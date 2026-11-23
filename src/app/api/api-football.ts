@@ -52,6 +52,7 @@ export class ApiFootball {
       .pipe(map((r) => r.response));
   }
 
+  /** Todas as rodadas da temporada, em ordem. */
   rounds(): Observable<string[]> {
     return this.get('fixtures/rounds', {});
   }

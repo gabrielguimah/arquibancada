@@ -1,15 +1,16 @@
-$green: #0b3d2e;
 $live: #d62828;
+$muted: #5b6b65;
+$line: #e3e9e6;
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 32px;
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 24px 16px;
 
-  @media (max-width: 900px) {
+  @media (max-width: 1000px) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -23,9 +24,11 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 8px;
 
   button {
+    flex-shrink: 0;
     width: 36px;
     height: 36px;
     border: 1px solid #cfd8d4;
@@ -41,23 +44,47 @@ h2 {
   }
 }
 
+.round-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  select {
+    appearance: none;
+    padding: 6px 32px 6px 14px;
+    border: 1px solid #cfd8d4;
+    border-radius: 999px;
+    background: #fff
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235b6b65' stroke-width='2'/%3E%3C/svg%3E")
+      no-repeat right 12px center;
+    font: inherit;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: inherit;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid #0b3d2e;
+      outline-offset: 2px;
+    }
+  }
+}
+
 .live-badge {
-  margin-left: 8px;
   padding: 2px 8px;
   border-radius: 999px;
   background: $live;
   color: #fff;
   font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  vertical-align: middle;
 }
 
 .day {
   margin: 20px 0 8px;
   font-size: 0.85rem;
   font-weight: 600;
-  text-transform: capitalize;
-  color: #5b6b65;
+  color: $muted;
 }
 
 .fixtures {
@@ -69,6 +96,7 @@ h2 {
 }
 
 .fixture {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -86,6 +114,20 @@ h2 {
       font-weight: 600;
     }
   }
+}
+
+.tag {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #fff4d6;
+  color: #8a5a00;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .team {
@@ -150,7 +192,7 @@ h2 {
   }
 
   small {
-    color: #5b6b65;
+    color: $muted;
   }
 }
 
@@ -160,7 +202,21 @@ h2 {
   text-align: center;
   font-size: 0.75rem;
   color: #8a9993;
+
+  time {
+    font-weight: 600;
+    color: $muted;
+  }
 }
+
+/* Classificação */
+
+$zones: (
+  libertadores: #1d4ed8,
+  pre-libertadores: #60a5fa,
+  sulamericana: #ea7a0c,
+  rebaixamento: $live,
+);
 
 .table-wrap {
   margin-top: 12px;
@@ -179,49 +235,72 @@ table {
 
 th,
 td {
-  padding: 8px 6px;
+  padding: 7px 6px;
   text-align: center;
-}
-
-th {
-  color: #5b6b65;
-  font-weight: 600;
-  border-bottom: 1px solid #e3e9e6;
-}
-
-tbody tr + tr td {
-  border-top: 1px solid #f0f3f2;
-}
-
-.pos {
-  width: 28px;
-  box-shadow: inset 3px 0 0 transparent;
-}
-
-.clube {
-  text-align: left;
   white-space: nowrap;
+}
 
-  img {
-    vertical-align: middle;
-    margin-right: 6px;
-    object-fit: contain;
+thead th {
+  color: $muted;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-bottom: 1px solid $line;
+}
+
+tbody + tbody tr:first-child > * {
+  border-top: 1px solid $line;
+}
+
+.zone-title th {
+  padding: 8px 12px 2px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: $muted;
+}
+
+// Barra lateral: corre por todas as linhas da zona.
+tbody td.pos {
+  position: relative;
+  width: 36px;
+  padding-left: 12px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--zone, transparent);
+  }
+
+  span {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--zone-soft, transparent);
+    color: var(--zone, inherit);
+    font-weight: 600;
+    font-size: 0.8rem;
   }
 }
 
-.pts {
-  font-weight: 700;
+tbody tr:first-child td.pos::before,
+.zone-title + tr td.pos::before {
+  top: 4px;
 }
 
-$zones: (
-  libertadores: #1d4ed8,
-  sulamericana: #ea7a0c,
-  rebaixamento: $live,
-);
+tbody tr:last-child td.pos::before {
+  bottom: 4px;
+}
 
 @each $zone, $color in $zones {
-  tr.#{$zone} .pos {
-    box-shadow: inset 3px 0 0 $color;
+  tbody.#{$zone} {
+    --zone: #{$color};
+    --zone-soft: #{rgba($color, 0.12)};
   }
 
   .legend .#{$zone}::before {
@@ -229,13 +308,67 @@ $zones: (
   }
 }
 
+.clube {
+  text-align: left;
+
+  img {
+    vertical-align: middle;
+    margin-right: 8px;
+    object-fit: contain;
+  }
+}
+
+.gols {
+  color: $muted;
+}
+
+.pts {
+  font-weight: 700;
+  padding-right: 12px;
+}
+
+.chips {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.chip {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  &.r-V {
+    background: #16a34a;
+  }
+
+  &.r-E {
+    background: #9aa8a2;
+  }
+
+  &.r-D {
+    background: #dc2626;
+  }
+}
+
+@media (max-width: 560px) {
+  .gols {
+    display: none;
+  }
+}
+
 .legend {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   list-style: none;
   padding: 0;
   font-size: 0.75rem;
-  color: #5b6b65;
+  color: $muted;
 
   li::before {
     content: '';
@@ -248,7 +381,7 @@ $zones: (
 }
 
 .muted {
-  color: #5b6b65;
+  color: $muted;
 }
 
 .error {
