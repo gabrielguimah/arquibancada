@@ -1,8 +1,16 @@
 import { Component, computed, input } from '@angular/core';
 import { Fixture, LIVE_STATUSES } from '../api/api-football';
 import { Crest } from './crest';
+import { liveClock } from './live-clock';
 
 export const TZ = 'America/Sao_Paulo';
+
+const RED_CARDS = new Set(['Red Card', 'Second Yellow card']);
+
+/** Data de hoje em Brasília, no formato AAAA-MM-DD. */
+export function todayInBrasilia(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
+}
 
 export function isLive(f: Fixture): boolean {
   return LIVE_STATUSES.includes(f.fixture.status.short);
@@ -50,9 +58,34 @@ export class FixtureCard {
       case 'SUSP':
       case 'INT':
         return 'Interrompido';
+      // Bola rolando: o relógio fica na linha de cima; aqui vai o período.
+      case '1H':
+        return '1º tempo';
+      case '2H':
+        return '2º tempo';
+      case 'ET':
+        return 'Prorrogação';
+      case 'BT':
+        return 'Intervalo';
+      case 'P':
+        return 'Pênaltis';
       default:
         return elapsed != null ? `${elapsed}${extra ? '+' + extra : ''}'` : long;
     }
+  });
+
+  /** Relógio do jogo ("67:12", "45'+04:26") no lugar do horário, enquanto a bola rola. */
+  protected clock = computed(() => liveClock(this.fixture()));
+
+  /** Cartões vermelhos de cada time (inclui o segundo amarelo), pelos eventos da partida; um item por cartão. */
+  protected redCards = computed(() => {
+    const cards: Record<'home' | 'away', string[]> = { home: [], away: [] };
+    const { home } = this.fixture().teams;
+    for (const e of this.fixture().events ?? []) {
+      if (e.type !== 'Card' || !RED_CARDS.has(e.detail)) continue;
+      cards[e.team.id === home.id ? 'home' : 'away'].push(`${e.player.name ?? ''} ${e.time.elapsed ?? ''}'`.trim());
+    }
+    return cards;
   });
 
   protected venue = computed(() => {

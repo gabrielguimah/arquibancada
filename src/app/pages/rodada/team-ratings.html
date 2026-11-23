@@ -1,13 +1,21 @@
 <div class="toolbar">
   <h2>Times</h2>
-  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense">
-    <mat-label>Classificar por</mat-label>
-    <mat-select [value]="metric().id" (selectionChange)="selectMetric($event.value)">
-      @for (m of metrics; track m.id) {
-        <mat-option [value]="m.id">{{ m.label }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
+  <label class="sort">
+    <span class="sort-label" id="sort-label">Classificar por</span>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense select-pill">
+      <mat-select
+        panelClass="select-panel"
+        hideSingleSelectionIndicator
+        aria-labelledby="sort-label"
+        [value]="metric().id"
+        (selectionChange)="selectMetric($event.value)"
+      >
+        @for (m of metrics; track m.id) {
+          <mat-option [value]="m.id">{{ m.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </label>
 </div>
 
 @if (message()) {
@@ -54,7 +62,9 @@
         </ol>
 
         @if (t.rows && t.rows.length > skeleton.length) {
-          <button type="button" class="more" (click)="toggle(t)">{{ expanded()[t.id] ? 'Ver menos' : 'Ver mais' }}</button>
+          <button type="button" class="more" (click)="toggle(t)">
+            {{ expanded()[t.id] ? 'Ver menos' : 'Ver mais' }}
+          </button>
         }
       </section>
     }

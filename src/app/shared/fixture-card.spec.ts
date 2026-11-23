@@ -27,10 +27,36 @@ function render(f: Fixture): HTMLElement {
 }
 
 describe('FixtureCard', () => {
-  it('mostra a bolinha ao vivo e o minuto durante o jogo', () => {
+  it('mostra a bolinha ao vivo, o período e o relógio no lugar do horário', () => {
     const el = render(fixture('2H', 67, [1, 0]));
     expect(el.querySelector('.live-dot')).toBeTruthy();
-    expect(el.querySelector('.state')?.textContent).toContain("67'");
+    expect(el.querySelector('.state')?.textContent).toContain('2º tempo');
+    // Minuto 67 = de 66:00 a 66:59 de jogo; os segundos começam do zero quando o minuto chega.
+    expect(el.querySelector('.clock')?.textContent?.trim()).toBe('66:00');
+    expect(el.querySelector('time')).toBeNull();
+  });
+
+  it('nos acréscimos, mostra o fim do tempo mais o acréscimo', () => {
+    const f = fixture('1H', 45, [0, 0]);
+    f.fixture.status.extra = 5;
+    f.fixture.id = 2;
+    expect(render(f).querySelector('.clock')?.textContent?.trim()).toBe("45'+04:00");
+  });
+
+  it('mostra um cartão vermelho por expulsão, ao lado do time', () => {
+    const f = fixture('2H', 70, [0, 0]);
+    f.fixture.id = 3;
+    const card = (team: 'home' | 'away', detail: string) => ({
+      time: { elapsed: 60, extra: null },
+      team: f.teams[team],
+      player: { id: 1, name: 'Jogador' },
+      assist: { id: null, name: null },
+      type: 'Card',
+      detail,
+    });
+    f.events = [card('home', 'Red Card'), card('away', 'Second Yellow card'), card('away', 'Red Card'), card('home', 'Yellow Card')];
+    const teams = [...render(f).querySelectorAll('.team')];
+    expect(teams.map((t) => t.querySelectorAll('.red-card').length)).toEqual([1, 2]);
   });
 
   it('não mostra a bolinha em jogo encerrado nem antes do início', () => {

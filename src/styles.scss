@@ -167,6 +167,73 @@ html {
   @include mat.theme((density: -4));
 }
 
+// Seletores (mat-select) em pílula, como os botões do tema: fundo do botão, sem contorno,
+// texto e seta na cor do botão; contorno só no foco do teclado.
+.select-pill {
+  @include mat.form-field-overrides(
+    (
+      outlined-outline-color: transparent,
+      outlined-hover-outline-color: transparent,
+      outlined-focus-outline-color: var(--accent),
+      outlined-focus-outline-width: 2px,
+      // Metade da altura do campo denso (40 px). Não usar 999px: o Material usa o raio também
+      // como largura das pontas do contorno, e o campo estica.
+      outlined-container-shape: 20px,
+    )
+  );
+  @include mat.select-overrides(
+    (
+      enabled-trigger-text-color: var(--button-text),
+      trigger-text-weight: 700,
+      enabled-arrow-color: var(--button-text),
+      focused-arrow-color: var(--button-text),
+    )
+  );
+
+  .mat-mdc-text-field-wrapper {
+    border-radius: 20px;
+    background: var(--button-bg);
+    transition: background 0.15s;
+  }
+
+  &:hover .mat-mdc-text-field-wrapper {
+    background: var(--button-bg-hover);
+  }
+}
+
+// Lista de opções dos seletores: cantos arredondados, opções em pílula e a atual destacada.
+.select-panel {
+  @include mat.select-overrides(
+    (
+      panel-background-color: var(--surface),
+    )
+  );
+  @include mat.option-overrides(
+    (
+      selected-state-layer-color: var(--button-bg),
+      selected-state-label-text-color: var(--button-text),
+      hover-state-layer-color: var(--surface-hover),
+      // Ao abrir, a opção atual também fica "em foco": mesma cor da selecionada, não o cinza padrão.
+      focus-state-layer-color: var(--button-bg-hover),
+    )
+  );
+
+  &.mat-mdc-select-panel {
+    padding: 6px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow), 0 2px 6px rgb(0 0 0 / 0.08);
+  }
+
+  .mat-mdc-option {
+    min-height: 38px;
+    border-radius: 8px;
+  }
+
+  .mat-mdc-option.mdc-list-item--selected {
+    font-weight: 700;
+  }
+}
+
 // Ícones alinhados ao texto ao redor; o tamanho segue o font-size de quem usa.
 .mat-icon {
   vertical-align: middle;

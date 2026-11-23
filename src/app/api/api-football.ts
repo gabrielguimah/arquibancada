@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, forkJoin, map, of } from 'rxjs';
 import { teamName } from './team-names';
 
 /** Worker da Cloudflare que guarda a chave e faz cache das respostas da API-Football. */
@@ -27,6 +27,18 @@ export interface Fixture {
   };
   teams: { home: Team; away: Team };
   goals: { home: number | null; away: number | null };
+  /** Só nas buscas por id (`fixturesByIds`): gols, cartões, substituições… */
+  events?: FixtureEvent[];
+}
+
+/** Evento de uma partida. Gol: type "Goal", detail "Normal Goal", "Own Goal", "Penalty" ou "Missed Penalty". */
+export interface FixtureEvent {
+  time: { elapsed: number | null; extra: number | null };
+  team: Team;
+  player: { id: number | null; name: string | null };
+  assist: { id: number | null; name: string | null };
+  type: string;
+  detail: string;
 }
 
 export interface Standing {
@@ -117,6 +129,13 @@ export interface RoundPlayer {
   rating: number;
   minutes: number;
   position: 'G' | 'D' | 'M' | 'F';
+  // Para o desempate do melhor da rodada (opcionais: respostas antigas do cache não têm).
+  goals?: number;
+  assists?: number;
+  yellowCards?: number;
+  redCards?: number;
+  /** Resultado do time do jogador no jogo: vitória, empate ou derrota. */
+  result?: 'W' | 'D' | 'L';
 }
 
 /** Resposta de `players/team-of-round`: 4-3-3 com as melhores notas dos jogos encerrados da rodada. */
@@ -198,6 +217,18 @@ export class ApiFootball {
       .pipe(map((r) => ({ ...r, players: r.players.map((p) => ({ ...p, team: rename(p.team) })) })));
   }
 
+  /** Partidas pelo id, com os eventos. A API aceita até 20 por chamada; mais que isso vira várias. */
+  fixturesByIds(ids: number[]): Observable<Fixture[]> {
+    if (!ids.length) return of([]);
+    const chunks = Array.from({ length: Math.ceil(ids.length / 20) }, (_, i) => ids.slice(i * 20, i * 20 + 20));
+    // `ids` não aceita liga e temporada juntos.
+    return forkJoin(
+      chunks.map((chunk) =>
+        this.http.get<ApiResponse<Fixture[]>>(`${API_URL}/fixtures`, { params: { ids: chunk.join('-') } }).pipe(map((r) => r.response)),
+      ),
+    ).pipe(map((parts) => renameFixtures(parts.flat())));
+  }
+
   standings(): Observable<Standing[]> {
     return this.get<{ league: { standings: Standing[][] } }[]>('standings', {}).pipe(
       map((r) => (r[0]?.league.standings[0] ?? []).map((s) => ({ ...s, team: rename(s.team) }))),
@@ -214,5 +245,9 @@ function rename<T extends Team>(team: T): T {
 }
 
 function renameFixtures(fixtures: Fixture[]): Fixture[] {
-  return fixtures.map((f) => ({ ...f, teams: { home: rename(f.teams.home), away: rename(f.teams.away) } }));
+  return fixtures.map((f) => ({
+    ...f,
+    teams: { home: rename(f.teams.home), away: rename(f.teams.away) },
+    events: f.events?.map((e) => ({ ...e, team: rename(e.team) })),
+  }));
 }

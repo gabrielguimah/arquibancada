@@ -21,7 +21,8 @@
       </section>
     }
 
-    @if (!rounds().length && !error()) {
+    <!-- Seletor em esqueleto enquanto as partidas carregam (junto com os cards). -->
+    @if ((loading() || !rounds().length) && !error()) {
       <div class="round-nav" aria-hidden="true">
         <span class="sk sk-nav-btn"></span>
         <span class="sk sk-nav-select"></span>
@@ -38,8 +39,10 @@
           <mat-icon>chevron_left</mat-icon>
         </button>
         <div class="round-select">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense select-pill">
             <mat-select
+              panelClass="select-panel"
+              hideSingleSelectionIndicator
               aria-label="Escolher rodada"
               [value]="round()"
               (selectionChange)="selectRound($event.value)"
@@ -151,11 +154,35 @@
           }
         </table>
       </div>
-      <ul class="legend">
-        @for (z of legend(); track z.id) {
-          <li [class]="z.id">{{ z.label }}</li>
-        }
-      </ul>
+      <!-- Regras e legenda (fechado por padrão), como no SofaScore. -->
+      <details class="rules">
+        <summary>
+          Regras e legenda
+          <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
+        </summary>
+
+        <ul class="legend">
+          @for (z of legend(); track z.id) {
+            <li [class]="z.id">{{ z.label }}</li>
+          }
+        </ul>
+
+        <p class="rules-title">Em caso de empate em pontos, os critérios de desempate são:</p>
+        <ol class="tiebreak">
+          @for (rule of tiebreakRules; track rule) {
+            <li>{{ rule }}</li>
+          }
+        </ol>
+
+        <dl class="glossary">
+          @for (item of glossary; track item.term) {
+            <dt>{{ item.term }}</dt>
+            <dd>{{ item.meaning }}</dd>
+          }
+          <dt><span class="live-dot" aria-hidden="true"></span></dt>
+          <dd>Time jogando agora</dd>
+        </dl>
+      </details>
     } @else if (!error()) {
       <!-- Esqueleto da classificação: mesmas colunas, com blocos no lugar dos números. -->
       <div class="table-wrap" aria-busy="true" aria-label="Carregando classificação">

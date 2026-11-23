@@ -1,0 +1,43 @@
+<div class="stack" aria-live="polite">
+  @for (t of notifier.toasts(); track t.id) {
+    <article class="toast" [class.cancelled]="t.type === 'cancelled'" role="status">
+      <img crest class="crest" [src]="t.goal.team.logo" alt="" width="36" height="36" />
+      <div class="body">
+        <p class="title">
+          @if (t.type === 'cancelled') {
+            <span class="ball"><mat-icon aria-hidden="true">block</mat-icon></span>
+            Gol anulado do {{ t.goal.team.name }}
+          } @else {
+            Gol do {{ t.goal.team.name }}!
+          }
+        </p>
+        <p class="scorer">
+          <mat-icon class="line-icon" aria-hidden="true">sports_soccer</mat-icon>
+          <strong>{{ t.goal.player.name }}</strong>
+          {{ t.minute }}
+          @if (t.kind === 'penalty') {
+            (pênalti)
+          } @else if (t.kind === 'own') {
+            (contra)
+          }
+        </p>
+        @if (t.type === 'cancelled') {
+          <p class="assist">Anulado pelo VAR{{ t.reason ? ': ' + t.reason : '' }}</p>
+        } @else if (t.goal.assist.name) {
+          <p class="assist">
+            <mat-icon class="line-icon" svgIcon="chuteira" aria-hidden="true" />
+            Assistência: {{ t.goal.assist.name }}
+          </p>
+        }
+        <p class="score">
+          {{ t.fixture.teams.home.name }}
+          <strong>{{ t.fixture.goals.home }} × {{ t.fixture.goals.away }}</strong>
+          {{ t.fixture.teams.away.name }}
+        </p>
+      </div>
+      <button type="button" class="close" aria-label="Fechar aviso" (click)="notifier.dismiss(t.id)">
+        <mat-icon>close</mat-icon>
+      </button>
+    </article>
+  }
+</div>

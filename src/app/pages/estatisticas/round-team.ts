@@ -36,11 +36,22 @@ export class RoundTeamCard {
     const players = this.team()?.players ?? [];
     return LINES.map((l) => ({ ...l, players: players.filter((p) => p.position === l.position) }));
   });
-  // Melhor da rodada (estrela): maior nota; no empate, quem jogou mais minutos.
-  protected bestId = computed(() => {
-    const players = [...(this.team()?.players ?? [])];
-    players.sort((a, b) => b.rating - a.rating || b.minutes - a.minutes);
-    return players[0]?.player.id ?? null;
+  // Melhor(es) da rodada (estrela): o primeiro na ordem de desempate; expulso não concorre.
+  // Se empatar em todos os critérios, todos os empatados ganham a estrela.
+  protected bestIds = computed(() => {
+    const players = (this.team()?.players ?? []).filter((p) => !p.redCards).sort(compareRoundPlayers);
+    const first = players[0];
+    return new Set(first ? players.filter((p) => compareRoundPlayers(p, first) === 0).map((p) => p.player.id) : []);
+  });
+
+  // Notas que aparecem iguais com uma casa (ex.: quatro "8.2") passam a mostrar duas.
+  private repeatedRatings = computed(() => {
+    const seen = new Map<string, number>();
+    for (const p of this.team()?.players ?? []) {
+      const label = p.rating.toFixed(1);
+      seen.set(label, (seen.get(label) ?? 0) + 1);
+    }
+    return new Set([...seen].filter(([, n]) => n > 1).map(([label]) => label));
   });
   protected skeletonLines = LINES.map((l) => ({ ...l, slots: Array.from({ length: l.count }, (_, i) => i) }));
 
@@ -84,11 +95,47 @@ export class RoundTeamCard {
     this.error.set(true);
   }
 
+  protected isBest(p: RoundPlayer): boolean {
+    return this.bestIds().has(p.player.id);
+  }
+
+  protected ratingLabel(p: RoundPlayer): string {
+    return this.repeatedRatings().has(p.rating.toFixed(1)) ? p.rating.toFixed(2) : p.rating.toFixed(1);
+  }
+
+  /** Dica ao passar o mouse: nome, time, minutos, resultado e participação em gols. */
+  protected tip(p: RoundPlayer): string {
+    const result = p.result ? { W: 'vitória', D: 'empate', L: 'derrota' }[p.result] : null;
+    const contributions = [p.goals ? `${p.goals} G` : '', p.assists ? `${p.assists} A` : ''].filter(Boolean).join(' · ');
+    return [this.isBest(p) ? 'Melhor da rodada' : '', p.player.name, p.team.name, `${p.minutes} min`, result, contributions]
+      .filter(Boolean)
+      .join(' · ');
+  }
+
   /** Sobrenome para caber embaixo da foto ("K. Viveros" → "Viveros"). */
   protected shortName(name: string): string {
     const parts = name.split(' ');
     return parts.length > 1 && /\.$/.test(parts[0]) ? parts.slice(1).join(' ') : name;
   }
+}
+
+const RESULT_ORDER = { W: 2, D: 1, L: 0 };
+
+/**
+ * Ordem de desempate do melhor da rodada (a mesma do Worker para montar o time): nota com duas casas,
+ * gols + assistências, resultado do time, menos minutos (mesma nota em menos tempo) e menos cartões.
+ */
+function compareRoundPlayers(a: RoundPlayer, b: RoundPlayer): number {
+  const contributions = (p: RoundPlayer) => (p.goals ?? 0) + (p.assists ?? 0);
+  const result = (p: RoundPlayer) => (p.result ? RESULT_ORDER[p.result] : 0);
+  const cards = (p: RoundPlayer) => (p.yellowCards ?? 0) + (p.redCards ?? 0) * 2;
+  return (
+    b.rating - a.rating ||
+    contributions(b) - contributions(a) ||
+    result(b) - result(a) ||
+    a.minutes - b.minutes ||
+    cards(a) - cards(b)
+  );
 }
 
 /** "Regular Season - 36" → "36ª rodada" */

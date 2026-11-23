@@ -5,6 +5,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
+import { BOOT_SVG } from './shared/boot.svg';
 import { LOGO_SVG } from './shared/logo.svg';
 
 export const appConfig: ApplicationConfig = {
@@ -17,7 +18,9 @@ export const appConfig: ApplicationConfig = {
       const icons = inject(MatIconRegistry);
       icons.setDefaultFontSetClass('material-symbols-outlined');
       // Logo do site (SVG próprio, embutido no código: não faz requisição).
-      icons.addSvgIconLiteral('arquibancada', inject(DomSanitizer).bypassSecurityTrustHtml(LOGO_SVG));
+      const sanitizer = inject(DomSanitizer);
+      icons.addSvgIconLiteral('arquibancada', sanitizer.bypassSecurityTrustHtml(LOGO_SVG));
+      icons.addSvgIconLiteral('chuteira', sanitizer.bypassSecurityTrustHtml(BOOT_SVG));
     }),
   ]
 };

@@ -73,3 +73,26 @@ describe('Quadros de estatísticas', () => {
     expect(boards()[1].querySelectorAll('.row').length).toBe(10);
   });
 });
+
+describe('Seletor de rodada em esqueleto', () => {
+  it('fica em esqueleto enquanto as partidas (ou o time da rodada) carregam, mesmo com as rodadas prontas', async () => {
+    const { of } = await import('rxjs');
+    const rounds = () => of(['Regular Season - 1']);
+    const current = () => of('Regular Season - 1');
+    TestBed.configureTestingModule({
+      imports: [Rodada, Estatisticas],
+      providers: [
+        provideRouter([]),
+        { provide: ApiFootball, useValue: { ...pendingApi, rounds, currentRound: current, teamOfRound: () => NEVER } },
+      ],
+    });
+    for (const component of [Rodada, Estatisticas] as const) {
+      const fixture = TestBed.createComponent(component as Type<unknown>);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      const nav = component === Rodada ? el.querySelector('.jogos')! : el.querySelector('app-round-team')!;
+      expect(nav.querySelector('.round-nav .sk-nav-select')).toBeTruthy();
+      expect(nav.querySelector('mat-select')).toBeNull();
+    }
+  });
+});

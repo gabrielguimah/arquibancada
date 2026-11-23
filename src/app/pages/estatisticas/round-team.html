@@ -6,13 +6,25 @@
     </div>
   </header>
 
-  @if (rounds().length) {
+  <!-- Seletor em esqueleto enquanto o time da rodada carrega (junto com o campo). -->
+  @if (rounds().length && !loading()) {
     <div class="round-nav">
-      <button type="button" (click)="step(-1)" [disabled]="roundIndex() <= 0" aria-label="Rodada anterior">
+      <button
+        type="button"
+        (click)="step(-1)"
+        [disabled]="roundIndex() <= 0"
+        aria-label="Rodada anterior"
+      >
         <mat-icon>chevron_left</mat-icon>
       </button>
-      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense">
-        <mat-select aria-label="Escolher rodada" [value]="round()" (selectionChange)="select($event.value)">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense select-pill">
+        <mat-select
+          panelClass="select-panel"
+          hideSingleSelectionIndicator
+          aria-label="Escolher rodada"
+          [value]="round()"
+          (selectionChange)="select($event.value)"
+        >
           @for (r of rounds(); track r) {
             <mat-option [value]="r">{{ roundName(r) }}</mat-option>
           }
@@ -62,16 +74,31 @@
           @for (p of line.players; track p.player.id) {
             <li
               class="spot"
-              [class.best]="p.player.id === bestId()"
-              [title]="(p.player.id === bestId() ? 'Melhor da rodada · ' : '') + p.player.name + ' · ' + p.team.name + ' · ' + p.minutes + ' min'"
+              [class.best]="isBest(p)"
+              [title]="tip(p)"
             >
               <span class="photo">
-                <img class="player" [src]="p.player.photo" alt="" width="44" height="44" loading="lazy" />
-                @if (p.player.id === bestId()) {
+                <img
+                  class="player"
+                  [src]="p.player.photo"
+                  alt=""
+                  width="44"
+                  height="44"
+                  loading="lazy"
+                />
+                @if (isBest(p)) {
                   <span class="star" aria-label="Melhor da rodada"><mat-icon>star</mat-icon></span>
                 }
-                <img crest class="badge" [src]="p.team.logo" alt="" width="16" height="16" loading="lazy" />
-                <span [class]="ratingClass(p.rating) + ' rating'">{{ p.rating.toFixed(1) }}</span>
+                <img
+                  crest
+                  class="badge"
+                  [src]="p.team.logo"
+                  alt=""
+                  width="16"
+                  height="16"
+                  loading="lazy"
+                />
+                <span [class]="ratingClass(p.rating) + ' rating'">{{ ratingLabel(p) }}</span>
               </span>
               <span class="name">{{ shortName(p.player.name) }}</span>
             </li>

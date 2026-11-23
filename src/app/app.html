@@ -5,6 +5,19 @@
     <a routerLink="/estatisticas" routerLinkActive="active">Estatísticas</a>
   </nav>
   <span class="tag">Brasileirão {{ season }}</span>
+  @if (notifications.supported) {
+    <button
+      type="button"
+      class="bell"
+      [class.on]="notifications.enabled()"
+      (click)="notifications.toggle()"
+      [matTooltip]="bellTip()"
+      [attr.aria-label]="bellTip()"
+      [attr.aria-pressed]="notifications.enabled()"
+    >
+      <mat-icon>{{ notifications.enabled() ? 'notifications_active' : 'notifications_off' }}</mat-icon>
+    </button>
+  }
   <mat-slide-toggle
     class="theme-toggle"
     labelPosition="before"
@@ -20,3 +33,5 @@
 <main>
   <router-outlet />
 </main>
+
+<app-goal-toasts />

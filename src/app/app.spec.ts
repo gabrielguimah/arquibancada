@@ -1,12 +1,17 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { GoalNotifier } from './shared/goal-notifier';
 import { App } from './app';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        { provide: GoalNotifier, useValue: { start: () => {}, dismiss: () => {}, toasts: signal([]) } },
+      ],
     }).compileComponents();
   });
 

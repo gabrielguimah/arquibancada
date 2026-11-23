@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
+import { MatFormField } from '@angular/material/form-field';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, TeamRating, TeamRatings } from '../../api/api-football';
@@ -30,7 +30,7 @@ interface RatingTable {
 /** Duas tabelas de times (temporada inteira e últimas 5 partidas), ordenadas pelo critério do select. */
 @Component({
   selector: 'app-team-ratings',
-  imports: [Crest, MatTooltip, MatFormField, MatLabel, MatSelect, MatOption],
+  imports: [Crest, MatTooltip, MatFormField, MatSelect, MatOption],
   templateUrl: './team-ratings.html',
   styleUrl: './team-ratings.scss',
 })

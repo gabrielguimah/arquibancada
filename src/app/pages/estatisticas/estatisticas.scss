@@ -109,8 +109,24 @@ h1 {
   }
 
   h2 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     margin: 0;
     font-size: 1rem;
+  }
+}
+
+// Bola (artilharia), chuteira (assistências) e estrela (melhores notas) ao lado do título.
+.title-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: var(--accent);
+
+  // Estrela preenchida, como a do melhor da rodada.
+  &.filled {
+    font-variation-settings: 'FILL' 1;
   }
 }
 

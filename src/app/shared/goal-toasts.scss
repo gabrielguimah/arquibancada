@@ -1,0 +1,139 @@
+// Pilha de avisos no canto superior direito, abaixo do cabeçalho; no celular, na largura toda.
+.stack {
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  z-index: 1000;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+
+  @media (max-width: 560px) {
+    top: 112px;
+    right: 8px;
+    width: calc(100vw - 16px);
+  }
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 28px;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 12px 12px 14px;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow:
+    inset 4px 0 0 var(--highlight),
+    0 8px 24px rgb(0 0 0 / 0.18);
+  pointer-events: auto;
+  animation: toast-in 0.25s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+// Gol anulado: faixa e título em vermelho, autor riscado.
+.toast.cancelled {
+  box-shadow:
+    inset 4px 0 0 #dc2626,
+    0 8px 24px rgb(0 0 0 / 0.18);
+
+  .title {
+    color: #dc2626;
+  }
+
+  .scorer strong {
+    text-decoration: line-through;
+  }
+}
+
+.crest {
+  object-fit: contain;
+}
+
+.body p {
+  margin: 0;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.ball .mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+.scorer {
+  margin-top: 2px !important;
+  font-size: 0.9rem;
+}
+
+// Bola na linha do autor, chuteira na da assistência.
+.scorer,
+.assist {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.line-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  color: var(--accent);
+}
+
+.assist {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.score {
+  margin-top: 6px !important;
+  font-size: 0.8rem;
+  color: var(--muted);
+
+  strong {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+
+  .mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+}

@@ -21,8 +21,21 @@ $line: var(--line);
   }
 
   mat-form-field {
-    width: 240px;
+    width: 230px;
   }
+}
+
+// "Classificar por" em texto pequeno ao lado do seletor (no lugar do rótulo flutuante do Material).
+.sort {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sort-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .value {

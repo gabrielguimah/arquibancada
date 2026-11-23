@@ -37,7 +37,7 @@ const ROUNDS_PER_CALL = 2;
 
 // Time da rodada (4-3-3): melhores notas da rodada por posição, como o "time da semana" do SofaScore.
 const ROUND_TEAM_PATH = 'players/team-of-round';
-const ROUND_TEAM_VERSION = 1;
+const ROUND_TEAM_VERSION = 2;
 // Só entra quem jogou ao menos isto na partida (evita quem entrou no fim com nota alta).
 const ROUND_TEAM_MIN_MINUTES = 45;
 const ROUND_TEAM_FORMATION: Record<string, number> = { G: 1, D: 4, M: 3, F: 3 };
@@ -83,6 +83,8 @@ interface FixtureDetail {
         tackles: { total: number | null; interceptions: number | null };
         dribbles: { success: number | null };
         penalty: { scored: number | null; commited: number | null };
+        goals?: { total: number | null; assists: number | null };
+        cards?: { yellow: number | null; red: number | null };
       }>;
     }>;
   }>;
@@ -167,13 +169,19 @@ function fixturesTtl(body: ApiBody, key: string): number {
     (f) => FINISHED_STATUSES.has(f.fixture?.status?.short ?? '') && Date.now() / 1000 - (f.fixture?.timestamp ?? 0) > 3 * 3600,
   );
   if (byId && fixtures.length && settled) return 7 * 24 * 3600;
-  if (fixtures.some((f) => LIVE_STATUSES.has(f.fixture?.status?.short ?? ''))) return 15;
   const now = Date.now() / 1000;
-  const startsSoon = fixtures.some((f) => {
-    const t = f.fixture?.timestamp ?? 0;
-    return f.fixture?.status?.short === 'NS' && t - now < 2 * 3600 && t - now > -3600;
-  });
-  return startsSoon ? 60 : 600;
+  const live = fixtures.some((f) => LIVE_STATUSES.has(f.fixture?.status?.short ?? ''));
+  const startsWithin = (seconds: number) =>
+    fixtures.some((f) => {
+      const t = f.fixture?.timestamp ?? 0;
+      return f.fixture?.status?.short === 'NS' && t - now < seconds && t - now > -3600;
+    });
+  // Busca por id é a fonte dos jogos ao vivo do site (placar, relógio, gols): 15 s com jogo rolando
+  // ou começando em até 10 min, para pegar o apito inicial na hora.
+  if (byId && (live || startsWithin(10 * 60))) return 15;
+  // Listas (rodada, dia): só dizem quais jogos existem e o horário; o ao vivo vem da busca por id.
+  if (live || startsWithin(2 * 3600)) return 60;
+  return 600;
 }
 
 function hasErrors(body: ApiBody): boolean {
@@ -257,6 +265,34 @@ function aggregate(matches: TeamMatch[]): TeamStats {
   if (matches.length) total.possession = Math.round((total.possession / matches.length) * 10) / 10;
   total.xg = round2(total.xg ?? 0);
   return total;
+}
+
+interface RoundCandidate {
+  player: { id: number; name: string; photo: string };
+  team: TeamRef;
+  rating: number;
+  minutes: number;
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+  result: 'W' | 'D' | 'L';
+}
+
+const RESULT_ORDER = { W: 2, D: 1, L: 0 };
+
+/**
+ * Ordem do time da rodada (e do melhor da rodada, no site): nota (duas casas), gols + assistências,
+ * resultado do time, menos minutos (mesma nota em menos tempo) e menos cartões.
+ */
+function compareRoundPlayers(a: RoundCandidate, b: RoundCandidate): number {
+  return (
+    b.rating - a.rating ||
+    b.goals + b.assists - (a.goals + a.assists) ||
+    RESULT_ORDER[b.result] - RESULT_ORDER[a.result] ||
+    a.minutes - b.minutes ||
+    a.yellowCards + a.redCards * 2 - (b.yellowCards + b.redCards * 2)
+  );
 }
 
 /** Rodada pedida em `players/team-of-round?round=...`, no formato da API ("Regular Season - 36"). */
@@ -560,7 +596,7 @@ export class ApiCache extends DurableObject<Env> {
     const fixtures = (JSON.parse(list.body) as { response: FixtureDetail[] }).response;
     const finished = fixtures.filter((f) => FINISHED_STATUSES.has(f.fixture.status.short));
 
-    const candidates = new Map<string, Array<{ player: unknown; team: TeamRef; rating: number; minutes: number }>>();
+    const candidates = new Map<string, RoundCandidate[]>();
     if (finished.length) {
       const details = await this.get(`fixtures?ids=${finished.map((f) => f.fixture.id).sort((a, b) => a - b).join('-')}`);
       if ('error' in details) return details;
@@ -568,8 +604,13 @@ export class ApiCache extends DurableObject<Env> {
         for (const side of f.players ?? []) {
           const team = [f.teams.home, f.teams.away].find((t) => t.id === side.team.id);
           if (!team) continue;
+          // Resultado do time no jogo, para o desempate.
+          const home = f.teams.home.id === team.id;
+          const [own, other] = home ? [f.goals.home ?? 0, f.goals.away ?? 0] : [f.goals.away ?? 0, f.goals.home ?? 0];
+          const result = own > other ? 'W' : own < other ? 'L' : 'D';
           for (const p of side.players) {
-            const g = p.statistics[0]?.games;
+            const st = p.statistics[0];
+            const g = st?.games;
             if (!g?.rating || !g.position || (g.minutes ?? 0) < ROUND_TEAM_MIN_MINUTES) continue;
             const list = candidates.get(g.position) ?? [];
             list.push({
@@ -577,6 +618,11 @@ export class ApiCache extends DurableObject<Env> {
               team: { id: team.id, name: team.name, logo: team.logo },
               rating: Number(g.rating),
               minutes: g.minutes ?? 0,
+              goals: st.goals?.total ?? 0,
+              assists: st.goals?.assists ?? 0,
+              yellowCards: st.cards?.yellow ?? 0,
+              redCards: st.cards?.red ?? 0,
+              result,
             });
             candidates.set(g.position, list);
           }
@@ -586,7 +632,7 @@ export class ApiCache extends DurableObject<Env> {
 
     const players = Object.entries(ROUND_TEAM_FORMATION).flatMap(([position, count]) =>
       (candidates.get(position) ?? [])
-        .sort((a, b) => b.rating - a.rating)
+        .sort(compareRoundPlayers)
         .slice(0, count)
         .map((p) => ({ ...p, position })),
     );

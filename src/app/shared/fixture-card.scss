@@ -102,3 +102,22 @@ $muted: var(--muted);
     color: $live;
   }
 }
+
+// Relógio do jogo ao vivo, no lugar do horário.
+.clock {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: $live;
+  white-space: nowrap;
+}
+
+// Cartão vermelho: retângulo vermelho em pé, ao lado do nome do time.
+.red-card {
+  display: inline-block;
+  width: 8px;
+  height: 11px;
+  margin-left: 4px;
+  border-radius: 1.5px;
+  background: #dc2626;
+  vertical-align: -1px;
+}

@@ -1,7 +1,11 @@
 @let f = fixture();
 <article class="card" [class.live]="live()" [attr.title]="venue() || null">
   <div class="status">
-    <time [attr.datetime]="f.fixture.date">{{ kickoff() }}</time>
+    @if (clock(); as c) {
+      <span class="clock" aria-label="Tempo de jogo">{{ c }}</span>
+    } @else {
+      <time [attr.datetime]="f.fixture.date">{{ kickoff() }}</time>
+    }
     @if (status()) {
       <span class="state">
         @if (live()) {
@@ -20,7 +24,12 @@
       @let team = f.teams[side];
       <div class="team" [class.winner]="team.winner === true" [class.loser]="team.winner === false">
         <img crest [src]="team.logo" [alt]="" width="22" height="22" loading="lazy" />
-        <span class="name">{{ team.name }}</span>
+        <span class="name">
+          {{ team.name }}
+          @for (card of redCards()[side]; track $index) {
+            <span class="red-card" [title]="'Cartão vermelho: ' + card" [attr.aria-label]="'Cartão vermelho: ' + card"></span>
+          }
+        </span>
         <span class="goals">{{ f.goals[side] ?? '' }}</span>
       </div>
     }

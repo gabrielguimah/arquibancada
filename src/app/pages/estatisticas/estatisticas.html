@@ -35,7 +35,16 @@
     <section class="board" [class]="'area-' + b.id" [attr.aria-labelledby]="'board-' + $index">
       <header>
         <div>
-          <h2 [id]="'board-' + $index">{{ b.title }}</h2>
+          <h2 [id]="'board-' + $index">
+            @if (b.id === 'scorers') {
+              <mat-icon class="title-icon" aria-hidden="true">sports_soccer</mat-icon>
+            } @else if (b.id === 'assists') {
+              <mat-icon class="title-icon" svgIcon="chuteira" aria-hidden="true" />
+            } @else if (b.id === 'rated') {
+              <mat-icon class="title-icon filled" aria-hidden="true">star</mat-icon>
+            }
+            {{ b.title }}
+          </h2>
           <p class="subtitle">{{ b.subtitle }}</p>
         </div>
         <span class="unit">{{ b.unit }}</span>

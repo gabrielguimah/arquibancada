@@ -1,0 +1,3 @@
+// Chuteira (vista de lado, com travas), para assistências. O Material Symbols não tem uma.
+// Usa currentColor; registrada como svgIcon "chuteira" em app.config.ts.
+export const BOOT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"> <path d="M3.5 14.2V7.4c0-.8.6-1.4 1.4-1.4h3.6c.5 0 .9.3 1.1.7l.9 1.9 2.6 1.1 5.2 2c1.7.7 2.7 1.6 2.7 2.5z"/> <path d="M3 15.4h18.2c0 1.1-.9 2-2 2H4.6c-.9 0-1.6-.7-1.6-1.6z"/> <rect x="5" y="17.4" width="1.8" height="1.8" rx=".5"/> <rect x="9.2" y="17.4" width="1.8" height="1.8" rx=".5"/> <rect x="14.4" y="17.4" width="1.8" height="1.8" rx=".5"/> <rect x="17.8" y="17.4" width="1.8" height="1.8" rx=".5"/> </svg>`;

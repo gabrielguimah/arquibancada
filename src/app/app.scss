@@ -58,6 +58,40 @@ nav {
   opacity: 0.8;
 }
 
+// Sino das notificações de gol (no cabeçalho, ao lado do switch de tema).
+.bell {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgb(255 255 255 / 0.75);
+  cursor: pointer;
+
+  &:hover {
+    background: rgb(255 255 255 / 0.1);
+    color: #fff;
+  }
+
+  &.on {
+    color: var(--highlight);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  .mat-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 22px;
+  }
+}
+
 // Switch de modo escuro: o ícone (sol/lua) fica à esquerda do switch, no branco do cabeçalho.
 // Ligado, usa o destaque da paleta (--highlight) em vez do verde padrão do Material.
 .theme-toggle {
@@ -99,7 +133,13 @@ nav {
     display: none;
   }
 
+  // Sino e switch juntos, à direita do logo (sem sino, o switch vai sozinho para a direita).
+  .bell,
   .theme-toggle {
     margin-left: auto;
+  }
+
+  .bell + .theme-toggle {
+    margin-left: 0;
   }
 }
