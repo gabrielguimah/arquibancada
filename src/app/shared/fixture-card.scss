@@ -1,0 +1,104 @@
+$live: #d62828;
+$muted: #5b6b65;
+
+:host {
+  display: block;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  padding: 8px 14px 8px 0;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+
+  &.live {
+    box-shadow: inset 3px 0 0 $live, 0 1px 2px rgb(0 0 0 / 0.06);
+  }
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  align-self: stretch;
+  justify-content: center;
+  margin-right: 12px;
+  border-right: 1px solid #edf1ef;
+  font-size: 0.75rem;
+  color: $muted;
+  text-align: center;
+
+  time {
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  .live & {
+    color: $live;
+    font-weight: 600;
+  }
+}
+
+.tag {
+  margin-top: 2px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #fff4d6;
+  color: #8a5a00;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.teams {
+  display: grid;
+  gap: 6px;
+}
+
+.team {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+
+  img {
+    object-fit: contain;
+  }
+
+  .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .goals {
+    min-width: 1ch;
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.winner {
+    font-weight: 600;
+  }
+
+  &.loser {
+    color: $muted;
+  }
+
+  .live & .goals {
+    color: $live;
+  }
+}

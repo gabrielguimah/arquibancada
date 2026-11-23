@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { teamName } from './team-names';
 
 /** Worker da Cloudflare que guarda a chave e faz cache das respostas da API-Football. */
 export const API_URL = 'https://arquibancada-api.arquibancada-api.workers.dev';
@@ -62,12 +63,25 @@ export class ApiFootball {
   }
 
   fixtures(round: string): Observable<Fixture[]> {
-    return this.get('fixtures', { round });
+    return this.get<Fixture[]>('fixtures', { round }).pipe(map(renameFixtures));
+  }
+
+  /** Jogos do Brasileirão numa data (AAAA-MM-DD), no fuso de Brasília. */
+  fixturesOn(date: string): Observable<Fixture[]> {
+    return this.get<Fixture[]>('fixtures', { date, timezone: 'America/Sao_Paulo' }).pipe(map(renameFixtures));
   }
 
   standings(): Observable<Standing[]> {
     return this.get<{ league: { standings: Standing[][] } }[]>('standings', {}).pipe(
-      map((r) => r[0]?.league.standings[0] ?? []),
+      map((r) => (r[0]?.league.standings[0] ?? []).map((s) => ({ ...s, team: rename(s.team) }))),
     );
   }
+}
+
+function rename<T extends Team>(team: T): T {
+  return { ...team, name: teamName(team) };
+}
+
+function renameFixtures(fixtures: Fixture[]): Fixture[] {
+  return fixtures.map((f) => ({ ...f, teams: { home: rename(f.teams.home), away: rename(f.teams.away) } }));
 }

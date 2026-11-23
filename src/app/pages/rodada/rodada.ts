@@ -1,9 +1,8 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
-import { ApiFootball, Fixture, LIVE_STATUSES, Standing } from '../../api/api-football';
+import { ApiFootball, Fixture, Standing } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
-
-const TZ = 'America/Sao_Paulo';
+import { FixtureCard, TZ, isLive } from '../../shared/fixture-card';
 
 // Intervalo de atualização: rápido com jogo rolando, lento no resto do tempo.
 const REFRESH_LIVE_MS = 30_000;
@@ -28,7 +27,7 @@ type FormResult = 'V' | 'E' | 'D';
 
 @Component({
   selector: 'app-rodada',
-  imports: [Crest],
+  imports: [Crest, FixtureCard],
   templateUrl: './rodada.html',
   styleUrl: './rodada.scss',
 })
@@ -41,12 +40,22 @@ export class Rodada {
   protected fixtures = signal<Fixture[]>([]);
   // Data típica (mediana) da rodada seguinte: jogos desta rodada disputados depois dela são atrasados.
   protected nextRoundStart = signal<number | null>(null);
+  protected today = signal<Fixture[]>([]);
   protected standings = signal<Standing[]>([]);
   protected error = signal<string | null>(null);
   protected loading = signal(true);
 
   protected roundIndex = computed(() => this.rounds().indexOf(this.round() ?? ''));
-  protected hasLive = computed(() => this.fixtures().some((f) => isLive(f)));
+  protected hasLive = computed(() => [...this.fixtures(), ...this.today()].some((f) => isLive(f)));
+  // Times em campo agora, para a bolinha ao vivo na tabela.
+  protected liveTeams = computed(() => {
+    const ids = new Set<number>();
+    for (const f of [...this.fixtures(), ...this.today()]) {
+      if (isLive(f)) ids.add(f.teams.home.id).add(f.teams.away.id);
+    }
+    return ids;
+  });
+  protected todaySorted = computed(() => [...this.today()].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp));
   protected days = computed<FixtureDay[]>(() => {
     const groups = new Map<string, Fixture[]>();
     for (const f of [...this.fixtures()].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)) {
@@ -105,10 +114,12 @@ export class Rodada {
       this.api.fixtures(round),
       this.api.standings(),
       nextRound ? this.api.fixtures(nextRound) : of([]),
+      this.api.fixturesOn(todayInBrasilia()),
     ]).subscribe({
-      next: ([fixtures, standings, next]) => {
+      next: ([fixtures, standings, next, today]) => {
         if (round !== this.round()) return;
         this.fixtures.set(fixtures);
+        this.today.set(today);
         this.standings.set(standings);
         // Mediana, e não o primeiro jogo: um jogo antecipado da rodada seguinte não deve marcar os desta como atrasados.
         const nextStarts = next
@@ -132,42 +143,13 @@ export class Rodada {
     this.error.set('Não foi possível carregar os dados. Tentando de novo em instantes…');
   }
 
-  protected isLive = isLive;
   protected roundName = roundName;
   // Uma rodada tem 10 jogos; 6 cards de esqueleto já preenchem a tela.
   protected skeletonCards = [0, 1, 2, 3, 4, 5];
 
-  protected kickoff(f: Fixture): string {
-    return new Date(f.fixture.date).toLocaleTimeString('pt-BR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
-  }
-
   protected isDelayed(f: Fixture): boolean {
     const start = this.nextRoundStart();
     return start !== null && f.fixture.timestamp > start;
-  }
-
-  protected statusLabel(f: Fixture): string {
-    const { short, elapsed, extra } = f.fixture.status;
-    switch (short) {
-      case 'NS':
-      case 'TBD':
-        return this.kickoff(f);
-      case 'HT':
-        return 'Intervalo';
-      case 'FT':
-      case 'AET':
-      case 'PEN':
-        return 'Encerrado';
-      case 'PST':
-        return 'Adiado';
-      case 'CANC':
-        return 'Cancelado';
-      case 'SUSP':
-      case 'INT':
-        return 'Interrompido';
-      default:
-        return elapsed != null ? `${elapsed}${extra ? '+' + extra : ''}'` : f.fixture.status.long;
-    }
   }
 
   /** Últimos 5 jogos, do mais antigo para o mais recente (a API manda o mais recente primeiro). */
@@ -192,8 +174,9 @@ function zoneOf(s: Standing): Zone | null {
   return null;
 }
 
-function isLive(f: Fixture): boolean {
-  return LIVE_STATUSES.includes(f.fixture.status.short);
+/** Data de hoje em Brasília, no formato AAAA-MM-DD. */
+function todayInBrasilia(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
 }
 
 /** "Regular Season - 36" → "36ª rodada" */

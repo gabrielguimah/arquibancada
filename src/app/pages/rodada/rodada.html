@@ -1,5 +1,16 @@
 <div class="layout">
   <section class="jogos">
+    @if (todaySorted().length) {
+      <section class="hoje" aria-labelledby="hoje-titulo">
+        <h2 id="hoje-titulo">Partidas de hoje</h2>
+        <ul class="fixtures">
+          @for (f of todaySorted(); track f.fixture.id) {
+            <li><app-fixture-card [fixture]="f" /></li>
+          }
+        </ul>
+      </section>
+    }
+
     <div class="round-nav">
       <button type="button" (click)="step(-1)" [disabled]="roundIndex() <= 0" aria-label="Rodada anterior">‹</button>
       <div class="round-select">
@@ -28,20 +39,20 @@
         <span class="sk sk-day"></span>
         <ul class="fixtures">
           @for (i of skeletonCards; track i) {
-            <li class="fixture" aria-hidden="true">
-              <div class="team home">
-                <span class="sk sk-name"></span>
-                <span class="sk sk-crest"></span>
+            <li class="sk-card" aria-hidden="true">
+              <div class="sk-status">
+                <span class="sk sk-time"></span>
+                <span class="sk sk-state"></span>
               </div>
-              <div class="score">
-                <span class="sk sk-score"></span>
-                <span class="sk sk-status"></span>
+              <div class="sk-teams">
+                @for (t of [0, 1]; track t) {
+                  <div class="sk-team">
+                    <span class="sk sk-crest"></span>
+                    <span class="sk sk-name"></span>
+                    <span class="sk sk-goal"></span>
+                  </div>
+                }
               </div>
-              <div class="team away">
-                <span class="sk sk-crest"></span>
-                <span class="sk sk-name"></span>
-              </div>
-              <span class="sk sk-venue"></span>
             </li>
           }
         </ul>
@@ -52,37 +63,7 @@
       <h3 class="day">{{ day.label }}</h3>
       <ul class="fixtures">
         @for (f of day.fixtures; track f.fixture.id) {
-          <li class="fixture" [class.live]="isLive(f)">
-            @if (isDelayed(f)) {
-              <span class="tag" title="Jogo desta rodada disputado depois do início da rodada seguinte">Atrasado</span>
-            }
-            <div class="team home">
-              <span class="name">{{ f.teams.home.name }}</span>
-              <img crest [src]="f.teams.home.logo" [alt]="f.teams.home.name" width="28" height="28" loading="lazy" />
-            </div>
-            <div class="score">
-              @if (f.goals.home !== null) {
-                <strong>{{ f.goals.home }} <span>×</span> {{ f.goals.away }}</strong>
-              } @else {
-                <strong class="vs">×</strong>
-              }
-              <small>{{ statusLabel(f) }}</small>
-            </div>
-            <div class="team away">
-              <img crest [src]="f.teams.away.logo" [alt]="f.teams.away.name" width="28" height="28" loading="lazy" />
-              <span class="name">{{ f.teams.away.name }}</span>
-            </div>
-            <p class="venue">
-              <!-- Jogo não iniciado já mostra o horário no lugar do placar. -->
-              @if (f.fixture.status.short !== 'NS') {
-                <time [attr.datetime]="f.fixture.date">{{ kickoff(f) }}</time>
-                @if (f.fixture.venue.name) {
-                  ·
-                }
-              }
-              {{ f.fixture.venue.name }}
-            </p>
-          </li>
+          <li><app-fixture-card [fixture]="f" [delayed]="isDelayed(f)" /></li>
         }
       </ul>
     }
@@ -97,6 +78,7 @@
             <tr>
               <th class="pos">#</th>
               <th class="clube">Clube</th>
+              <th class="pts" title="Pontos">Pts</th>
               <th title="Jogos">J</th>
               <th title="Vitórias">V</th>
               <th title="Empates">E</th>
@@ -104,7 +86,6 @@
               <th title="Saldo de gols">SG</th>
               <th class="gols" title="Gols pró : gols contra">Gols</th>
               <th class="forma">Últimas 5</th>
-              <th class="pts" title="Pontos">Pts</th>
             </tr>
           </thead>
           @for (g of standingGroups(); track $index) {
@@ -120,7 +101,11 @@
                   <td class="clube">
                     <img crest [src]="s.team.logo" alt="" width="20" height="20" loading="lazy" />
                     {{ s.team.name }}
+                    @if (liveTeams().has(s.team.id)) {
+                      <span class="live-dot" title="Jogando agora" aria-label="Jogando agora"></span>
+                    }
                   </td>
+                  <td class="pts">{{ s.points }}</td>
                   <td>{{ s.all.played }}</td>
                   <td>{{ s.all.win }}</td>
                   <td>{{ s.all.draw }}</td>
@@ -134,7 +119,6 @@
                       }
                     </span>
                   </td>
-                  <td class="pts">{{ s.points }}</td>
                 </tr>
               }
             </tbody>

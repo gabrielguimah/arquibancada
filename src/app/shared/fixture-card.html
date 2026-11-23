@@ -1,0 +1,28 @@
+@let f = fixture();
+<article class="card" [class.live]="live()" [attr.title]="venue() || null">
+  <div class="status">
+    <time [attr.datetime]="f.fixture.date">{{ kickoff() }}</time>
+    @if (status()) {
+      <span class="state">
+        @if (live()) {
+          <span class="live-dot" aria-label="Ao vivo"></span>
+        }
+        {{ status() }}
+      </span>
+    }
+    @if (delayed()) {
+      <span class="tag" title="Jogo desta rodada disputado depois da rodada seguinte">Atrasado</span>
+    }
+  </div>
+
+  <div class="teams">
+    @for (side of sides; track side) {
+      @let team = f.teams[side];
+      <div class="team" [class.winner]="team.winner === true" [class.loser]="team.winner === false">
+        <img crest [src]="team.logo" [alt]="" width="22" height="22" loading="lazy" />
+        <span class="name">{{ team.name }}</span>
+        <span class="goals">{{ f.goals[side] ?? '' }}</span>
+      </div>
+    }
+  </div>
+</article>

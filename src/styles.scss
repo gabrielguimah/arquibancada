@@ -5,3 +5,26 @@ html, body {
   background: #f5f7f6;
   color: #1a1a1a;
 }
+
+/* Bolinha vermelha piscando: jogo ao vivo (cards de partida e tabela). */
+.live-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d62828;
+  animation: live-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes live-blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
