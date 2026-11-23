@@ -1,0 +1,34 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #0b3d2e;
+  color: #fff;
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.tag {
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.hero {
+  max-width: 720px;
+  margin: 64px auto;
+  padding: 0 16px;
+  text-align: center;
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+
+  p {
+    color: #555;
+  }
+}
