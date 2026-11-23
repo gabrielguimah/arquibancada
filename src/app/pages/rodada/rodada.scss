@@ -209,6 +209,71 @@ h2 {
   }
 }
 
+/* Esqueleto do carregamento: mesmos cards dos jogos, com blocos no lugar do conteúdo. */
+
+.sk {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #dde5e1 0%, #eef2f0 50%, #dde5e1 100%) 0 0 / 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.sk-day {
+  width: 120px;
+  height: 14px;
+  margin: 20px 0 8px;
+}
+
+.sk-name {
+  width: 60%;
+  max-width: 110px;
+  height: 14px;
+}
+
+.sk-crest {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.sk-score {
+  width: 48px;
+  height: 22px;
+}
+
+.sk-status {
+  width: 56px;
+  height: 10px;
+  margin-top: 6px;
+}
+
+.sk-venue {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: 140px;
+  height: 10px;
+}
+
+@media (max-width: 480px) {
+  .skeleton .sk-name {
+    width: 70%;
+  }
+}
+
 /* Classificação */
 
 $zones: (

@@ -24,7 +24,28 @@
     }
 
     @if (loading()) {
-      <p class="muted">Carregando jogos…</p>
+      <div class="skeleton" aria-busy="true" aria-label="Carregando jogos">
+        <span class="sk sk-day"></span>
+        <ul class="fixtures">
+          @for (i of skeletonCards; track i) {
+            <li class="fixture" aria-hidden="true">
+              <div class="team home">
+                <span class="sk sk-name"></span>
+                <span class="sk sk-crest"></span>
+              </div>
+              <div class="score">
+                <span class="sk sk-score"></span>
+                <span class="sk sk-status"></span>
+              </div>
+              <div class="team away">
+                <span class="sk sk-crest"></span>
+                <span class="sk sk-name"></span>
+              </div>
+              <span class="sk sk-venue"></span>
+            </li>
+          }
+        </ul>
+      </div>
     }
 
     @for (day of days(); track day.label) {

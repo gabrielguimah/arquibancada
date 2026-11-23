@@ -134,6 +134,8 @@ export class Rodada {
 
   protected isLive = isLive;
   protected roundName = roundName;
+  // Uma rodada tem 10 jogos; 6 cards de esqueleto já preenchem a tela.
+  protected skeletonCards = [0, 1, 2, 3, 4, 5];
 
   protected kickoff(f: Fixture): string {
     return new Date(f.fixture.date).toLocaleTimeString('pt-BR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
