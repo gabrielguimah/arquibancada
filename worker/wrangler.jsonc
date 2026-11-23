@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "arquibancada-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+  "vars": {
+    // Teto de requisições por dia (UTC). O plano Pro permite 7.500; a folga evita estourar.
+    "DAILY_LIMIT": "7000",
+    "ALLOWED_ORIGINS": "https://gabrielguimah.com.br,http://gabrielguimah.com.br,https://gabrielguimah.github.io,http://localhost:4200"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "API_CACHE", "class_name": "ApiCache" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ApiCache"] }]
+}

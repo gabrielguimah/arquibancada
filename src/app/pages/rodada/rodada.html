@@ -1,0 +1,95 @@
+<div class="layout">
+  <section class="jogos">
+    <div class="round-nav">
+      <button type="button" (click)="step(-1)" [disabled]="roundIndex() <= 0" aria-label="Rodada anterior">‹</button>
+      <h2>
+        {{ roundLabel() }}
+        @if (hasLive()) {
+          <span class="live-badge">Ao vivo</span>
+        }
+      </h2>
+      <button type="button" (click)="step(1)" [disabled]="roundIndex() >= rounds().length - 1" aria-label="Próxima rodada">›</button>
+    </div>
+
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+
+    @if (loading()) {
+      <p class="muted">Carregando jogos…</p>
+    }
+
+    @for (day of days(); track day.label) {
+      <h3 class="day">{{ day.label }}</h3>
+      <ul class="fixtures">
+        @for (f of day.fixtures; track f.fixture.id) {
+          <li class="fixture" [class.live]="isLive(f)">
+            <div class="team home">
+              <span class="name">{{ f.teams.home.name }}</span>
+              <img [src]="f.teams.home.logo" [alt]="f.teams.home.name" width="28" height="28" loading="lazy" />
+            </div>
+            <div class="score">
+              @if (f.goals.home !== null) {
+                <strong>{{ f.goals.home }} <span>×</span> {{ f.goals.away }}</strong>
+              } @else {
+                <strong class="vs">×</strong>
+              }
+              <small>{{ statusLabel(f) }}</small>
+            </div>
+            <div class="team away">
+              <img [src]="f.teams.away.logo" [alt]="f.teams.away.name" width="28" height="28" loading="lazy" />
+              <span class="name">{{ f.teams.away.name }}</span>
+            </div>
+            @if (f.fixture.venue.name) {
+              <p class="venue">{{ f.fixture.venue.name }}</p>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section class="tabela">
+    <h2>Classificação</h2>
+    @if (standings().length) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="pos">#</th>
+              <th class="clube">Clube</th>
+              <th title="Pontos">P</th>
+              <th title="Jogos">J</th>
+              <th title="Vitórias">V</th>
+              <th title="Empates">E</th>
+              <th title="Derrotas">D</th>
+              <th title="Saldo de gols">SG</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of standings(); track s.team.id) {
+              <tr [class]="zone(s)">
+                <td class="pos">{{ s.rank }}</td>
+                <td class="clube">
+                  <img [src]="s.team.logo" [alt]="" width="20" height="20" loading="lazy" />
+                  {{ s.team.name }}
+                </td>
+                <td class="pts">{{ s.points }}</td>
+                <td>{{ s.all.played }}</td>
+                <td>{{ s.all.win }}</td>
+                <td>{{ s.all.draw }}</td>
+                <td>{{ s.all.lose }}</td>
+                <td>{{ s.goalsDiff }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <ul class="legend">
+        <li class="libertadores">Libertadores</li>
+        <li class="sulamericana">Sul-Americana</li>
+        <li class="rebaixamento">Rebaixamento</li>
+      </ul>
+    }
+  </section>
+</div>
