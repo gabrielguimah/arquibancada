@@ -1,0 +1,167 @@
+$muted: var(--muted);
+$line: var(--line);
+
+:host {
+  display: block;
+  margin-top: 24px;
+}
+
+// Título e select de critério, acima das duas tabelas.
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  mat-form-field {
+    width: 240px;
+  }
+}
+
+.value {
+  min-width: 40px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+// Duas tabelas lado a lado; no celular, uma embaixo da outra.
+.tables {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 560px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.table-card {
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px var(--shadow);
+  padding: 12px 0 8px;
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 14px 8px;
+
+    span {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: $muted;
+    }
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+// Altura fixa das linhas: a tabela tem sempre 5 linhas de altura, aberta ou não.
+$row-height: 35px;
+
+.rows.scroll {
+  max-height: $row-height * 5;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.row {
+  box-sizing: border-box;
+  height: $row-height;
+  display: grid;
+  grid-template-columns: 18px 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  font-size: 0.875rem;
+
+  & + & {
+    border-top: 1px solid $line;
+  }
+
+  img {
+    object-fit: contain;
+  }
+}
+
+.rank {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $muted;
+  text-align: center;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 6px 14px 4px;
+  padding: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--button-bg);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--button-text);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--button-bg-hover);
+  }
+}
+
+.message {
+  margin: 0;
+  font-size: 0.85rem;
+  color: $muted;
+}
+
+/* Esqueleto */
+
+.sk-rank {
+  width: 10px;
+  height: 10px;
+  justify-self: center;
+}
+
+.sk-crest {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.sk-name {
+  width: 55%;
+  height: 11px;
+}
+
+.sk-badge {
+  width: 40px;
+  height: 22px;
+}

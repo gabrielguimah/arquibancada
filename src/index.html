@@ -5,7 +5,20 @@
   <title>Arquibancada</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script>
+    // Aplica o modo escuro antes de a página aparecer (mesma regra do ThemeService).
+    try {
+      var tema = localStorage.getItem('arquibancada:tema');
+      if (tema ? tema === 'escuro' : matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      }
+    } catch (e) {}
+  </script>
+  <!-- Ícones do Angular Material (mat-icon), na fonte Material Symbols. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&display=block">
 </head>
 <body>
   <app-root></app-root>

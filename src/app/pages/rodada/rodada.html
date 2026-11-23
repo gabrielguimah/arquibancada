@@ -1,6 +1,16 @@
 <div class="layout">
   <section class="jogos">
-    @if (todaySorted().length) {
+    <!-- Enquanto não se sabe se há jogo hoje, mostra o esqueleto; sem jogo, a seção some. -->
+    @if (today() === null) {
+      <section class="hoje" aria-busy="true" aria-label="Carregando partidas de hoje">
+        <span class="sk sk-title"></span>
+        <ul class="fixtures">
+          @for (i of [0, 1]; track i) {
+            <li><app-fixture-card-skeleton /></li>
+          }
+        </ul>
+      </section>
+    } @else if (todaySorted().length) {
       <section class="hoje" aria-labelledby="hoje-titulo">
         <h2 id="hoje-titulo">Partidas de hoje</h2>
         <ul class="fixtures">
@@ -11,24 +21,48 @@
       </section>
     }
 
-    <div class="round-nav">
-      <button type="button" (click)="step(-1)" [disabled]="roundIndex() <= 0" aria-label="Rodada anterior">‹</button>
-      <div class="round-select">
-        <select
-          aria-label="Escolher rodada"
-          [value]="round() ?? ''"
-          (change)="selectRound($any($event.target).value)"
-        >
-          @for (r of rounds(); track r) {
-            <option [value]="r" [selected]="r === round()">{{ roundName(r) }}</option>
-          }
-        </select>
-        @if (hasLive()) {
-          <span class="live-badge">Ao vivo</span>
-        }
+    @if (!rounds().length && !error()) {
+      <div class="round-nav" aria-hidden="true">
+        <span class="sk sk-nav-btn"></span>
+        <span class="sk sk-nav-select"></span>
+        <span class="sk sk-nav-btn"></span>
       </div>
-      <button type="button" (click)="step(1)" [disabled]="roundIndex() >= rounds().length - 1" aria-label="Próxima rodada">›</button>
-    </div>
+    } @else if (rounds().length) {
+      <div class="round-nav">
+        <button
+          type="button"
+          (click)="step(-1)"
+          [disabled]="roundIndex() <= 0"
+          aria-label="Rodada anterior"
+        >
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <div class="round-select">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense">
+            <mat-select
+              aria-label="Escolher rodada"
+              [value]="round()"
+              (selectionChange)="selectRound($event.value)"
+            >
+              @for (r of rounds(); track r) {
+                <mat-option [value]="r">{{ roundName(r) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          @if (hasLive()) {
+            <span class="live-badge">Ao vivo</span>
+          }
+        </div>
+        <button
+          type="button"
+          (click)="step(1)"
+          [disabled]="roundIndex() >= rounds().length - 1"
+          aria-label="Próxima rodada"
+        >
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    }
 
     @if (error()) {
       <p class="error">{{ error() }}</p>
@@ -39,21 +73,7 @@
         <span class="sk sk-day"></span>
         <ul class="fixtures">
           @for (i of skeletonCards; track i) {
-            <li class="sk-card" aria-hidden="true">
-              <div class="sk-status">
-                <span class="sk sk-time"></span>
-                <span class="sk sk-state"></span>
-              </div>
-              <div class="sk-teams">
-                @for (t of [0, 1]; track t) {
-                  <div class="sk-team">
-                    <span class="sk sk-crest"></span>
-                    <span class="sk sk-name"></span>
-                    <span class="sk sk-goal"></span>
-                  </div>
-                }
-              </div>
-            </li>
+            <li><app-fixture-card-skeleton /></li>
           }
         </ul>
       </div>
@@ -97,12 +117,18 @@
               }
               @for (s of g.rows; track s.team.id) {
                 <tr>
-                  <td class="pos"><span>{{ s.rank }}</span></td>
+                  <td class="pos">
+                    <span>{{ s.rank }}</span>
+                  </td>
                   <td class="clube">
                     <img crest [src]="s.team.logo" alt="" width="20" height="20" loading="lazy" />
                     {{ s.team.name }}
                     @if (liveTeams().has(s.team.id)) {
-                      <span class="live-dot" title="Jogando agora" aria-label="Jogando agora"></span>
+                      <span
+                        class="live-dot"
+                        title="Jogando agora"
+                        aria-label="Jogando agora"
+                      ></span>
                     }
                   </td>
                   <td class="pts">{{ s.points }}</td>
@@ -130,6 +156,43 @@
           <li [class]="z.id">{{ z.label }}</li>
         }
       </ul>
+    } @else if (!error()) {
+      <!-- Esqueleto da classificação: mesmas colunas, com blocos no lugar dos números. -->
+      <div class="table-wrap" aria-busy="true" aria-label="Carregando classificação">
+        <table aria-hidden="true">
+          <thead>
+            <tr>
+              <th class="pos">#</th>
+              <th class="clube">Clube</th>
+              <th class="pts">Pts</th>
+              <th>J</th>
+              <th>V</th>
+              <th>E</th>
+              <th>D</th>
+              <th>SG</th>
+              <th class="gols">Gols</th>
+              <th class="forma">Últimas 5</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (i of skeletonStandings; track i) {
+              <tr class="sk-row">
+                <td class="pos"><span class="sk sk-pos"></span></td>
+                <td class="clube">
+                  <span class="sk sk-crest-sm"></span><span class="sk sk-club"></span>
+                </td>
+                @for (c of [0, 1, 2, 3, 4, 5]; track c) {
+                  <td><span class="sk sk-num"></span></td>
+                }
+                <td class="gols"><span class="sk sk-num"></span></td>
+                <td class="forma"><span class="sk sk-form"></span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
+
+    <app-team-ratings />
   </section>
 </div>

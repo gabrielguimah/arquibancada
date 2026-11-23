@@ -7,6 +7,8 @@
   "vars": {
     // Teto de requisições por dia (UTC). O plano Pro permite 7.500; a folga evita estourar.
     "DAILY_LIMIT": "7000",
+    // Temporada do ranking de notas (players/toprated).
+    "SEASON": "2026",
     "ALLOWED_ORIGINS": "https://gabrielguimah.com.br,http://gabrielguimah.com.br,https://gabrielguimah.github.io,http://localhost:4200"
   },
   "durable_objects": {

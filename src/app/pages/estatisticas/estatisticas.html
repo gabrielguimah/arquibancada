@@ -1,0 +1,129 @@
+<!-- Grade da página: título e filtro; artilharia, assistências e notas; time da rodada e jogadores.
+     O filtro fica em cima do quadro de notas, o único que ele afeta. -->
+<div class="page">
+  <h1 class="area-title">Estatísticas</h1>
+
+  <div class="filter area-filter">
+    <div class="switch" role="radiogroup" aria-label="Jogadores considerados">
+      <button
+        type="button"
+        role="radio"
+        [attr.aria-checked]="filter() === 'regulares'"
+        [class.on]="filter() === 'regulares'"
+        aria-describedby="regulares-tip"
+        (click)="filter.set('regulares')"
+      >
+        Regulares
+        <mat-icon class="info" [matTooltip]="regularTip()" matTooltipPosition="below"
+          >info</mat-icon
+        >
+        <span class="sr-only" id="regulares-tip">{{ regularTip() }}</span>
+      </button>
+      <button
+        type="button"
+        role="radio"
+        [attr.aria-checked]="filter() === 'todos'"
+        [class.on]="filter() === 'todos'"
+        (click)="filter.set('todos')"
+      >
+        Todos os jogadores
+      </button>
+    </div>
+  </div>
+
+  @for (b of boards(); track b.title) {
+    <section class="board" [class]="'area-' + b.id" [attr.aria-labelledby]="'board-' + $index">
+      <header>
+        <div>
+          <h2 [id]="'board-' + $index">{{ b.title }}</h2>
+          <p class="subtitle">{{ b.subtitle }}</p>
+        </div>
+        <span class="unit">{{ b.unit }}</span>
+      </header>
+
+      @if (b.loading) {
+        <ol class="rows" aria-busy="true" aria-label="Carregando">
+          @for (i of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; track i) {
+            <li class="row" aria-hidden="true">
+              <span class="sk sk-rank"></span>
+              <span class="sk sk-photo"></span>
+              <span class="sk-text"
+                ><span class="sk sk-name"></span><span class="sk sk-team"></span
+              ></span>
+              <span class="sk sk-value"></span>
+            </li>
+          }
+        </ol>
+      } @else if (b.message) {
+        <p class="message">{{ b.message }}</p>
+      } @else {
+        <ol class="rows" [class.scroll]="isExpanded(b)" (scroll)="onScroll(b, $event)">
+          @for (r of visible(b); track r.id) {
+            <li class="row">
+              <span class="rank">{{ r.rank }}</span>
+              <span class="photo">
+                <img [src]="r.photo" [alt]="" width="36" height="36" loading="lazy" />
+                <img
+                  crest
+                  class="badge"
+                  [src]="r.team.logo"
+                  [alt]=""
+                  width="16"
+                  height="16"
+                  loading="lazy"
+                />
+              </span>
+              <span class="who">
+                <strong>{{ r.name }}</strong>
+                <small>{{ r.team.name }} · {{ r.detail }}</small>
+              </span>
+              @if (b.rating) {
+                <span [class]="ratingClass(r.value)">{{ r.value.toFixed(2) }}</span>
+              } @else {
+                <span class="value">{{ r.value }}</span>
+              }
+            </li>
+          }
+        </ol>
+      }
+
+      <!-- Quadro sem mais linhas: o botão fica invisível, mas ocupa o espaço (quadros do mesmo tamanho). -->
+      @if (canExpand()) {
+        <button
+          type="button"
+          class="more"
+          [class.placeholder]="b.rows.length <= collapsed"
+          [disabled]="b.rows.length <= collapsed"
+          (click)="toggle(b)"
+        >
+          {{ isExpanded(b) ? 'Ver menos' : 'Ver mais' }}
+        </button>
+      }
+    </section>
+  }
+
+  <app-round-team class="area-team" />
+
+  <!-- Esboço: grade de jogadores (conteúdo a definir). -->
+  <section class="board players-sketch area-players" aria-labelledby="players-title">
+    <header>
+      <div>
+        <h2 id="players-title">Jogadores</h2>
+        <p class="subtitle">Esboço: conteúdo a definir</p>
+      </div>
+    </header>
+    <div class="sketch" aria-hidden="true">
+      <div class="sketch-row head">
+        <span></span><span>Jogador</span><span>Time</span><span>Pos.</span><span>J</span
+        ><span>G</span><span>A</span><span>Nota</span>
+      </div>
+      @for (i of [0, 1, 2, 3, 4, 5, 6, 7]; track i) {
+        <div class="sketch-row">
+          <span class="dot"></span><span class="bar w-60"></span><span class="bar w-40"></span
+          ><span class="bar"></span><span class="bar"></span><span class="bar"></span
+          ><span class="bar"></span><span class="bar"></span>
+        </div>
+      }
+    </div>
+  </section>
+</div>

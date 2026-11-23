@@ -1,0 +1,334 @@
+$muted: var(--muted);
+$line: var(--line);
+
+.page {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    'title title filter'
+    'scorers assists rated'
+    'team players players';
+  gap: 16px 20px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 16px;
+
+  // Celular e tablet: uma coluna, com o filtro logo acima do quadro de notas (o único que ele afeta).
+  @media (max-width: 1000px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'title' 'scorers' 'assists' 'filter' 'rated' 'team' 'players';
+    max-width: 560px;
+  }
+}
+
+@each $area in title, filter, scorers, assists, rated, team, players {
+  .area-#{$area} {
+    grid-area: $area;
+  }
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.filter {
+  display: grid;
+  justify-items: end;
+  align-self: end;
+
+  @media (max-width: 1000px) {
+    justify-items: start;
+  }
+}
+
+.switch {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--button-bg);
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: $muted;
+    cursor: pointer;
+
+    &.on {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+}
+
+// Ícone de informação da opção Regulares (texto no matTooltip).
+.info {
+  margin: -2px -4px 0 2px;
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
+  cursor: help;
+}
+
+// Texto só para leitores de tela (o tooltip não é anunciado ao focar a opção).
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px var(--shadow);
+  padding: 12px 0 8px;
+
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0 16px 8px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: $muted;
+}
+
+.unit {
+  padding-top: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: $muted;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+// Altura fixa das linhas: os quadros têm sempre 10 linhas de altura, abertos ou não.
+$row-height: 51px;
+
+.rows.scroll {
+  max-height: $row-height * 10;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.row {
+  box-sizing: border-box;
+  height: $row-height;
+  display: grid;
+  grid-template-columns: 22px 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+
+  & + & {
+    border-top: 1px solid $line;
+  }
+}
+
+.rank {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $muted;
+  text-align: center;
+}
+
+.photo {
+  position: relative;
+  width: 36px;
+  height: 36px;
+
+  > img:first-child {
+    box-sizing: border-box;
+    width: 36px;
+    height: 36px;
+    // Borda fina na cor de destaque da paleta (marinho no claro, azul elétrico no escuro).
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    background: var(--line-strong);
+    object-fit: cover;
+  }
+
+  .badge {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    padding: 1px;
+    border-radius: 50%;
+    background: var(--surface);
+    object-fit: contain;
+  }
+}
+
+.who {
+  display: grid;
+  min-width: 0;
+
+  strong,
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  small {
+    font-size: 0.72rem;
+    color: $muted;
+  }
+}
+
+.value {
+  min-width: 28px;
+  text-align: right;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.more {
+  display: block;
+  width: calc(100% - 32px);
+  // Fica no rodapé do quadro, alinhado entre os três.
+  margin: auto 16px 4px;
+  padding: 7px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--button-bg);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--button-text);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--button-bg-hover);
+  }
+
+  &.placeholder {
+    visibility: hidden;
+  }
+}
+
+.message {
+  margin: 8px 16px 12px;
+  font-size: 0.85rem;
+  color: $muted;
+}
+
+/* Esqueleto */
+
+.sk-rank {
+  width: 14px;
+  height: 12px;
+  justify-self: center;
+}
+
+.sk-photo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.sk-text {
+  display: grid;
+  gap: 5px;
+}
+
+.sk-name {
+  width: 60%;
+  height: 12px;
+}
+
+.sk-team {
+  width: 40%;
+  height: 9px;
+}
+
+.sk-value {
+  width: 28px;
+  height: 16px;
+}
+
+/* Esboço da grade de jogadores (placeholder até definir o conteúdo). */
+
+.players-sketch {
+  border: 1.5px dashed var(--border);
+  box-shadow: none;
+}
+
+.sketch {
+  padding: 0 16px 8px;
+}
+
+.sketch-row {
+  display: grid;
+  grid-template-columns: 28px 2fr 1.4fr repeat(5, 0.6fr);
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  border-top: 1px solid $line;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: $muted;
+
+  &.head {
+    border-top: 0;
+  }
+
+  .dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--line-strong);
+  }
+
+  .bar {
+    width: 70%;
+    height: 10px;
+    border-radius: 5px;
+    background: var(--line-strong);
+
+    &.w-60 {
+      width: 60%;
+    }
+
+    &.w-40 {
+      width: 40%;
+    }
+  }
+}

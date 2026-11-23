@@ -1,0 +1,62 @@
+<div class="toolbar">
+  <h2>Times</h2>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense">
+    <mat-label>Classificar por</mat-label>
+    <mat-select [value]="metric().id" (selectionChange)="selectMetric($event.value)">
+      @for (m of metrics; track m.id) {
+        <mat-option [value]="m.id">{{ m.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (message()) {
+  <p class="message">{{ message() }}</p>
+} @else {
+  <div class="tables">
+    @for (t of tables(); track t.id) {
+      <section class="table-card" [attr.aria-labelledby]="'team-rating-' + t.id">
+        <header>
+          <h3 [id]="'team-rating-' + t.id">{{ metric().label }}</h3>
+          <span>{{ t.subtitle }}</span>
+        </header>
+
+        <ol
+          class="rows"
+          [class.scroll]="expanded()[t.id]"
+          [attr.aria-busy]="t.rows === null"
+          (scroll)="onScroll(t, $event)"
+        >
+          @if (t.rows === null) {
+            @for (i of skeleton; track i) {
+              <li class="row" aria-hidden="true">
+                <span class="sk sk-rank"></span>
+                <span class="sk sk-crest"></span>
+                <span class="sk sk-name"></span>
+                <span class="sk sk-badge"></span>
+              </li>
+            }
+          } @else {
+            @for (r of visible(t); track r.row.team.id) {
+              <li class="row">
+                <span class="rank">{{ r.rank }}</span>
+                <img crest [src]="r.row.team.logo" alt="" width="20" height="20" loading="lazy" />
+                <span class="name">{{ r.row.team.name }}</span>
+                <span
+                  [class]="metric().id === 'rating' ? ratingClass(r.value) : 'value'"
+                  [matTooltip]="tip(r.row)"
+                  [matTooltipDisabled]="!tip(r.row)"
+                  >{{ metric().format(r.value) }}</span
+                >
+              </li>
+            }
+          }
+        </ol>
+
+        @if (t.rows && t.rows.length > skeleton.length) {
+          <button type="button" class="more" (click)="toggle(t)">{{ expanded()[t.id] ? 'Ver menos' : 'Ver mais' }}</button>
+        }
+      </section>
+    }
+  </div>
+}

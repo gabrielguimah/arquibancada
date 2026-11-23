@@ -1,9 +1,227 @@
 /* You can add global styles to this file, and also import other style files */
+@use 'sass:list';
+@use '@angular/material' as mat;
+
+// Faixas do selo de nota, de 0,5 em 0,5 (10 = nota 10; 95 = 9,5 a 9,9; ...; 0 = abaixo de 6).
+// ratingClass() em shared/rating.ts escolhe a faixa; cada paleta define as cores com rating-scale().
+$rating-bins: 100, 95, 90, 85, 80, 75, 70, 65, 60, 0;
+
+@mixin rating-scale($backgrounds, $texts) {
+  @for $i from 1 through list.length($rating-bins) {
+    $bin: list.nth($rating-bins, $i);
+    --rating-#{$bin}: #{list.nth($backgrounds, $i)};
+    --rating-#{$bin}-text: #{list.nth($texts, $i)};
+  }
+}
+
+// Paletas do site. Cada uma define o destaque (`--highlight`, aba ativa e switch) e as cores
+// de fundo, texto e linhas, no par light-dark(claro, escuro). A ativa é incluída no `html` abaixo.
+
+// "Verde-escuro, marfim e amarelo" (#009B4D, #FFCC00, #FAF5E9), as cores do Brasil.
+// Onde o verde fica atrás de texto branco ou é ele mesmo o texto, vai um tom mais escuro (#007A3D),
+// para o contraste passar de 4,5:1.
+@mixin palette-brasil {
+  // Cor principal do Angular Material (selects, menus, foco) e botões, no tom da paleta.
+  @include mat.theme((color: (primary: mat.$green-palette, theme-type: color-scheme)));
+  --button-bg: light-dark(#e6f3ea, #1c2c22);
+  --button-bg-hover: light-dark(#d4ecdc, #243a2c);
+  --button-text: light-dark(#007a3d, #ffd43b);
+  // Notas (≥ 8, de 7 a 8, de 6,5 a 7) e vitória (V em "Últimas 5"); as faixas baixas e a derrota ficam fixas.
+  // Escala anterior: azul (≥ 8), verde, verde-limão, laranja e vermelho (< 6).
+  @include rating-scale(
+    (#1d4ed8, #1d4ed8, #1d4ed8, #1d4ed8, #1d4ed8, #16a34a, #16a34a, #84b819, #ea7a0c, #dc2626),
+    (#fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff)
+  );
+  --win: #16a34a;
+
+  --highlight: #ffcc00;
+  --on-highlight: #0d3b22;
+
+  --bg: light-dark(#faf5e9, #0d1410);
+  --surface: light-dark(#fff, #16201a);
+  --surface-hover: light-dark(#f7f1e2, #1d2a22);
+  --text: light-dark(#1d221e, #e8ede6);
+  --muted: light-dark(#5f6a60, #98a89b);
+  --subtle: light-dark(#a3a796, #677a6b);
+  --line: light-dark(#f0eadb, #212c25);
+  --line-strong: light-dark(#e8e0cc, #29362d);
+  --border: light-dark(#d9d0b9, #34443a);
+  --accent: light-dark(#007a3d, #ffd43b);
+  --topbar: light-dark(#007a3d, #08261a);
+  --shadow: light-dark(rgb(60 50 20 / 0.08), rgb(0 0 0 / 0.45));
+  --sk-base: light-dark(#ebe4d3, #212d25);
+  --sk-shine: light-dark(#f6f1e4, #2c3b31);
+}
+
+// "Cinza-escuro e amarelo-esverdeado" (#BAFF39, #6E6E6E, #FFFFFF), indicada para esportes.
+// O limão só aparece como fundo (aba ativa, switch) ou sobre o escuro: sobre o branco ele some,
+// então o texto de destaque no modo claro usa um verde-oliva tirado dele (#4A7A00).
+@mixin palette-esporte {
+  // Cor principal do Angular Material (selects, menus, foco) e botões, no tom da paleta.
+  @include mat.theme((color: (primary: mat.$chartreuse-palette, theme-type: color-scheme)));
+  --button-bg: light-dark(#ecf4dc, #262626);
+  --button-bg-hover: light-dark(#dfedc2, #303030);
+  --button-text: light-dark(#3d6600, #baff39);
+  // Notas (≥ 8, de 7 a 8, de 6,5 a 7) e vitória (V em "Últimas 5"); as faixas baixas e a derrota ficam fixas.
+  // Escala anterior: azul (≥ 8), verde, verde-limão, laranja e vermelho (< 6).
+  @include rating-scale(
+    (#1d4ed8, #1d4ed8, #1d4ed8, #1d4ed8, #1d4ed8, #16a34a, #16a34a, #84b819, #ea7a0c, #dc2626),
+    (#fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff)
+  );
+  --win: #16a34a;
+
+  --highlight: #baff39;
+  --on-highlight: #1c1c1c;
+
+  --bg: light-dark(#f3f3f1, #121212);
+  --surface: light-dark(#fff, #1e1e1e);
+  --surface-hover: light-dark(#f6f6f4, #262626);
+  --text: light-dark(#1c1c1c, #ededed);
+  --muted: light-dark(#6e6e6e, #a6a6a6);
+  --subtle: light-dark(#a4a4a4, #6e6e6e);
+  --line: light-dark(#eeeeec, #2a2a2a);
+  --line-strong: light-dark(#e4e4e1, #333);
+  --border: light-dark(#d2d2ce, #444);
+  --accent: light-dark(#4a7a00, #baff39);
+  --topbar: light-dark(#2b2b2b, #0b0b0b);
+  --shadow: light-dark(rgb(0 0 0 / 0.07), rgb(0 0 0 / 0.5));
+  --sk-base: light-dark(#e6e6e3, #262626);
+  --sk-shine: light-dark(#f2f2f0, #313131);
+}
+
+// "Azul-marinho e azul elétrico" (#01257D, #00FFFF), indicada para sites corporativos.
+// O marinho é o cabeçalho e o texto de destaque no modo claro; o elétrico é o destaque (aba ativa,
+// switch) e, no escuro, o texto de destaque. Sobre o branco o elétrico some, por isso não vira texto lá.
+@mixin palette-marinho {
+  // Cor principal do Angular Material (selects, menus, foco) e botões, no tom da paleta.
+  @include mat.theme((color: (primary: mat.$blue-palette, theme-type: color-scheme)));
+  --button-bg: light-dark(#d5e0f7, #16224a);
+  --button-bg-hover: light-dark(#c3d2f2, #1d2c5c);
+  --button-text: light-dark(#01257d, #00ffff);
+  // Notas (≥ 8, de 7 a 8, de 6,5 a 7) e vitória (V em "Últimas 5"); as faixas baixas e a derrota ficam fixas.
+  // Quanto maior a nota, mais claro e elétrico o azul: do marinho (< 6) ao #00FFFF (10).
+  // Nas faixas claras o número fica em marinho; nas escuras, em branco.
+  @include rating-scale(
+    (#00ffff, #1ae6ff, #2fccff, #3bb2ff, #3d97f5, #2f7be6, #2361cf, #1a4ab3, #123894, #0b2870),
+    (#01257d, #01257d, #01257d, #01257d, #01257d, #fff, #fff, #fff, #fff, #fff)
+  );
+  --win: light-dark(#1d5fd6, #2a86ff);
+
+  --highlight: #00ffff;
+  --on-highlight: #01257d;
+
+  --bg: light-dark(#e9effa, #070d1d);
+  --surface: light-dark(#fff, #0f172c);
+  --surface-hover: light-dark(#f1f5fd, #152040);
+  --text: light-dark(#0e1830, #e6ecf8);
+  --muted: light-dark(#56637e, #97a4c2);
+  --subtle: light-dark(#9aa5bd, #5f6c8a);
+  --line: light-dark(#ebeff7, #1a2440);
+  --line-strong: light-dark(#dbe3f4, #222e4e);
+  --border: light-dark(#cdd5e6, #2f3c60);
+  --accent: light-dark(#01257d, #00ffff);
+  --topbar: light-dark(#01257d, #010f36);
+  --shadow: light-dark(rgb(1 37 125 / 0.08), rgb(0 0 0 / 0.5));
+  --sk-base: light-dark(#e1e7f3, #18223d);
+  --sk-shine: light-dark(#eef2fa, #22304f);
+}
+
+// Tema do Angular Material (tooltip, selects, ícones), no verde do site. Com `theme-type: color-scheme`,
+// as cores do Material seguem a propriedade `color-scheme` do <html> (claro/escuro).
+html {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$green-palette,
+        theme-type: color-scheme,
+      ),
+      typography: (
+        plain-family: (system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif),
+      ),
+      density: 0,
+    )
+  );
+
+  // Modo escuro: a classe `dark` no <html> (ThemeService). As cores do site usam light-dark(claro, escuro).
+  color-scheme: light;
+
+  &.dark {
+    color-scheme: dark;
+  }
+
+  // Paleta ativa: `palette-brasil`, `palette-esporte` ou `palette-marinho`.
+  @include palette-marinho;
+
+  // "Atrasado" em violeta, para não se confundir com o destaque das paletas.
+  --tag-bg: light-dark(#efe9f8, #2c2340);
+  --tag-text: light-dark(#5b3f91, #c8b5f0);
+  // Gramado do campo (time da rodada): verde em todas as paletas, mais escuro no modo escuro.
+  --pitch: light-dark(#2f8150, #1d5235);
+  --pitch-stripe: light-dark(#2a7648, #1a4a30);
+  --error-bg: light-dark(#fdecec, #3a1c1c);
+  --error-text: light-dark(#8a1c1c, #f4a9a9);
+}
+
+// Campos do Material mais baixos (selects de rodada e de critério).
+.dense {
+  @include mat.theme((density: -4));
+}
+
+// Ícones alinhados ao texto ao redor; o tamanho segue o font-size de quem usa.
+.mat-icon {
+  vertical-align: middle;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
 html, body {
   margin: 0;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #f5f7f6;
-  color: #1a1a1a;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Esqueleto de carregamento: bloco cinza com brilho; cada componente define tamanho e forma. */
+.sk {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-shine) 50%, var(--sk-base) 100%) 0 0 / 200% 100%;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes sk-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk {
+    animation: none;
+  }
+}
+
+/* Selo da nota (0–10); a faixa vem de ratingClass() em shared/rating.ts, as cores da paleta. */
+.rating-badge {
+  display: inline-block;
+  min-width: 40px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+
+  @each $bin in $rating-bins {
+    &.r-#{$bin} {
+      background: var(--rating-#{$bin});
+      color: var(--rating-#{$bin}-text);
+    }
+  }
 }
 
 /* Bolinha vermelha piscando: jogo ao vivo (cards de partida e tabela). */

@@ -1,8 +1,13 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { MatFormField } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
+import { MatOption, MatSelect } from '@angular/material/select';
 import { forkJoin, of } from 'rxjs';
 import { ApiFootball, Fixture, Standing } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { FixtureCard, TZ, isLive } from '../../shared/fixture-card';
+import { FixtureCardSkeleton } from '../../shared/fixture-card-skeleton';
+import { TeamRatingsTables } from './team-ratings';
 
 // Intervalo de atualização: rápido com jogo rolando, lento no resto do tempo.
 const REFRESH_LIVE_MS = 30_000;
@@ -27,7 +32,7 @@ type FormResult = 'V' | 'E' | 'D';
 
 @Component({
   selector: 'app-rodada',
-  imports: [Crest, FixtureCard],
+  imports: [Crest, FixtureCard, FixtureCardSkeleton, MatIcon, MatFormField, MatSelect, MatOption, TeamRatingsTables],
   templateUrl: './rodada.html',
   styleUrl: './rodada.scss',
 })
@@ -40,22 +45,23 @@ export class Rodada {
   protected fixtures = signal<Fixture[]>([]);
   // Data típica (mediana) da rodada seguinte: jogos desta rodada disputados depois dela são atrasados.
   protected nextRoundStart = signal<number | null>(null);
-  protected today = signal<Fixture[]>([]);
+  // null até a primeira resposta: a seção "Partidas de hoje" mostra o esqueleto.
+  protected today = signal<Fixture[] | null>(null);
   protected standings = signal<Standing[]>([]);
   protected error = signal<string | null>(null);
   protected loading = signal(true);
 
   protected roundIndex = computed(() => this.rounds().indexOf(this.round() ?? ''));
-  protected hasLive = computed(() => [...this.fixtures(), ...this.today()].some((f) => isLive(f)));
+  protected hasLive = computed(() => [...this.fixtures(), ...(this.today() ?? [])].some((f) => isLive(f)));
   // Times em campo agora, para a bolinha ao vivo na tabela.
   protected liveTeams = computed(() => {
     const ids = new Set<number>();
-    for (const f of [...this.fixtures(), ...this.today()]) {
+    for (const f of [...this.fixtures(), ...(this.today() ?? [])]) {
       if (isLive(f)) ids.add(f.teams.home.id).add(f.teams.away.id);
     }
     return ids;
   });
-  protected todaySorted = computed(() => [...this.today()].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp));
+  protected todaySorted = computed(() => [...(this.today() ?? [])].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp));
   protected days = computed<FixtureDay[]>(() => {
     const groups = new Map<string, Fixture[]>();
     for (const f of [...this.fixtures()].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)) {
@@ -140,12 +146,15 @@ export class Rodada {
 
   private fail() {
     this.loading.set(false);
+    // Sem dados de hoje: esconde a seção em vez de deixar o esqueleto girando.
+    if (this.today() === null) this.today.set([]);
     this.error.set('Não foi possível carregar os dados. Tentando de novo em instantes…');
   }
 
   protected roundName = roundName;
   // Uma rodada tem 10 jogos; 6 cards de esqueleto já preenchem a tela.
   protected skeletonCards = [0, 1, 2, 3, 4, 5];
+  protected skeletonStandings = Array.from({ length: 20 }, (_, i) => i);
 
   protected isDelayed(f: Fixture): boolean {
     const start = this.nextRoundStart();

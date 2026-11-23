@@ -1,0 +1,89 @@
+<section class="card" aria-labelledby="round-team-title">
+  <header>
+    <div>
+      <h2 id="round-team-title">Time da rodada</h2>
+      <p class="subtitle">4-3-3 com as melhores notas</p>
+    </div>
+  </header>
+
+  @if (rounds().length) {
+    <div class="round-nav">
+      <button type="button" (click)="step(-1)" [disabled]="roundIndex() <= 0" aria-label="Rodada anterior">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense">
+        <mat-select aria-label="Escolher rodada" [value]="round()" (selectionChange)="select($event.value)">
+          @for (r of rounds(); track r) {
+            <mat-option [value]="r">{{ roundName(r) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <button
+        type="button"
+        (click)="step(1)"
+        [disabled]="roundIndex() >= rounds().length - 1"
+        aria-label="Próxima rodada"
+      >
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+  } @else if (!error()) {
+    <div class="round-nav" aria-hidden="true">
+      <span class="sk sk-nav-btn"></span>
+      <span class="sk sk-nav-select"></span>
+      <span class="sk sk-nav-btn"></span>
+    </div>
+  }
+
+  <div class="pitch" [attr.aria-busy]="loading()">
+    <span class="mark half"></span>
+    <span class="mark circle"></span>
+    <span class="mark box top"></span>
+    <span class="mark box bottom"></span>
+
+    @if (loading()) {
+      @for (line of skeletonLines; track line.position) {
+        <div class="line" aria-hidden="true">
+          @for (i of line.slots; track i) {
+            <div class="spot">
+              <span class="sk sk-photo"></span>
+              <span class="sk sk-name"></span>
+            </div>
+          }
+        </div>
+      }
+    } @else if (error()) {
+      <p class="message">Não foi possível carregar.</p>
+    } @else if (!team()?.players?.length) {
+      <p class="message">Nenhum jogo encerrado nesta rodada ainda.</p>
+    } @else {
+      @for (line of lines(); track line.position) {
+        <ol class="line">
+          @for (p of line.players; track p.player.id) {
+            <li
+              class="spot"
+              [class.best]="p.player.id === bestId()"
+              [title]="(p.player.id === bestId() ? 'Melhor da rodada · ' : '') + p.player.name + ' · ' + p.team.name + ' · ' + p.minutes + ' min'"
+            >
+              <span class="photo">
+                <img class="player" [src]="p.player.photo" alt="" width="44" height="44" loading="lazy" />
+                @if (p.player.id === bestId()) {
+                  <span class="star" aria-label="Melhor da rodada"><mat-icon>star</mat-icon></span>
+                }
+                <img crest class="badge" [src]="p.team.logo" alt="" width="16" height="16" loading="lazy" />
+                <span [class]="ratingClass(p.rating) + ' rating'">{{ p.rating.toFixed(1) }}</span>
+              </span>
+              <span class="name">{{ shortName(p.player.name) }}</span>
+            </li>
+          }
+        </ol>
+      }
+    }
+  </div>
+
+  @if (team(); as t) {
+    @if (!loading() && t.games < t.totalGames) {
+      <p class="note">{{ t.games }} de {{ t.totalGames }} jogos encerrados nesta rodada.</p>
+    }
+  }
+</section>

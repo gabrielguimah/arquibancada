@@ -1,0 +1,269 @@
+$muted: var(--muted);
+
+:host {
+  display: block;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px 14px;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px var(--shadow);
+
+  header {
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: $muted;
+}
+
+// Mesmo seletor de rodada da Classificação.
+.round-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--button-bg);
+    color: var(--button-text);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--button-bg-hover);
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+  }
+
+  mat-form-field {
+    width: 150px;
+  }
+}
+
+.sk-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.sk-nav-select {
+  width: 150px;
+  height: 40px;
+  border-radius: 4px;
+}
+
+// Campo visto de cima, ataque em cima; listras e linhas brancas.
+.pitch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 6px;
+  min-height: 460px;
+  padding: 14px 6px;
+  border-radius: 8px;
+  background: repeating-linear-gradient(
+    180deg,
+    var(--pitch) 0,
+    var(--pitch) 46px,
+    var(--pitch-stripe) 46px,
+    var(--pitch-stripe) 92px
+  );
+  overflow: hidden;
+}
+
+.mark {
+  position: absolute;
+  border: 1.5px solid rgb(255 255 255 / 0.35);
+  pointer-events: none;
+
+  &.half {
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-width: 1.5px 0 0;
+  }
+
+  &.circle {
+    left: 50%;
+    top: 50%;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  &.box {
+    left: 25%;
+    right: 25%;
+    height: 56px;
+
+    &.top {
+      top: -1.5px;
+    }
+
+    &.bottom {
+      bottom: -1.5px;
+    }
+  }
+}
+
+.line {
+  position: relative;
+  display: flex;
+  justify-content: space-around;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spot {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  // Até 4 por linha, com folga entre os nomes.
+  width: calc(25% - 12px);
+  min-width: 0;
+}
+
+.photo {
+  position: relative;
+  width: 44px;
+  height: 44px;
+
+  .player {
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: var(--line-strong);
+    object-fit: cover;
+  }
+
+  .badge {
+    position: absolute;
+    left: -4px;
+    bottom: -2px;
+    padding: 1px;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: contain;
+  }
+
+  // Notas sempre com número branco (a cor do fundo segue a faixa); a sombra mantém o branco
+  // legível nos azuis mais claros.
+  .rating {
+    position: absolute;
+    right: -14px;
+    top: -6px;
+    min-width: 0;
+    padding: 1px 5px;
+    font-size: 0.7rem;
+    border-radius: 5px;
+    color: #fff;
+    text-shadow: 0 0 2px rgb(1 37 125 / 0.9);
+  }
+}
+
+// Melhor da rodada: estrela branca num círculo azul elétrico (a cor da nota 10), e foto com borda de destaque.
+// O contorno marinho e a sombra da estrela garantem que o branco apareça sobre o azul claro.
+.star {
+  position: absolute;
+  left: -8px;
+  top: -6px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--rating-100-text);
+  border-radius: 50%;
+  background: var(--rating-100);
+  box-sizing: border-box;
+
+  // Ícone em bloco, com altura de linha igual ao tamanho, para ficar no centro exato do círculo.
+  .mat-icon {
+    display: block;
+    width: 13px;
+    height: 13px;
+    font-size: 13px;
+    line-height: 13px;
+    color: #fff;
+    font-variation-settings: 'FILL' 1;
+    filter: drop-shadow(0 0 1px rgb(1 37 125 / 0.9));
+  }
+}
+
+.best .player {
+  border-color: var(--highlight);
+}
+
+.name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.45);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.sk-photo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.sk-name {
+  width: 52px;
+  height: 12px;
+  opacity: 0.6;
+}
+
+.message {
+  position: relative;
+  margin: auto;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.45);
+  color: #fff;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.note {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  color: $muted;
+}
