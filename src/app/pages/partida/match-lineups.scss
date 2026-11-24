@@ -1,0 +1,543 @@
+$muted: var(--muted);
+
+// Ícone (mat-icon) ocupando o círculo inteiro, com o desenho no centro exato: a caixa do ícone é do
+// tamanho do círculo e o desenho é centrado dentro dela. Tamanhos pares evitam meio pixel (e o
+// desenho fora do centro) em algumas resoluções.
+@mixin centered-glyph($glyph) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: $glyph;
+  line-height: 1;
+  overflow: visible;
+}
+
+:host {
+  display: block;
+  // As quebras de layout seguem a largura do card (ele divide a página com o lance a lance).
+  container-type: inline-size;
+}
+
+.card {
+  padding: 14px 16px 16px;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px var(--shadow);
+
+  h2 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+  }
+}
+
+// Campo em cima, reservas embaixo.
+.layout {
+  display: grid;
+  gap: 20px;
+}
+
+// Vertical: faixa do mandante, campo, faixa do visitante. Horizontal: as duas faixas lado a lado em
+// cima (mandante à esquerda), campo embaixo.
+.field {
+  display: grid;
+  grid-template-areas: 'home' 'pitch' 'away';
+  gap: 8px;
+
+  .team-bar.home {
+    grid-area: home;
+  }
+
+  .team-bar.away {
+    grid-area: away;
+  }
+
+  .pitch {
+    grid-area: pitch;
+  }
+}
+
+.team-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+
+  img {
+    object-fit: contain;
+  }
+
+  .team-rating {
+    min-width: 0;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+  }
+
+  .formation {
+    margin-left: auto;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: $muted;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Campo, com as faixas de grama do time da rodada. Por padrão vertical (mandante em cima). */
+
+.pitch {
+  position: relative;
+  min-height: 760px;
+  padding: 10px 4px;
+  border-radius: 8px;
+  // Faixas de grama na largura do campo; no horizontal, só o ângulo muda (--stripes).
+  background: repeating-linear-gradient(
+    var(--stripes, 180deg),
+    var(--pitch) 0,
+    var(--pitch) 48px,
+    var(--pitch-stripe) 48px,
+    var(--pitch-stripe) 96px
+  );
+  overflow: hidden;
+}
+
+.mark {
+  position: absolute;
+  border: 1.5px solid rgb(255 255 255 / 0.35);
+  pointer-events: none;
+
+  &.half {
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-width: 1.5px 0 0;
+  }
+
+  &.circle {
+    left: 50%;
+    top: 50%;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  // Grande área e pequena área de cada gol (start: gol do mandante; end: do visitante).
+  &.box {
+    left: 22%;
+    right: 22%;
+    height: 11%;
+  }
+
+  &.area {
+    left: 38%;
+    right: 38%;
+    height: 4%;
+  }
+
+  &.start {
+    top: -1.5px;
+  }
+
+  &.end {
+    bottom: -1.5px;
+  }
+}
+
+// Jogadores posicionados pelas coordenadas de `pitchPositions` (--x: do próprio gol ao meio-campo;
+// --y: da esquerda à direita do time). Cada time é uma camada do tamanho do campo, e as linhas só
+// agrupam os jogadores (sem caixa própria).
+// Vertical: o mandante (em cima) ataca para baixo e, de frente para quem olha, a esquerda dele fica à
+// direita da tela; o visitante (embaixo) ataca para cima, com a esquerda dele à esquerda da tela.
+.side {
+  position: absolute;
+  inset: 8px 10px;
+}
+
+.line {
+  display: contents;
+}
+
+.spot {
+  // A posição (--x, --y) é a do centro da foto; o nome fica pendurado embaixo dela. Distâncias
+  // mínimas do centro da foto até a borda do campo, para nada ser cortado: em cima, só os ícones em
+  // volta da foto (MVP, gol…); embaixo, a metade da foto e o nome em uma linha (o goleiro fica perto
+  // do gol; um nome de 2 linhas pode encostar na borda); dos lados, metade da largura do jogador.
+  --edge-top: 22px;
+  --edge-bottom: 42px;
+  --edge-side: 36px;
+
+  position: absolute;
+  transform: translate(-50%, calc(var(--photo, 40px) / -2));
+
+  .home & {
+    top: max(var(--edge-top), calc(var(--x) * 50%));
+    left: clamp(var(--edge-side), calc((1 - var(--y)) * 100%), calc(100% - var(--edge-side)));
+  }
+
+  .away & {
+    top: min(calc(100% - var(--edge-bottom)), calc(100% - var(--x) * 50%));
+    left: clamp(var(--edge-side), calc(var(--y) * 100%), calc(100% - var(--edge-side)));
+  }
+}
+
+// Campo estreito (celular): foto, nome e nota menores, para 5 jogadores caberem na mesma linha.
+@container (max-width: 420px) {
+  .pitch {
+    --photo: 30px;
+  }
+
+  .spot {
+    gap: 3px;
+  }
+
+  .name {
+    font-size: 0.65rem;
+  }
+
+  .photo {
+    .rating {
+      padding: 0 3px;
+      font-size: 0.6rem;
+    }
+
+    .card-icon {
+      width: 7px;
+      height: 10px;
+    }
+
+    .sub-out {
+      width: 12px;
+      height: 12px;
+
+      mat-icon {
+        font-size: 10px;
+      }
+    }
+
+  }
+
+  .best {
+    width: 14px;
+    height: 14px;
+
+    mat-icon {
+      font-size: 9px;
+    }
+  }
+
+  .pitch .ev {
+    width: 14px;
+    height: 14px;
+    font-size: 11px;
+    line-height: 11px;
+  }
+
+  .pitch .ev-wrap .count {
+    min-width: 10px;
+    height: 10px;
+    font-size: 0.45rem;
+    line-height: 10px;
+  }
+}
+
+// Horizontal (card largo): mandante à esquerda atacando para a direita (a esquerda dele fica em cima),
+// visitante à direita atacando para a esquerda (a esquerda dele fica embaixo).
+@container (min-width: 560px) {
+  .field {
+    grid-template-areas: 'home away' 'pitch pitch';
+    grid-template-columns: 1fr 1fr;
+
+    .team-bar.away {
+      flex-direction: row-reverse;
+
+      .formation {
+        margin-left: 0;
+        margin-right: auto;
+      }
+    }
+  }
+
+  .pitch {
+    min-height: 0;
+    aspect-ratio: 105 / 68;
+    padding: 4px 10px;
+    --stripes: 90deg;
+  }
+
+  // Marcações deitadas: meio-campo na vertical, áreas nas laterais (start: esquerda; end: direita).
+  .mark {
+    &.half {
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      right: auto;
+      border-width: 0 0 0 1.5px;
+    }
+
+    &.box,
+    &.area {
+      left: auto;
+      right: auto;
+      height: auto;
+    }
+
+    &.box {
+      top: 22%;
+      bottom: 22%;
+      width: 11%;
+    }
+
+    &.area {
+      top: 38%;
+      bottom: 38%;
+      width: 4%;
+    }
+
+    &.start {
+      left: -1.5px;
+    }
+
+    &.end {
+      right: -1.5px;
+    }
+  }
+
+  // Horizontal: o mandante (à esquerda) ataca para a direita, com a esquerda dele em cima; o
+  // visitante (à direita) ataca para a esquerda, com a esquerda dele embaixo.
+  // As mesmas distâncias mínimas da borda, com os eixos trocados (o nome continua embaixo da foto).
+  .spot {
+    .home & {
+      left: max(var(--edge-side), calc(var(--x) * 50%));
+      top: clamp(var(--edge-top), calc(var(--y) * 100%), calc(100% - var(--edge-bottom)));
+    }
+
+    .away & {
+      left: min(calc(100% - var(--edge-side)), calc(100% - var(--x) * 50%));
+      top: clamp(var(--edge-top), calc((1 - var(--y)) * 100%), calc(100% - var(--edge-bottom)));
+    }
+  }
+}
+
+.spot {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  // Até 64 px; numa linha cheia (--n jogadores) num campo estreito, o passo entre vizinhos
+  // (80% da largura dividido em n - 1) menos uma folga, para os nomes não se encostarem.
+  width: min(64px, calc((100cqw - 52px) * 0.8 / max(var(--n, 1) - 1, 1) - 6px));
+  min-width: 0;
+}
+
+.photo {
+  // Lances e nota em volta do círculo, todos à mesma distância (--d) do centro da foto, só muda o
+  // ângulo (diagonais: --diag = --d · cos 45°). A distância é a da estrela do melhor da rodada no
+  // Time da rodada: o centro do ícone fica uns 22% do raio além da borda.
+  --r: calc(var(--photo, 40px) / 2);
+  --d: calc(var(--r) * 1.22);
+  --diag: calc(var(--d) * 0.7071);
+
+  position: relative;
+  width: var(--photo, 40px);
+  height: var(--photo, 40px);
+
+  .player {
+    box-sizing: border-box;
+    width: var(--photo, 40px);
+    height: var(--photo, 40px);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: var(--line-strong);
+    object-fit: cover;
+  }
+
+  .rating {
+    min-width: 0;
+    padding: 1px 4px;
+    font-size: 0.66rem;
+    border-radius: 4px;
+  }
+
+  .pos {
+    position: absolute;
+    z-index: 1;
+    display: flex;
+    transform: translate(-50%, -50%);
+
+    &.top-right {
+      left: calc(var(--r) + var(--diag));
+      top: calc(var(--r) - var(--diag));
+    }
+
+    &.top-left {
+      left: calc(var(--r) - var(--diag));
+      top: calc(var(--r) - var(--diag));
+    }
+
+    &.left {
+      left: calc(var(--r) - var(--d));
+      top: var(--r);
+    }
+
+    &.right {
+      left: calc(var(--r) + var(--d));
+      top: var(--r);
+    }
+
+    &.bottom-left {
+      left: calc(var(--r) - var(--diag));
+      top: calc(var(--r) + var(--diag));
+    }
+
+    &.bottom-right {
+      left: calc(var(--r) + var(--diag));
+      top: calc(var(--r) + var(--diag));
+    }
+  }
+
+  // Gol e gol contra juntos (raro): o segundo encosta no primeiro.
+  .top-right .ev-wrap + .ev-wrap {
+    margin-left: -4px;
+  }
+
+  // Substituído: seta vermelha para baixo, pequena, num círculo branco (para aparecer na grama).
+  .sub-out {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+
+    mat-icon {
+      @include centered-glyph(12px);
+      color: #dc2626;
+      font-variation-settings: 'wght' 700;
+    }
+  }
+}
+
+// Ícones de gol, gol contra e assistência: círculo branco de 18 px (para aparecer na grama) com o
+// desenho de 13 px no centro exato. A altura de linha igual ao tamanho evita que a fonte de ícones
+// empurre o desenho para baixo (o padrão do Material é 24 px).
+.ev {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  font-size: 13px;
+  line-height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+
+  &.own-goal {
+    color: #dc2626;
+  }
+
+  // Chuteira (SVG): o desenho ocupa a caixa toda; o espaço interno deixa ele do tamanho da bola.
+  &.assist {
+    padding: 2px;
+  }
+
+}
+
+// Ícone com a quantidade (2 gols, 3 assistências…) num número pequeno no canto de cima à direita.
+.ev-wrap {
+  position: relative;
+  display: inline-flex;
+
+  & + & {
+    margin-left: -2px;
+  }
+
+  .count {
+    position: absolute;
+    min-width: 11px;
+    height: 11px;
+    padding: 0 2px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    background: #111;
+    box-shadow: 0 0 0 1px #fff;
+    color: #fff;
+    font-size: 0.5rem;
+    font-weight: 700;
+    line-height: 11px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+
+    &.top-right {
+      right: -5px;
+      top: -4px;
+    }
+
+  }
+}
+
+.card-icon {
+  display: inline-block;
+  width: 9px;
+  height: 12px;
+  border-radius: 1.5px;
+  background: #facc15;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25);
+
+  &.red {
+    background: #dc2626;
+  }
+}
+
+// Foto do melhor da partida com a borda na cor de destaque, como no Time da rodada.
+.mvp .player {
+  border-color: var(--highlight);
+}
+
+// Melhor da partida: estrela branca num círculo azul elétrico (a cor da nota 10), como a do melhor
+// da rodada, em cima à esquerda da foto.
+.best {
+  display: inline-flex;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  background: var(--rating-100);
+
+  mat-icon {
+    @include centered-glyph(11px);
+    color: #fff;
+    font-variation-settings: 'FILL' 1;
+    filter: drop-shadow(0 0 1px rgb(1 37 125 / 0.9));
+  }
+
+}
+
+.name {
+  // Nome comprido quebra para a linha de baixo (até 2 linhas), em vez de ser cortado.
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: 1.2;
+  padding: 1px 2px;
+  // Sem fundo: a sombra escura mantém o branco legível sobre a grama.
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.8), 0 0 1px rgb(0 0 0 / 0.6);
+  font-size: 0.72rem;
+  font-weight: 600;
+
+  .number {
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.message {
+  margin: 0;
+  font-size: 0.85rem;
+  color: $muted;
+}

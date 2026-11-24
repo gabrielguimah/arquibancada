@@ -4,6 +4,14 @@
       <h2 id="round-team-title">Time da rodada</h2>
       <p class="subtitle">4-3-3 com as melhores notas</p>
     </div>
+    <!-- No cabeçalho, e não embaixo do campo, para não mudar a altura do card. -->
+    @if (team(); as t) {
+      @if (!loading() && t.games < t.totalGames) {
+        <span class="note" [title]="t.games + ' de ' + t.totalGames + ' jogos finalizados nesta rodada'"
+          >{{ t.games }} de {{ t.totalGames }} jogos finalizados</span
+        >
+      }
+    }
   </header>
 
   <!-- Seletor em esqueleto enquanto o time da rodada carrega (junto com o campo). -->
@@ -67,7 +75,7 @@
     } @else if (error()) {
       <p class="message">Não foi possível carregar.</p>
     } @else if (!team()?.players?.length) {
-      <p class="message">Nenhum jogo encerrado nesta rodada ainda.</p>
+      <p class="message">Nenhum jogo finalizado nesta rodada ainda.</p>
     } @else {
       @for (line of lines(); track line.position) {
         <ol class="line">
@@ -107,10 +115,4 @@
       }
     }
   </div>
-
-  @if (team(); as t) {
-    @if (!loading() && t.games < t.totalGames) {
-      <p class="note">{{ t.games }} de {{ t.totalGames }} jogos encerrados nesta rodada.</p>
-    }
-  }
 </section>

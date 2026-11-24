@@ -32,10 +32,46 @@ export interface Fixture {
       clockStart?: number;
     };
   };
+  /** Liga e rodada ("Regular Season - 36"). */
+  league?: { id: number; name: string; logo: string; round: string };
   teams: { home: Team; away: Team };
   goals: { home: number | null; away: number | null };
+  /** Placar por etapa (intervalo, fim do tempo normal, prorrogação, pênaltis). */
+  score?: Record<'halftime' | 'fulltime' | 'extratime' | 'penalty', { home: number | null; away: number | null }>;
   /** Só nas buscas por id (`fixturesByIds`): gols, cartões, substituições… */
   events?: FixtureEvent[];
+  /** Só nas buscas por id: escalações (sai cerca de 1 h antes do jogo). */
+  lineups?: Lineup[];
+  /** Só nas buscas por id: números de cada jogador na partida (nota, minutos, capitão…). */
+  players?: FixtureTeamPlayers[];
+}
+
+/** Jogador na escalação. `grid` é "linha:coluna" (1:1 é o goleiro; coluna 1 é a esquerda do time). */
+export interface LineupPlayer {
+  id: number;
+  name: string;
+  number: number | null;
+  pos: string | null;
+  grid: string | null;
+}
+
+export interface Lineup {
+  team: Team;
+  /** "4-2-3-1", "3-4-1-2"… */
+  formation: string | null;
+  startXI: Array<{ player: LineupPlayer }>;
+  substitutes: Array<{ player: LineupPlayer }>;
+  coach: { id: number | null; name: string | null; photo: string | null } | null;
+}
+
+export interface FixtureTeamPlayers {
+  team: Team;
+  players: Array<{
+    player: { id: number; name: string; photo: string };
+    statistics: Array<{
+      games: { minutes: number | null; rating: string | null; captain: boolean; substitute: boolean };
+    }>;
+  }>;
 }
 
 /** Evento de uma partida. Gol: type "Goal", detail "Normal Goal", "Own Goal", "Penalty" ou "Missed Penalty". */
@@ -46,6 +82,8 @@ export interface FixtureEvent {
   assist: { id: number | null; name: string | null };
   type: string;
   detail: string;
+  /** Motivo do cartão ("Foul", "Time Wasting"…), quando a API informa. */
+  comments?: string | null;
 }
 
 export interface Standing {
@@ -159,6 +197,54 @@ export interface RoundTeam {
   players: RoundPlayer[];
 }
 
+/** Jogador na tabela de jogadores (`players/stats`): soma dos clubes dele no Brasileirão. */
+export interface PlayerRow {
+  id: number;
+  name: string;
+  photo: string;
+  /** Clube onde mais jogou no campeonato. */
+  team: Team;
+  /** G (goleiro), D, M ou F (atacante). */
+  position: string | null;
+  appearances: number;
+  minutes: number;
+  rating: number | null;
+  goals: number;
+  assists: number;
+  shots: number;
+  shotsOn: number;
+  passes: number;
+  keyPasses: number;
+  /** Acerto no passe (%). */
+  passAccuracy: number | null;
+  tackles: number;
+  interceptions: number;
+  blocks: number;
+  duels: number;
+  duelsWon: number;
+  dribbles: number;
+  dribblesWon: number;
+  foulsDrawn: number;
+  foulsCommitted: number;
+  yellowCards: number;
+  redCards: number;
+  penaltiesScored: number;
+  penaltiesMissed: number;
+  penaltiesWon: number;
+  penaltiesCommitted: number;
+  saves: number;
+  goalsConceded: number;
+  penaltiesSaved: number;
+}
+
+/** Resposta de `players/stats`, montada no Worker. */
+export interface PlayerStats {
+  updatedAt: string;
+  /** Mínimo de jogos do filtro "Regulares". */
+  minAppearances: number;
+  players: PlayerRow[];
+}
+
 interface ApiResponse<T> {
   response: T;
 }
@@ -221,6 +307,13 @@ export class ApiFootball {
       .pipe(map((r) => ({ ...r, season: renameAll(r.season), last5: renameAll(r.last5) })));
   }
 
+  /** Números de todos os jogadores do campeonato na temporada (tabela de jogadores). */
+  playerStats(): Observable<PlayerStats> {
+    return this.http
+      .get<PlayerStats>(`${API_URL}/players/stats`)
+      .pipe(map((r) => ({ ...r, players: r.players.map((p) => ({ ...p, team: rename(p.team) })) })));
+  }
+
   /** Time da rodada (4-3-3), montado no Worker a partir das notas dos jogos encerrados. */
   teamOfRound(round: string): Observable<RoundTeam> {
     return this.http
@@ -248,6 +341,11 @@ export class ApiFootball {
     return this.get<Fixture[]>('fixtures', { status: 'FT-AET-PEN' });
   }
 
+  /** Uma partida pelo id, com os eventos; `null` se não existir. */
+  fixture(id: number): Observable<Fixture | null> {
+    return this.fixturesByIds([id]).pipe(map((r) => r[0] ?? null));
+  }
+
   standings(): Observable<Standing[]> {
     return this.get<{ league: { standings: Standing[][] } }[]>('standings', {}).pipe(
       map((r) => (r[0]?.league.standings[0] ?? []).map((s) => ({ ...s, team: rename(s.team) }))),
@@ -268,5 +366,7 @@ function renameFixtures(fixtures: Fixture[]): Fixture[] {
     ...f,
     teams: { home: rename(f.teams.home), away: rename(f.teams.away) },
     events: f.events?.map((e) => ({ ...e, team: rename(e.team) })),
+    lineups: f.lineups?.map((l) => ({ ...l, team: rename(l.team) })),
+    players: f.players?.map((p) => ({ ...p, team: rename(p.team) })),
   }));
 }

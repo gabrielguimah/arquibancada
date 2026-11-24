@@ -1,15 +1,15 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatFormField } from '@angular/material/form-field';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, TeamRating, TeamRatings } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
-import { nearBottom } from '../../shared/infinite-scroll';
+import { Pager } from '../../shared/pager';
 import { ratingClass } from '../../shared/rating';
 import { TEAM_METRICS, TeamMetric } from './team-metrics';
 
-// Linhas visíveis (a altura da tabela) e quantas a rolagem infinita acrescenta por vez.
+// Linhas por página (a altura da tabela).
 const PAGE = 5;
 // As estatísticas são calculadas em segundo plano no Worker; enquanto não ficam prontas, tenta de novo.
 const RETRY_MS = 60_000;
@@ -30,7 +30,7 @@ interface RatingTable {
 /** Duas tabelas de times (temporada inteira e últimas 5 partidas), ordenadas pelo critério do select. */
 @Component({
   selector: 'app-team-ratings',
-  imports: [Crest, MatTooltip, MatFormField, MatSelect, MatOption],
+  imports: [Crest, MatTooltip, MatFormField, MatSelect, MatOption, Pager],
   templateUrl: './team-ratings.html',
   styleUrl: './team-ratings.scss',
 })
@@ -38,17 +38,22 @@ export class TeamRatingsTables {
   private api = inject(ApiFootball);
   private retry?: ReturnType<typeof setTimeout>;
 
+  /**
+   * Libera a exibição: a página da rodada só mostra as tabelas depois que a classificação e os jogos
+   * carregaram, para a seção não aparecer antes do resto. Até lá, fica no esqueleto.
+   */
+  ready = input(true);
+
   private data = signal<TeamRatings | null>(null);
   protected message = signal<string | null>(null);
-  // "Ver mais" não aumenta a tabela: liga a rolagem dentro dela, que vai carregando mais linhas.
-  protected expanded = signal<Record<RatingTable['id'], boolean>>({ season: false, last5: false });
-  protected shown = signal<Record<RatingTable['id'], number>>({ season: PAGE, last5: PAGE });
+  // Página atual de cada tabela.
+  protected page = signal<Record<RatingTable['id'], number>>({ season: 1, last5: 1 });
 
   protected metrics = TEAM_METRICS;
   protected metric = signal<TeamMetric>(TEAM_METRICS[0]);
 
   protected tables = computed<RatingTable[]>(() => {
-    const d = this.data();
+    const d = this.ready() ? this.data() : null;
     return [
       { id: 'season', subtitle: 'Temporada inteira', rows: rank(d?.season ?? null, this.metric()) },
       { id: 'last5', subtitle: 'Últimas 5 partidas', rows: rank(d?.last5 ?? null, this.metric()) },
@@ -83,29 +88,20 @@ export class TeamRatingsTables {
 
   protected selectMetric(id: TeamMetric['id']) {
     this.metric.set(TEAM_METRICS.find((m) => m.id === id) ?? TEAM_METRICS[0]);
-    this.collapseAll();
+    this.page.set({ season: 1, last5: 1 });
   }
 
-  private collapseAll() {
-    this.expanded.set({ season: false, last5: false });
-    this.shown.set({ season: PAGE, last5: PAGE });
+  protected pages(t: RatingTable): number {
+    return Math.max(1, Math.ceil((t.rows?.length ?? 0) / PAGE));
+  }
+
+  protected setPage(t: RatingTable, page: number) {
+    this.page.update((p) => ({ ...p, [t.id]: page }));
   }
 
   protected visible(t: RatingTable): RankedRow[] {
-    return (t.rows ?? []).slice(0, this.shown()[t.id]);
-  }
-
-  protected toggle(t: RatingTable) {
-    const open = !this.expanded()[t.id];
-    this.expanded.update((e) => ({ ...e, [t.id]: open }));
-    // Aberta, já carrega um bloco a mais para haver o que rolar.
-    this.shown.update((s) => ({ ...s, [t.id]: open ? PAGE * 2 : PAGE }));
-  }
-
-  protected onScroll(t: RatingTable, event: Event) {
-    if (nearBottom(event) && this.shown()[t.id] < (t.rows?.length ?? 0)) {
-      this.shown.update((s) => ({ ...s, [t.id]: s[t.id] + PAGE }));
-    }
+    const start = (this.page()[t.id] - 1) * PAGE;
+    return (t.rows ?? []).slice(start, start + PAGE);
   }
 
   protected tip(r: TeamRating): string {

@@ -1,0 +1,60 @@
+<section class="card" aria-labelledby="timeline-title">
+  <h2 id="timeline-title">Lance a lance</h2>
+
+  @if (items().length) {
+    <ol class="items">
+      @for (item of items(); track $index) {
+        @if (item.type === 'divider') {
+          <li class="divider">
+            <span>{{ item.label }} <strong>{{ item.score }}</strong></span>
+          </li>
+        } @else {
+          <!-- Mandante: minuto à esquerda; visitante: minuto à direita (a ordem visual inverte no CSS). -->
+          <li class="event" [class]="item.side + ' ' + item.kind" [attr.aria-label]="labels[item.kind] + ', ' + item.minute">
+            <span class="minute">{{ item.minute }}</span>
+            <span class="icon" [title]="labels[item.kind]">
+              @switch (item.kind) {
+                @case ('goal') {
+                  <mat-icon aria-hidden="true">sports_soccer</mat-icon>
+                }
+                @case ('missed-penalty') {
+                  <span class="missed" aria-hidden="true">P</span>
+                }
+                @case ('sub') {
+                  <span class="swap" aria-hidden="true">
+                    <mat-icon class="in">arrow_upward</mat-icon><mat-icon class="out">arrow_downward</mat-icon>
+                  </span>
+                }
+                @case ('var') {
+                  <span class="var" aria-hidden="true">VAR</span>
+                }
+                @case ('second-yellow') {
+                  <span class="card-icon second" aria-hidden="true"></span>
+                }
+                @default {
+                  <span class="card-icon" [class.red]="item.kind === 'red'" aria-hidden="true"></span>
+                }
+              }
+            </span>
+            @if (item.score) {
+              <span class="score">{{ item.score }}</span>
+            }
+            <span class="text">
+              <strong>{{ item.main }}</strong>
+              @if (item.secondary) {
+                <span class="secondary">
+                  @if (item.assist) {
+                    <mat-icon class="assist" svgIcon="chuteira" aria-label="Assistência" />
+                  }
+                  {{ item.secondary }}
+                </span>
+              }
+            </span>
+          </li>
+        }
+      }
+    </ol>
+  } @else {
+    <p class="message">Nenhum lance ainda.</p>
+  }
+</section>

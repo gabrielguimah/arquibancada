@@ -18,7 +18,7 @@
   </label>
 </div>
 
-@if (message()) {
+@if (message() && ready()) {
   <p class="message">{{ message() }}</p>
 } @else {
   <div class="tables">
@@ -29,12 +29,7 @@
           <span>{{ t.subtitle }}</span>
         </header>
 
-        <ol
-          class="rows"
-          [class.scroll]="expanded()[t.id]"
-          [attr.aria-busy]="t.rows === null"
-          (scroll)="onScroll(t, $event)"
-        >
+        <ol class="rows" [attr.aria-busy]="t.rows === null">
           @if (t.rows === null) {
             @for (i of skeleton; track i) {
               <li class="row" aria-hidden="true">
@@ -61,10 +56,14 @@
           }
         </ol>
 
-        @if (t.rows && t.rows.length > skeleton.length) {
-          <button type="button" class="more" (click)="toggle(t)">
-            {{ expanded()[t.id] ? 'Ver menos' : 'Ver mais' }}
-          </button>
+        @if (t.rows) {
+          <app-pager
+            class="pager"
+            [page]="page()[t.id]"
+            [pages]="pages(t)"
+            [label]="'Páginas: ' + t.subtitle"
+            (pageChange)="setPage(t, $event)"
+          />
         }
       </section>
     }

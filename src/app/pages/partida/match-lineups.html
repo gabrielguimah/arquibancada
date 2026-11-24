@@ -1,0 +1,133 @@
+<section class="card" aria-labelledby="lineups-title">
+  <h2 id="lineups-title">Escalações</h2>
+
+  @if (data(); as d) {
+    <div class="layout">
+      <!-- Campo horizontal (mandante à esquerda) quando o card é largo; vertical (mandante em cima) no
+           celular. As linhas vêm do goleiro ao ataque e, em cada linha, da esquerda para a direita do
+           time: o CSS inverte a ordem onde precisa, em cada orientação. -->
+      <div class="field">
+        <ng-container [ngTemplateOutlet]="teamBar" [ngTemplateOutletContext]="{ $implicit: d.home, side: 'home' }" />
+
+        <div class="pitch">
+          <span class="mark half"></span>
+          <span class="mark circle"></span>
+          <span class="mark box start"></span>
+          <span class="mark box end"></span>
+          <span class="mark area start"></span>
+          <span class="mark area end"></span>
+
+          @for (side of sides; track side) {
+            <div class="side" [class]="side" [attr.aria-label]="'Titulares: ' + d[side].team.name">
+              @for (line of placed()![side]; track $index) {
+                <ol class="line">
+                  @for (pos of line; track pos.spot.id) {
+                    @let p = pos.spot;
+                    <li class="spot" [class.mvp]="p.best" [title]="tip(p)" [style.--x]="pos.x" [style.--y]="pos.y" [style.--n]="line.length">
+                      <ng-container [ngTemplateOutlet]="photo" [ngTemplateOutletContext]="{ $implicit: p }" />
+                      <span class="name">
+                        <span class="number">{{ p.number }}</span>
+                        {{ p.captain ? '(c) ' : '' }}{{ p.name }}
+                      </span>
+                    </li>
+                  }
+                </ol>
+              }
+            </div>
+          }
+        </div>
+
+        <ng-container [ngTemplateOutlet]="teamBar" [ngTemplateOutletContext]="{ $implicit: d.away, side: 'away' }" />
+      </div>
+
+      <app-match-bench [teams]="[d.home, d.away]" />
+    </div>
+  } @else {
+    <p class="message">Escalações ainda não divulgadas. Elas costumam sair cerca de 1 hora antes do jogo.</p>
+  }
+</section>
+
+<!-- Faixa do time acima (mandante) e abaixo (visitante) do campo: escudo, nome, nota média e formação. -->
+<ng-template #teamBar let-t let-side="side">
+  <div class="team-bar" [class]="side">
+    <img crest [src]="t.team.logo" alt="" width="22" height="22" />
+    <strong>{{ t.team.name }}</strong>
+    @if (t.rating !== null) {
+      <span [class]="ratingClass(t.rating) + ' team-rating'" title="Nota média do time">{{ t.rating.toFixed(2) }}</span>
+    }
+    @if (t.formation) {
+      <span class="formation">{{ t.formation }}</span>
+    }
+  </div>
+</ng-template>
+
+<!-- Foto do jogador no campo, com os lances em volta do círculo, todos à mesma distância da borda:
+     melhor da partida em cima à esquerda, gol em cima à direita, assistência no meio à direita (ou no
+     lugar do gol, se o jogador não marcou),
+     cartão no meio à esquerda, substituição embaixo à esquerda e a nota embaixo à direita. -->
+<ng-template #photo let-p>
+  <span class="photo">
+    <img class="player" [src]="p.photo" alt="" width="40" height="40" loading="lazy" />
+    @if (p.goals || p.ownGoals) {
+      <span class="pos top-right">
+        <ng-container [ngTemplateOutlet]="goalIcons" [ngTemplateOutletContext]="{ $implicit: p }" />
+      </span>
+    }
+    @if (p.assists) {
+      <!-- Assistência no lugar do gol (em cima à direita); com gol também, vai para o meio à direita. -->
+      <span class="pos" [class.right]="p.goals || p.ownGoals" [class.top-right]="!p.goals && !p.ownGoals">
+        <ng-container [ngTemplateOutlet]="assistIcon" [ngTemplateOutletContext]="{ $implicit: p }" />
+      </span>
+    }
+    @if (p.best) {
+      <span class="pos top-left best" aria-label="Melhor da partida"><mat-icon aria-hidden="true">star</mat-icon></span>
+    }
+    @if (p.yellow || p.red) {
+      <span class="pos left">
+        <span class="card-icon" [class.red]="p.red" [attr.aria-label]="p.red ? 'Expulso' : 'Cartão amarelo'"></span>
+      </span>
+    }
+    @if (p.subOut) {
+      <span class="pos bottom-left sub-out" [attr.aria-label]="'Saiu aos ' + p.subOut">
+        <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+      </span>
+    }
+    @if (p.rating !== null) {
+      <span [class]="ratingClass(p.rating) + ' rating pos bottom-right'">{{ p.rating.toFixed(1) }}</span>
+    } @else {
+      <span [class]="noRating.class + ' rating pos bottom-right'" [title]="noRating.title">{{ noRating.label }}</span>
+    }
+  </span>
+</ng-template>
+
+<!-- Gols, gols contra, assistências (e cartões, nos reservas). -->
+<!-- Um ícone por tipo; mais de um aparece como número no canto de cima à direita do ícone. -->
+<ng-template #goalIcons let-p>
+  @if (p.goals) {
+    <span class="ev-wrap" [attr.aria-label]="p.goals + (p.goals > 1 ? ' gols' : ' gol')">
+      <mat-icon class="ev goal" aria-hidden="true">sports_soccer</mat-icon>
+      @if (p.goals > 1) {
+        <span class="count top-right" aria-hidden="true">{{ p.goals }}</span>
+      }
+    </span>
+  }
+  @if (p.ownGoals) {
+    <span class="ev-wrap" [attr.aria-label]="p.ownGoals + (p.ownGoals > 1 ? ' gols contra' : ' gol contra')">
+      <mat-icon class="ev own-goal" aria-hidden="true">sports_soccer</mat-icon>
+      @if (p.ownGoals > 1) {
+        <span class="count top-right" aria-hidden="true">{{ p.ownGoals }}</span>
+      }
+    </span>
+  }
+</ng-template>
+
+<ng-template #assistIcon let-p>
+  @if (p.assists) {
+    <span class="ev-wrap" [attr.aria-label]="p.assists + (p.assists > 1 ? ' assistências' : ' assistência')">
+      <mat-icon class="ev assist" svgIcon="chuteira" aria-hidden="true" />
+      @if (p.assists > 1) {
+        <span class="count top-right" aria-hidden="true">{{ p.assists }}</span>
+      }
+    </span>
+  }
+</ng-template>

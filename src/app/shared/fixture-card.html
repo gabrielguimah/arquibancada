@@ -1,5 +1,6 @@
 @let f = fixture();
-<article class="card" [class.live]="live()" [attr.title]="venue() || null">
+<!-- O card inteiro abre a página da partida. -->
+<a class="card" [class.live]="live()" [routerLink]="['/partida', f.fixture.id]" [attr.title]="venue() || null">
   <div class="status">
     @if (clock(); as c) {
       <span class="clock" aria-label="Tempo de jogo">{{ c }}</span>
@@ -36,4 +37,4 @@
       <span class="tag" title="Jogo desta rodada disputado depois da rodada seguinte">Atrasado</span>
     }
   </div>
-</article>
+</a>

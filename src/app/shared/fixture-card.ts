@@ -1,5 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 import { Fixture, LIVE_STATUSES } from '../api/api-football';
+import { RouterLink } from '@angular/router';
 import { Crest } from './crest';
 import { liveClock } from './live-clock';
 
@@ -19,7 +20,7 @@ export function isLive(f: Fixture): boolean {
 /** Card compacto de partida: horário e situação à esquerda, times empilhados, placar à direita. */
 @Component({
   selector: 'app-fixture-card',
-  imports: [Crest],
+  imports: [Crest, RouterLink],
   templateUrl: './fixture-card.html',
   styleUrl: './fixture-card.scss',
 })
@@ -52,7 +53,7 @@ export class FixtureCard {
       case 'FT':
       case 'AET':
       case 'PEN':
-        return 'Encerrado';
+        return 'Finalizado';
       case 'PST':
         return 'Adiado';
       case 'CANC':

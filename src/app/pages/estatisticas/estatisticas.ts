@@ -4,13 +4,13 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, PlayerStat, RatedPlayer, Team, TopRated } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { Pager } from '../../shared/pager';
 import { RoundTeamCard } from './round-team';
-import { nearBottom } from '../../shared/infinite-scroll';
+import { PlayersTable } from './players-table';
 import { ratingClass } from '../../shared/rating';
 
-// Linhas visíveis (a altura dos quadros) e quantas a rolagem infinita acrescenta por vez.
-const COLLAPSED = 10;
-const STEP = 5;
+// Linhas por página de cada quadro (a altura dos quadros).
+const PAGE_SIZE = 10;
 // Fração dos jogos de quem mais jogou exigida no filtro "Regulares".
 const REGULAR_FRACTION = 0.5;
 // O ranking de notas é montado em segundo plano no Worker; enquanto não fica pronto, tenta de novo.
@@ -50,7 +50,7 @@ interface Source<T> {
 
 @Component({
   selector: 'app-estatisticas',
-  imports: [Crest, MatIcon, MatTooltip, RoundTeamCard],
+  imports: [Crest, MatIcon, MatTooltip, Pager, PlayersTable, RoundTeamCard],
   templateUrl: './estatisticas.html',
   styleUrl: './estatisticas.scss',
 })
@@ -58,12 +58,9 @@ export class Estatisticas {
   private api = inject(ApiFootball);
   private retry?: ReturnType<typeof setTimeout>;
 
-  protected collapsed = COLLAPSED;
   protected filter = signal<Filter>('regulares');
-  // "Ver mais" de cada quadro (pelo título) não muda o tamanho dele: liga a rolagem
-  // dentro do quadro, que vai carregando mais linhas.
-  private expanded = signal<Record<string, boolean>>({});
-  private shown = signal<Record<string, number>>({});
+  // Página atual de cada quadro, pelo título.
+  private pages = signal<Record<string, number>>({});
 
   private scorers = signal<Source<Leader[]>>({ data: null, message: null });
   private assists = signal<Source<Leader[]>>({ data: null, message: null });
@@ -96,8 +93,6 @@ export class Estatisticas {
     ];
   });
 
-  protected canExpand = computed(() => this.boards().some((b) => b.rows.length > COLLAPSED));
-
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.retry));
 
@@ -126,24 +121,22 @@ export class Estatisticas {
     });
   }
 
+  protected pagesOf(b: Board): number {
+    return Math.max(1, Math.ceil(b.rows.length / PAGE_SIZE));
+  }
+
+  /** Página do quadro; se o filtro encolheu a lista, volta para a última que existe. */
+  protected pageOf(b: Board): number {
+    return Math.min(this.pages()[b.title] ?? 1, this.pagesOf(b));
+  }
+
+  protected setPage(b: Board, page: number) {
+    this.pages.update((p) => ({ ...p, [b.title]: page }));
+  }
+
   protected visible(b: Board): Leader[] {
-    return b.rows.slice(0, this.isExpanded(b) ? (this.shown()[b.title] ?? COLLAPSED + STEP) : COLLAPSED);
-  }
-
-  protected isExpanded(b: Board): boolean {
-    return !!this.expanded()[b.title];
-  }
-
-  protected toggle(b: Board) {
-    this.expanded.update((e) => ({ ...e, [b.title]: !e[b.title] }));
-    this.shown.update((s) => ({ ...s, [b.title]: COLLAPSED + STEP }));
-  }
-
-  protected onScroll(b: Board, event: Event) {
-    const shown = this.visible(b).length;
-    if (nearBottom(event) && shown < b.rows.length) {
-      this.shown.update((s) => ({ ...s, [b.title]: shown + STEP }));
-    }
+    const start = (this.pageOf(b) - 1) * PAGE_SIZE;
+    return b.rows.slice(start, start + PAGE_SIZE);
   }
 
   protected ratingClass = ratingClass;

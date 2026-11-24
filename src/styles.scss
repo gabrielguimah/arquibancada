@@ -1,16 +1,41 @@
 /* You can add global styles to this file, and also import other style files */
+@use 'sass:color';
 @use 'sass:list';
+@use 'sass:map';
+@use 'sass:math';
 @use '@angular/material' as mat;
 
-// Faixas do selo de nota, de 0,5 em 0,5 (10 = nota 10; 95 = 9,5 a 9,9; ...; 0 = abaixo de 6).
-// ratingClass() em shared/rating.ts escolhe a faixa; cada paleta define as cores com rating-scale().
-$rating-bins: 100, 95, 90, 85, 80, 75, 70, 65, 60, 0;
+// Selo da nota: uma cor por décimo, de 5,0 a 10 (classes r-50 … r-100; abaixo de 5 usa r-50).
+// ratingClass() em shared/rating.ts escolhe o décimo; cada paleta define as cores com rating-gradient().
+$rating-min: 50;
+$rating-max: 100;
 
-@mixin rating-scale($backgrounds, $texts) {
-  @for $i from 1 through list.length($rating-bins) {
-    $bin: list.nth($rating-bins, $i);
-    --rating-#{$bin}: #{list.nth($backgrounds, $i)};
-    --rating-#{$bin}-text: #{list.nth($texts, $i)};
+// Cores dos décimos a partir de alguns pontos de referência (mapa décimo → cor, ex.: (50: …, 100: …)):
+// entre dois pontos, a cor vai mudando aos poucos (mistura em OKLCH, que mantém o tom vivo no meio).
+// O número é sempre branco (ver .rating-badge).
+@mixin rating-gradient($stops) {
+  $keys: map.keys($stops);
+  @for $n from $rating-min through $rating-max {
+    $lo: list.nth($keys, 1);
+    $hi: list.nth($keys, -1);
+    @each $k in $keys {
+      @if $k <= $n {
+        $lo: $k;
+      }
+    }
+    @for $i from list.length($keys) through 1 {
+      $k: list.nth($keys, $i);
+      @if $k >= $n {
+        $hi: $k;
+      }
+    }
+    $bg: map.get($stops, $lo);
+    @if $hi != $lo {
+      $t: math.div($n - $lo, $hi - $lo) * 100%;
+      $bg: color.to-gamut(color.mix(map.get($stops, $hi), map.get($stops, $lo), $t, $method: oklch), $method: local-minde);
+      $bg: color.to-space($bg, rgb);
+    }
+    --rating-#{$n}: #{$bg};
   }
 }
 
@@ -26,12 +51,8 @@ $rating-bins: 100, 95, 90, 85, 80, 75, 70, 65, 60, 0;
   --button-bg: light-dark(#e6f3ea, #1c2c22);
   --button-bg-hover: light-dark(#d4ecdc, #243a2c);
   --button-text: light-dark(#007a3d, #ffd43b);
-  // Notas (≥ 8, de 7 a 8, de 6,5 a 7) e vitória (V em "Últimas 5"); as faixas baixas e a derrota ficam fixas.
-  // Escala anterior: azul (≥ 8), verde, verde-limão, laranja e vermelho (< 6).
-  @include rating-scale(
-    (#1d4ed8, #1d4ed8, #1d4ed8, #1d4ed8, #1d4ed8, #16a34a, #16a34a, #84b819, #ea7a0c, #dc2626),
-    (#fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff)
-  );
+  // Notas: do vermelho (5) ao azul (8 ou mais), passando por laranja, verde-limão e verde.
+  @include rating-gradient((50: #dc2626, 60: #ea7a0c, 65: #84b819, 70: #16a34a, 80: #1d4ed8, 100: #1d4ed8));
   --win: #16a34a;
 
   --highlight: #ffcc00;
@@ -62,12 +83,8 @@ $rating-bins: 100, 95, 90, 85, 80, 75, 70, 65, 60, 0;
   --button-bg: light-dark(#ecf4dc, #262626);
   --button-bg-hover: light-dark(#dfedc2, #303030);
   --button-text: light-dark(#3d6600, #baff39);
-  // Notas (≥ 8, de 7 a 8, de 6,5 a 7) e vitória (V em "Últimas 5"); as faixas baixas e a derrota ficam fixas.
-  // Escala anterior: azul (≥ 8), verde, verde-limão, laranja e vermelho (< 6).
-  @include rating-scale(
-    (#1d4ed8, #1d4ed8, #1d4ed8, #1d4ed8, #1d4ed8, #16a34a, #16a34a, #84b819, #ea7a0c, #dc2626),
-    (#fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff, #fff)
-  );
+  // Notas: do vermelho (5) ao azul (8 ou mais), passando por laranja, verde-limão e verde.
+  @include rating-gradient((50: #dc2626, 60: #ea7a0c, 65: #84b819, 70: #16a34a, 80: #1d4ed8, 100: #1d4ed8));
   --win: #16a34a;
 
   --highlight: #baff39;
@@ -98,12 +115,10 @@ $rating-bins: 100, 95, 90, 85, 80, 75, 70, 65, 60, 0;
   --button-bg: light-dark(#d5e0f7, #16224a);
   --button-bg-hover: light-dark(#c3d2f2, #1d2c5c);
   --button-text: light-dark(#01257d, #00ffff);
-  // Notas (≥ 8, de 7 a 8, de 6,5 a 7) e vitória (V em "Últimas 5"); as faixas baixas e a derrota ficam fixas.
-  // Quanto maior a nota, mais claro e elétrico o azul: do marinho (< 6) ao #00FFFF (10).
-  // Nas faixas claras o número fica em marinho; nas escuras, em branco.
-  @include rating-scale(
-    (#00ffff, #1ae6ff, #2fccff, #3bb2ff, #3d97f5, #2f7be6, #2361cf, #1a4ab3, #123894, #0b2870),
-    (#01257d, #01257d, #01257d, #01257d, #01257d, #fff, #fff, #fff, #fff, #fff)
+  // Notas: o azul muda a cada décimo, do violeta-escuro (5) ao #00FFFF (10), passando por índigo,
+  // azul, azul-petróleo e ciano. Os pontos ficam mais juntos entre 6 e 8, as notas mais comuns.
+  @include rating-gradient(
+    (50: #2e1065, 60: #6d28d9, 65: #4338ca, 70: #1d4ed8, 75: #0369a1, 80: #0891b2, 90: #22d3ee, 100: #00ffff)
   );
   --win: light-dark(#1d5fd6, #2a86ff);
 
@@ -289,11 +304,20 @@ html, body {
   text-align: center;
   font-variant-numeric: tabular-nums;
 
-  @each $bin in $rating-bins {
-    &.r-#{$bin} {
-      background: var(--rating-#{$bin});
-      color: var(--rating-#{$bin}-text);
+  // Número sempre branco; a sombra escura mantém o branco legível nos tons claros (8,5 para cima).
+  text-shadow: 0 0 2px rgb(1 37 125 / 0.9);
+
+  @for $n from $rating-min through $rating-max {
+    &.r-#{$n} {
+      background: var(--rating-#{$n});
     }
+  }
+
+  // Jogador sem nota ("Indef."): cinza, nos dois modos.
+  &.r-none {
+    background: #8a94a6;
+    font-weight: 600;
+    text-shadow: none;
   }
 }
 

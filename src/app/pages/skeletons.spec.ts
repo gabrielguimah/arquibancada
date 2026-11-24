@@ -17,6 +17,7 @@ const pendingApi: Partial<Record<keyof ApiFootball, () => typeof NEVER>> = {
   topScorers: () => NEVER,
   topAssists: () => NEVER,
   topRated: () => NEVER,
+  playerStats: () => NEVER,
 };
 
 function render<T>(component: Type<T>): HTMLElement {
@@ -38,15 +39,16 @@ describe('Esqueletos de carregamento', () => {
     expect(el.querySelectorAll('app-team-ratings .rows[aria-busy="true"] .sk').length).toBeGreaterThan(0);
   });
 
-  it('Estatísticas: os três quadros e o time da rodada', () => {
+  it('Estatísticas: os três quadros, o time da rodada e a tabela de jogadores', () => {
     const el = render(Estatisticas);
     expect(el.querySelectorAll('.board .rows[aria-busy="true"]').length).toBe(3);
     expect(el.querySelectorAll('app-round-team .pitch[aria-busy="true"] .sk-photo').length).toBe(11);
+    expect(el.querySelectorAll('app-players-table table[aria-busy="true"] .sk-name').length).toBe(10);
   });
 });
 
 describe('Quadros de estatísticas', () => {
-  it('"Ver mais" abre só o quadro clicado', async () => {
+  it('a paginação no rodapé troca a página só do quadro clicado', async () => {
     const { of } = await import('rxjs');
     const player = (id: number) => ({
       player: { id, name: `Jogador ${id}`, photo: '' },
@@ -59,18 +61,27 @@ describe('Quadros de estatísticas', () => {
         provideRouter([]),
         {
           provide: ApiFootball,
-          useValue: { topScorers: () => of(players), topAssists: () => of(players), topRated: () => NEVER, rounds: () => NEVER, currentRound: () => NEVER },
+          useValue: {
+            topScorers: () => of(players),
+            topAssists: () => of(players),
+            topRated: () => NEVER,
+            playerStats: () => NEVER,
+            rounds: () => NEVER,
+            currentRound: () => NEVER,
+          },
         },
       ],
     });
     const fixture = TestBed.createComponent(Estatisticas);
     fixture.detectChanges();
     const boards = () => [...(fixture.nativeElement as HTMLElement).querySelectorAll('.board')] as HTMLElement[];
-    (boards()[0].querySelector('button.more') as HTMLButtonElement).click();
+    const ranks = (board: HTMLElement) => [...board.querySelectorAll('.rank')].map((r) => r.textContent?.trim());
+    (boards()[0].querySelector('app-pager [aria-label="Página 2"]') as HTMLButtonElement).click();
     fixture.detectChanges();
-    expect(boards()[0].querySelector('.rows')?.classList).toContain('scroll');
-    expect(boards()[1].querySelector('.rows')?.classList).not.toContain('scroll');
-    expect(boards()[1].querySelectorAll('.row').length).toBe(10);
+    // 20 jogadores, 10 por página.
+    expect(ranks(boards()[0])[0]).toBe('11');
+    expect(ranks(boards()[0]).length).toBe(10);
+    expect(ranks(boards()[1])[0]).toBe('1');
   });
 });
 

@@ -2,7 +2,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { MatFormField } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatOption, MatSelect } from '@angular/material/select';
-import { catchError, forkJoin, map, of, switchMap } from 'rxjs';
+import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { ApiFootball, Fixture, Standing } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { FixtureCard, TZ, isLive, todayInBrasilia } from '../../shared/fixture-card';
@@ -62,6 +62,7 @@ export class Rodada {
   private api = inject(ApiFootball);
   private live = inject(LiveFixtures);
   private timer?: ReturnType<typeof setTimeout>;
+  private standingsLoading = false;
 
   protected rounds = signal<string[]>([]);
   protected round = signal<string | null>(null);
@@ -79,6 +80,14 @@ export class Rodada {
   // Listas com os dados ao vivo por cima (placar, status, eventos), quando o jogo está em LiveFixtures.
   private roundView = computed(() => this.withLive(this.fixtures()));
   private todayView = computed(() => this.withLive(this.today() ?? []));
+
+  // Jogos (da rodada e de hoje) já carregaram uma vez; trocar de rodada depois não volta a esperar.
+  private fixturesLoaded = signal(false);
+  // Classificação e jogos carregados, ou falhou: libera a seção Times, que fica no esqueleto até lá
+  // para não aparecer antes do resto da página.
+  protected pageLoaded = computed(
+    () => !!this.error() || (this.standings().length > 0 && this.fixturesLoaded()),
+  );
 
   protected roundIndex = computed(() => this.rounds().indexOf(this.round() ?? ''));
   protected hasLive = computed(() =>
@@ -133,6 +142,8 @@ export class Rodada {
   constructor() {
     this.live.start();
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
+    // A classificação não depende da rodada: busca já, sem esperar rodadas, jogos e eventos.
+    this.loadStandings();
     forkJoin([this.api.rounds(), this.api.currentRound()]).subscribe({
       next: ([rounds, current]) => {
         this.rounds.set(rounds);
@@ -160,23 +171,22 @@ export class Rodada {
     const round = this.round();
     if (!round) return;
     const nextRound = this.rounds()[this.rounds().indexOf(round) + 1];
+    this.loadStandings();
     forkJoin([
       this.api.fixtures(round),
-      this.api.standings(),
       nextRound ? this.api.fixtures(nextRound) : of([]),
       this.api.fixturesOn(todayInBrasilia()),
     ])
       .pipe(
-        switchMap(([fixtures, standings, next, today]) =>
-          this.withEvents(fixtures, today).pipe(map(([f, t]) => [f, standings, next, t] as const)),
+        switchMap(([fixtures, next, today]) =>
+          this.withEvents(fixtures, today).pipe(map(([f, t]) => [f, next, t] as const)),
         ),
       )
       .subscribe({
-        next: ([fixtures, standings, next, today]) => {
+        next: ([fixtures, next, today]) => {
           if (round !== this.round()) return;
           this.fixtures.set(fixtures);
           this.today.set(today);
-          this.standings.set(standings);
           // Mediana, e não o primeiro jogo: um jogo antecipado da rodada seguinte não deve marcar os desta como atrasados.
           const nextStarts = next
             .filter((f) => f.fixture.status.short !== 'PST')
@@ -188,6 +198,7 @@ export class Rodada {
           this.loadSeasonFinished([...fixtures, ...today]);
           this.error.set(null);
           this.loading.set(false);
+          this.fixturesLoaded.set(true);
           this.timer = setTimeout(
             () => this.load(),
             this.hasLive() ? REFRESH_LIVE_MS : REFRESH_IDLE_MS,
@@ -219,6 +230,19 @@ export class Rodada {
       .finishedFixtures()
       .pipe(catchError(() => of(null)))
       .subscribe((list) => this.seasonFinished.set(list));
+  }
+
+  /** Busca a classificação, a não ser que já haja uma busca dela em andamento (a do construtor, na primeira carga). */
+  private loadStandings() {
+    if (this.standingsLoading) return;
+    this.standingsLoading = true;
+    this.api
+      .standings()
+      .pipe(finalize(() => (this.standingsLoading = false)))
+      .subscribe({
+        next: (standings) => this.standings.set(standings),
+        error: () => this.fail(),
+      });
   }
 
   private withLive(list: Fixture[]): Fixture[] {

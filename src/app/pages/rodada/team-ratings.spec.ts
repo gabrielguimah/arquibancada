@@ -31,30 +31,24 @@ describe('Tabelas de times', () => {
     expect(ranks()).toEqual(['1', '2', '3', '4', '5']);
   });
 
-  it('"Ver mais" liga a rolagem sem aumentar a tabela, e rolar carrega mais linhas', () => {
-    const { fixture, firstTable, ranks } = render();
-    const button = firstTable().querySelector('button.more') as HTMLButtonElement;
-    expect(button.textContent?.trim()).toBe('Ver mais');
+  it('pagina no rodapé: as setas e os números trocam a página só da tabela clicada', () => {
+    const { fixture, el, firstTable, ranks } = render();
+    const pager = () => firstTable().querySelector('app-pager') as HTMLElement;
+    const click = (label: string) => {
+      (pager().querySelector(`[aria-label="${label}"]`) as HTMLButtonElement).click();
+      fixture.detectChanges();
+    };
 
-    button.click();
-    fixture.detectChanges();
-    const list = firstTable().querySelector('.rows') as HTMLElement;
-    expect(list.classList).toContain('scroll');
-    expect(ranks().length).toBe(10);
-    // A outra tabela não muda.
-    const other = fixture.nativeElement.querySelectorAll('.table-card')[1] as HTMLElement;
-    expect(other.querySelectorAll('.rank').length).toBe(5);
-    expect((other.querySelector('.rows') as HTMLElement).classList).not.toContain('scroll');
-    expect(button.textContent?.trim()).toBe('Ver menos');
+    // 20 times, 5 por página.
+    expect([...pager().querySelectorAll('.number')].map((b) => b.textContent?.trim())).toEqual(['1', '2', '3', '4']);
+    click('Próxima página');
+    expect(ranks()).toEqual(['6', '7', '8', '9', '10']);
+    click('Página 4');
+    expect(ranks()).toEqual(['16', '17', '18', '19', '20']);
+    expect((pager().querySelector('[aria-label="Próxima página"]') as HTMLButtonElement).disabled).toBe(true);
 
-    // Sem layout no jsdom, a lista está sempre "no fim": cada rolagem carrega mais um bloco.
-    list.dispatchEvent(new Event('scroll'));
-    fixture.detectChanges();
-    expect(ranks().length).toBe(15);
-
-    button.click();
-    fixture.detectChanges();
-    expect(ranks().length).toBe(5);
-    expect((firstTable().querySelector('.rows') as HTMLElement).classList).not.toContain('scroll');
+    // A outra tabela continua na primeira página.
+    const other = el.querySelectorAll('.table-card')[1] as HTMLElement;
+    expect([...other.querySelectorAll('.rank')].map((r) => r.textContent?.trim())).toEqual(['1', '2', '3', '4', '5']);
   });
 });

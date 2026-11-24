@@ -160,10 +160,16 @@ h2 {
   margin-bottom: 10px;
 }
 
+// "Classificação" é mais curto que "Partidas de hoje".
+.sk-title-tabela {
+  width: 130px;
+}
+
+// Cores das zonas (barra lateral, círculo da posição e legenda): azuis saturados, um tom por zona.
 $zones: (
-  libertadores: #1d4ed8,
-  pre-libertadores: #60a5fa,
-  sulamericana: #0891b2,
+  libertadores: #0040ff,
+  pre-libertadores: #3b82f6,
+  sulamericana: #0ea5e9,
   rebaixamento: $red,
 );
 
@@ -278,7 +284,7 @@ tbody tr:last-child td.pos::before {
 @each $zone, $color in $zones {
   tbody.#{$zone} {
     --zone: #{$color};
-    --zone-soft: #{rgba($color, 0.12)};
+    --zone-soft: #{rgba($color, 0.18)};
   }
 
   .legend .#{$zone}::before {

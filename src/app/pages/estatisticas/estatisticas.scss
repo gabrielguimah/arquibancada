@@ -5,18 +5,19 @@ $line: var(--line);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-areas:
-    'title title filter'
-    'scorers assists rated'
-    'team players players';
+    'title title title'
+    'scorers assists team'
+    'filter filter filter'
+    'rated players players';
   gap: 16px 20px;
   max-width: 1240px;
   margin: 0 auto;
   padding: 24px 16px;
 
-  // Celular e tablet: uma coluna, com o filtro logo acima do quadro de notas (o único que ele afeta).
+  // Celular e tablet: uma coluna, com o filtro logo acima dos quadros que ele afeta (notas e jogadores).
   @media (max-width: 1000px) {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'title' 'scorers' 'assists' 'filter' 'rated' 'team' 'players';
+    grid-template-areas: 'title' 'scorers' 'assists' 'team' 'filter' 'rated' 'players';
     max-width: 560px;
   }
 }
@@ -34,12 +35,8 @@ h1 {
 
 .filter {
   display: grid;
-  justify-items: end;
+  justify-items: start;
   align-self: end;
-
-  @media (max-width: 1000px) {
-    justify-items: start;
-  }
 }
 
 .switch {
@@ -149,13 +146,11 @@ h1 {
   padding: 0;
 }
 
-// Altura fixa das linhas: os quadros têm sempre 10 linhas de altura, abertos ou não.
+// Altura fixa das linhas: os quadros têm sempre 10 linhas de altura, mesmo na última página.
 $row-height: 51px;
 
-.rows.scroll {
-  max-height: $row-height * 10;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+.rows {
+  min-height: $row-height * 10;
 }
 
 .row {
@@ -236,28 +231,10 @@ $row-height: 51px;
   font-variant-numeric: tabular-nums;
 }
 
-.more {
-  display: block;
-  width: calc(100% - 32px);
-  // Fica no rodapé do quadro, alinhado entre os três.
-  margin: auto 16px 4px;
-  padding: 7px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--button-bg);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--button-text);
-  cursor: pointer;
-
-  &:hover {
-    background: var(--button-bg-hover);
-  }
-
-  &.placeholder {
-    visibility: hidden;
-  }
+// Paginação no rodapé do quadro, alinhada entre os três.
+.pager {
+  margin-top: auto;
+  padding: 6px 16px 0;
 }
 
 .message {
@@ -298,53 +275,4 @@ $row-height: 51px;
 .sk-value {
   width: 28px;
   height: 16px;
-}
-
-/* Esboço da grade de jogadores (placeholder até definir o conteúdo). */
-
-.players-sketch {
-  border: 1.5px dashed var(--border);
-  box-shadow: none;
-}
-
-.sketch {
-  padding: 0 16px 8px;
-}
-
-.sketch-row {
-  display: grid;
-  grid-template-columns: 28px 2fr 1.4fr repeat(5, 0.6fr);
-  align-items: center;
-  gap: 12px;
-  height: 40px;
-  border-top: 1px solid $line;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: $muted;
-
-  &.head {
-    border-top: 0;
-  }
-
-  .dot {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: var(--line-strong);
-  }
-
-  .bar {
-    width: 70%;
-    height: 10px;
-    border-radius: 5px;
-    background: var(--line-strong);
-
-    &.w-60 {
-      width: 60%;
-    }
-
-    &.w-40 {
-      width: 40%;
-    }
-  }
 }

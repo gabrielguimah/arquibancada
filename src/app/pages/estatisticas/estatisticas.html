@@ -1,5 +1,5 @@
-<!-- Grade da página: título e filtro; artilharia, assistências e notas; time da rodada e jogadores.
-     O filtro fica em cima do quadro de notas, o único que ele afeta. -->
+<!-- Grade da página: título; artilharia, assistências e time da rodada; filtro; notas e jogadores.
+     O filtro fica logo acima dos dois quadros que ele afeta (notas e jogadores). -->
 <div class="page">
   <h1 class="area-title">Estatísticas</h1>
 
@@ -66,7 +66,7 @@
       } @else if (b.message) {
         <p class="message">{{ b.message }}</p>
       } @else {
-        <ol class="rows" [class.scroll]="isExpanded(b)" (scroll)="onScroll(b, $event)">
+        <ol class="rows">
           @for (r of visible(b); track r.id) {
             <li class="row">
               <span class="rank">{{ r.rank }}</span>
@@ -96,43 +96,17 @@
         </ol>
       }
 
-      <!-- Quadro sem mais linhas: o botão fica invisível, mas ocupa o espaço (quadros do mesmo tamanho). -->
-      @if (canExpand()) {
-        <button
-          type="button"
-          class="more"
-          [class.placeholder]="b.rows.length <= collapsed"
-          [disabled]="b.rows.length <= collapsed"
-          (click)="toggle(b)"
-        >
-          {{ isExpanded(b) ? 'Ver menos' : 'Ver mais' }}
-        </button>
-      }
+      <app-pager
+        class="pager"
+        [page]="pageOf(b)"
+        [pages]="pagesOf(b)"
+        [label]="'Páginas de ' + b.title.toLowerCase()"
+        (pageChange)="setPage(b, $event)"
+      />
     </section>
   }
 
   <app-round-team class="area-team" />
 
-  <!-- Esboço: grade de jogadores (conteúdo a definir). -->
-  <section class="board players-sketch area-players" aria-labelledby="players-title">
-    <header>
-      <div>
-        <h2 id="players-title">Jogadores</h2>
-        <p class="subtitle">Esboço: conteúdo a definir</p>
-      </div>
-    </header>
-    <div class="sketch" aria-hidden="true">
-      <div class="sketch-row head">
-        <span></span><span>Jogador</span><span>Time</span><span>Pos.</span><span>J</span
-        ><span>G</span><span>A</span><span>Nota</span>
-      </div>
-      @for (i of [0, 1, 2, 3, 4, 5, 6, 7]; track i) {
-        <div class="sketch-row">
-          <span class="dot"></span><span class="bar w-60"></span><span class="bar w-40"></span
-          ><span class="bar"></span><span class="bar"></span><span class="bar"></span
-          ><span class="bar"></span><span class="bar"></span>
-        </div>
-      }
-    </div>
-  </section>
+  <app-players-table class="area-players" [regulars]="filter() === 'regulares'" />
 </div>

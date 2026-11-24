@@ -1,0 +1,281 @@
+$muted: var(--muted);
+$line: var(--line);
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  // Mesmo respiro embaixo que os quadros ao lado (paginação no rodapé).
+  padding: 12px 0 8px;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.head {
+  padding: 0 16px;
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: $muted;
+}
+
+// Botões em pílula das abas e do Acumulado; roláveis de lado no celular.
+.pills {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  button {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--button-bg);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--button-text);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--button-bg-hover);
+    }
+
+    &.on {
+      background: var(--accent);
+      color: var(--surface);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.tabs {
+  padding: 0 16px;
+}
+
+// Acumulado, à direita (o filtro Regulares/Todos fica no topo da página).
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 16px;
+}
+
+.mode-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $muted;
+}
+
+// Tabela rola de lado em telas estreitas; número, time e nome ficam presos à esquerda.
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  padding: 6px 8px;
+  white-space: nowrap;
+  border-bottom: 1px solid $line;
+}
+
+thead th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: $muted;
+  text-align: left;
+  vertical-align: bottom;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+// Altura fixa: 10 linhas com foto preenchem o card até a paginação, ao lado do quadro de notas.
+tbody tr {
+  height: 39px;
+}
+
+.rank {
+  width: 28px;
+  padding-left: 16px;
+  text-align: center;
+  color: $muted;
+  font-weight: 600;
+}
+
+.team {
+  width: 26px;
+  text-align: center;
+
+  img {
+    display: block;
+    margin: 0 auto;
+    object-fit: contain;
+  }
+}
+
+.name {
+  max-width: 210px;
+  font-weight: 600;
+}
+
+// Foto do jogador (borda branca, como nos outros quadros) e nome cortado com "…" se não couber.
+.who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 210px;
+
+  .text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.photo {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  background: var(--line-strong);
+  object-fit: cover;
+}
+
+.rank,
+.team,
+.name {
+  position: sticky;
+  background: var(--surface);
+  z-index: 1;
+}
+
+.rank {
+  left: 0;
+}
+
+.team {
+  left: 52px;
+}
+
+.name {
+  left: 94px;
+}
+
+.stat {
+  text-align: right;
+
+  &:last-child {
+    padding-right: 16px;
+  }
+
+  // Coluna ordenada em destaque.
+  &.sorted {
+    font-weight: 700;
+  }
+}
+
+// Cabeçalho clicável: ordena pela coluna; a seta fica ao lado do título.
+thead .stat button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: right;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+.arrow {
+  font-size: 0.55rem;
+  opacity: 0.35;
+
+  .sorted & {
+    opacity: 1;
+    color: var(--accent);
+  }
+}
+
+thead .sorted {
+  color: var(--text);
+}
+
+.message {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  color: $muted;
+}
+
+// Paginação presa ao rodapé do card, mesmo quando ele estica para acompanhar o quadro ao lado.
+.pager {
+  margin-top: auto;
+  padding: 0 16px;
+}
+
+/* Esqueleto */
+
+.sk-rank {
+  width: 14px;
+  height: 11px;
+  margin: 0 auto;
+}
+
+.sk-crest {
+  width: 22px;
+  height: 22px;
+  margin: 0 auto;
+  border-radius: 50%;
+}
+
+.sk-photo {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.sk-name {
+  width: 120px;
+  height: 12px;
+}
+
+.sk-value {
+  width: 28px;
+  height: 12px;
+  margin-left: auto;
+}

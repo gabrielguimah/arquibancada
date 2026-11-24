@@ -1,0 +1,116 @@
+<div class="page">
+  <a class="back" routerLink="/"><mat-icon aria-hidden="true">chevron_left</mat-icon>Classificação</a>
+
+  @if (fixture(); as f) {
+    <section class="header" [class.live]="live()" aria-label="Partida">
+      <div class="scoreboard">
+        <div class="team home">
+          <span class="name">{{ f.teams.home.name }}</span>
+          <img crest [src]="f.teams.home.logo" alt="" width="48" height="48" />
+        </div>
+
+        <div class="center">
+          <!-- Bolinha de ao vivo acima do placar. -->
+          @if (live()) {
+            <span class="live-dot" aria-label="Ao vivo"></span>
+          }
+          @if (started()) {
+            <span class="score" [attr.aria-label]="f.goals.home + ' a ' + f.goals.away">
+              {{ f.goals.home }}<span class="dash">-</span>{{ f.goals.away }}
+            </span>
+          } @else {
+            <span class="score kickoff">{{ kickoff().time }}</span>
+          }
+          <span class="status">{{ clock() ?? status() }}</span>
+        </div>
+
+        <div class="team away">
+          <img crest [src]="f.teams.away.logo" alt="" width="48" height="48" />
+          <span class="name">{{ f.teams.away.name }}</span>
+        </div>
+      </div>
+
+      @for (row of highlightRows(); track row.kind) {
+        <div class="scorers" [attr.aria-label]="row.label">
+          <ul class="home">
+            @for (h of row.home; track h.name) {
+              <li>{{ h.name }} {{ h.minutes.join(', ') }}</li>
+            }
+          </ul>
+          <!-- Ícone do tipo de lance no meio, como a bola dos gols. -->
+          <span class="icon" aria-hidden="true">
+            @switch (row.kind) {
+              @case ('goal') {
+                <mat-icon>sports_soccer</mat-icon>
+              }
+              @case ('red') {
+                <span class="red-card"></span>
+              }
+              @case ('missed') {
+                <span class="missed">P</span>
+              }
+            }
+          </span>
+          <ul class="away">
+            @for (h of row.away; track h.name) {
+              <li>{{ h.name }} {{ h.minutes.join(', ') }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <ul class="meta">
+        <li>
+          <mat-icon aria-hidden="true">event</mat-icon>
+          {{ kickoff().date }} <span class="sep" aria-hidden="true">•</span> {{ kickoff().time }}
+        </li>
+        @if (league(); as l) {
+          <li>
+            <img [src]="l.logo" alt="" width="16" height="16" />
+            {{ l.name }}
+            @if (l.round) {
+              <span class="sep" aria-hidden="true">•</span> {{ l.round }}
+            }
+          </li>
+        }
+        @if (venue()) {
+          <li>
+            <mat-icon aria-hidden="true">stadium</mat-icon>
+            {{ venue() }}
+          </li>
+        }
+      </ul>
+    </section>
+
+    <!-- Celular: um seletor escolhe o que aparece (lance a lance ou escalações). -->
+    <div class="tabs" role="tablist" aria-label="Seções da partida">
+      <button type="button" role="tab" [attr.aria-selected]="tab() === 'timeline'" (click)="tab.set('timeline')">
+        Lance a lance
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab() === 'lineups'" (click)="tab.set('lineups')">
+        Escalações
+      </button>
+    </div>
+
+    <!-- Computador: lance a lance em 1/3, escalações em 2/3, lado a lado. -->
+    <div class="sections" [attr.data-tab]="tab()">
+      <app-match-timeline class="timeline" [fixture]="f" />
+      <app-match-lineups class="lineups" [fixture]="f" />
+    </div>
+  } @else if (error()) {
+    <section class="header message">
+      <p>{{ error() }}</p>
+      <a routerLink="/">Voltar para a classificação</a>
+    </section>
+  } @else {
+    <!-- Esqueleto do cabeçalho enquanto a partida carrega. -->
+    <section class="header" aria-busy="true" aria-label="Carregando partida">
+      <div class="scoreboard" aria-hidden="true">
+        <div class="team home"><span class="sk sk-name"></span><span class="sk sk-crest"></span></div>
+        <div class="center"><span class="sk sk-score"></span><span class="sk sk-status"></span></div>
+        <div class="team away"><span class="sk sk-crest"></span><span class="sk sk-name"></span></div>
+      </div>
+      <div class="meta" aria-hidden="true"><span class="sk sk-meta"></span></div>
+    </section>
+  }
+</div>

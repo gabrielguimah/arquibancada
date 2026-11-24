@@ -1,0 +1,99 @@
+<header class="head">
+  <div>
+    <h2 id="players-title">Jogadores</h2>
+    <p class="subtitle">Números de cada jogador na temporada</p>
+  </div>
+</header>
+
+<!-- Abas: tipo de estatística. -->
+<div class="pills tabs" role="tablist" aria-label="Tipo de estatística">
+  @for (t of tabs; track t.id) {
+    <button type="button" role="tab" [attr.aria-selected]="t.id === tab().id" [class.on]="t.id === tab().id" (click)="selectTab(t)">
+      {{ t.label }}
+    </button>
+  }
+</div>
+
+<!-- Acumulado: totais da temporada ou médias. -->
+<div class="controls">
+  <span class="mode-label" id="players-mode-label">Acumulado</span>
+  <div class="pills" role="radiogroup" aria-labelledby="players-mode-label">
+    @for (a of accumulations; track a.id) {
+      <button type="button" role="radio" [attr.aria-checked]="a.id === mode()" [class.on]="a.id === mode()" (click)="mode.set(a.id)">
+        {{ a.label }}
+      </button>
+    }
+  </div>
+</div>
+
+@if (message()) {
+  <p class="message">{{ message() }}</p>
+} @else {
+  <div class="table-wrap">
+    <table [attr.aria-busy]="visible() === null" aria-labelledby="players-title">
+      <thead>
+        <tr>
+          <th class="rank" scope="col">#</th>
+          <th class="team" scope="col">Time</th>
+          <th class="name" scope="col">Nome</th>
+          @for (c of tab().columns; track c.id) {
+            <th scope="col" class="stat" [class.sorted]="sort().column === c.id" [attr.aria-sort]="ariaSort(c)">
+              <button type="button" [matTooltip]="c.title" (click)="sortBy(c)">
+                {{ c.label }}
+                <span class="arrow" aria-hidden="true">{{ sort().column === c.id && sort().ascending ? '▲' : '▼' }}</span>
+              </button>
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @if (visible(); as lines) {
+          @for (l of lines; track l.player.id) {
+            <tr>
+              <td class="rank">{{ l.rank }}</td>
+              <td class="team">
+                <img crest [src]="l.player.team.logo" [alt]="l.player.team.name" [title]="l.player.team.name" width="22" height="22" loading="lazy" />
+              </td>
+              <td class="name">
+                <span class="who">
+                  <img class="photo" [src]="l.player.photo" alt="" width="28" height="28" loading="lazy" />
+                  <span class="text">{{ l.player.name }}</span>
+                </span>
+              </td>
+              @for (cell of l.cells; track cell.column.id) {
+                <td class="stat" [class.sorted]="sort().column === cell.column.id">
+                  @if (cell.column.kind === 'rating' && cell.value !== null) {
+                    <span [class]="ratingClass(cell.value)">{{ cell.text }}</span>
+                  } @else if (cell.column.kind === 'rating') {
+                    <span [class]="noRating.class" [title]="noRating.title">{{ noRating.label }}</span>
+                  } @else {
+                    {{ cell.text }}
+                  }
+                </td>
+              }
+            </tr>
+          } @empty {
+            <tr>
+              <td class="message" [attr.colspan]="tab().columns.length + 3">Nenhum jogador neste filtro.</td>
+            </tr>
+          }
+        } @else {
+          @for (i of skeleton; track i) {
+            <tr aria-hidden="true">
+              <td class="rank"><span class="sk sk-rank"></span></td>
+              <td class="team"><span class="sk sk-crest"></span></td>
+              <td class="name">
+                <span class="who"><span class="sk sk-photo"></span><span class="sk sk-name"></span></span>
+              </td>
+              @for (c of tab().columns; track c.id) {
+                <td class="stat"><span class="sk sk-value"></span></td>
+              }
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-pager class="pager" [page]="page()" [pages]="pages()" label="Páginas de jogadores" (pageChange)="page.set($event)" />
+}

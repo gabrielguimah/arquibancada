@@ -9,5 +9,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/estatisticas/estatisticas').then((m) => m.Estatisticas),
     title: 'Estatísticas · Arquibancada',
   },
+  {
+    path: 'partida/:id',
+    loadComponent: () => import('./pages/partida/partida').then((m) => m.Partida),
+    title: 'Partida · Arquibancada',
+  },
   { path: '**', redirectTo: '' },
 ];

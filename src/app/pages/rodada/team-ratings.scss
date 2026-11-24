@@ -89,13 +89,11 @@ $line: var(--line);
   padding: 0;
 }
 
-// Altura fixa das linhas: a tabela tem sempre 5 linhas de altura, aberta ou não.
+// Altura fixa das linhas: a tabela tem sempre 5 linhas de altura, em qualquer página.
 $row-height: 35px;
 
-.rows.scroll {
-  max-height: $row-height * 5;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+.rows {
+  min-height: $row-height * 5;
 }
 
 .row {
@@ -130,23 +128,10 @@ $row-height: 35px;
   white-space: nowrap;
 }
 
-.more {
+// Paginação no rodapé da tabela.
+.pager {
   display: block;
-  width: calc(100% - 28px);
-  margin: 6px 14px 4px;
-  padding: 6px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--button-bg);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--button-text);
-  cursor: pointer;
-
-  &:hover {
-    background: var(--button-bg-hover);
-  }
+  padding: 6px 14px 0;
 }
 
 .message {

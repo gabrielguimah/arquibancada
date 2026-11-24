@@ -1,0 +1,201 @@
+$muted: var(--muted);
+
+:host {
+  display: block;
+  // As colunas seguem a largura do card (uma por time; uma só se ficar estreito).
+  container-type: inline-size;
+}
+
+.bench {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+
+  @container (max-width: 480px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  display: grid;
+  grid-template-columns: 20px 28px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8rem;
+
+  // Reserva que não entrou: mais apagado.
+  &.unused {
+    color: $muted;
+
+    .mini {
+      opacity: 0.6;
+    }
+  }
+
+  // Melhor da partida: foto com a borda na cor de destaque, como no campo.
+  &.mvp .mini {
+    border-color: var(--highlight);
+  }
+}
+
+.number {
+  color: $muted;
+  font-size: 0.72rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.rating {
+  min-width: 30px;
+  padding: 2px 4px;
+  font-size: 0.7rem;
+}
+
+.mini {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  background: var(--line-strong);
+  object-fit: cover;
+}
+
+// Nome do reserva quebra para baixo, sem cortar.
+.bench-name {
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
+// Ícones soltos (sem o círculo de fundo do campo), encostados no nome; descem junto se ele quebrar.
+.name-events {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 4px;
+  vertical-align: -3px;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.ev-wrap {
+  position: relative;
+  display: inline-flex;
+
+  // Mais de um (2 gols, 3 assistências…): número pequeno no canto de cima à direita.
+  .count {
+    position: absolute;
+    right: -5px;
+    top: -4px;
+    min-width: 11px;
+    height: 11px;
+    padding: 0 2px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    background: var(--text);
+    color: var(--surface);
+    font-size: 0.5rem;
+    font-weight: 700;
+    line-height: 11px;
+    text-align: center;
+  }
+}
+
+.ev {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 16px;
+  color: var(--text);
+
+  &.own-goal {
+    color: #dc2626;
+  }
+}
+
+.card-icon {
+  display: inline-block;
+  width: 9px;
+  height: 12px;
+  border-radius: 1.5px;
+  background: #facc15;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25);
+
+  &.red {
+    background: #dc2626;
+  }
+}
+
+// Melhor da partida: só a estrela, na cor de destaque do tema.
+.best {
+  width: 17px;
+  height: 17px;
+  font-size: 17px;
+  line-height: 17px;
+  color: var(--accent);
+  font-variation-settings: 'FILL' 1;
+}
+
+.events {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// Entrou (seta verde para cima) e, se saiu depois, saiu (seta vermelha para baixo), com o minuto.
+.sub-in,
+.sub-out {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+
+  mat-icon {
+    width: 14px;
+    height: 14px;
+    font-size: 14px;
+  }
+}
+
+.sub-in {
+  color: #16a34a;
+}
+
+.sub-out {
+  color: #dc2626;
+}
+
+.coach {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+
+  small {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: $muted;
+  }
+}

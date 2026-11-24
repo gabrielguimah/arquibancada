@@ -90,7 +90,11 @@
   </section>
 
   <section class="tabela">
-    <h2>Classificação</h2>
+    @if (standings().length || error()) {
+      <h2>Classificação</h2>
+    } @else {
+      <span class="sk sk-title sk-title-tabela" aria-hidden="true"></span>
+    }
     @if (standings().length) {
       <div class="table-wrap">
         <table>
@@ -240,6 +244,6 @@
       </div>
     }
 
-    <app-team-ratings />
+    <app-team-ratings [ready]="pageLoaded()" />
   </section>
 </div>

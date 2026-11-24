@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { Fixture } from '../api/api-football';
 import { FixtureCard } from './fixture-card';
 
@@ -27,6 +28,14 @@ function render(f: Fixture): HTMLElement {
 }
 
 describe('FixtureCard', () => {
+  beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([])] }));
+
+  it('o card é um link para a página da partida', () => {
+    const f = fixture('NS', null, [null, null]);
+    f.fixture.id = 1492463;
+    expect(render(f).querySelector('a.card')?.getAttribute('href')).toBe('/partida/1492463');
+  });
+
   it('mostra a bolinha ao vivo e o relógio no lugar do horário, sem nome do período', () => {
     const el = render(fixture('2H', 67, [1, 0]));
     expect(el.querySelector('.live-dot')).toBeTruthy();

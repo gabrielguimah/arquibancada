@@ -24,6 +24,11 @@ const CRAWL_GAP_MS = 2000;
 // Só entra no ranking quem jogou ao menos esta fração das partidas do jogador com mais jogos.
 const TOP_RATED_MIN_APPEARANCES = 0.5;
 
+// Tabela de jogadores (grade da página de estatísticas): números de cada jogador na temporada,
+// montados a partir das mesmas páginas de `players` do ranking de notas.
+const PLAYER_STATS_PATH = 'players/stats';
+const PLAYER_STATS_VERSION = 1;
+
 // Estatísticas dos times (a API não tem um ranking pronto). A nota média da temporada sai das mesmas
 // páginas de `players` do ranking de jogadores; o resto (e a nota das últimas 5) sai dos detalhes de
 // cada jogo encerrado, buscados em grupos de 2 rodadas (até 20 jogos por chamada de `fixtures?ids=`).
@@ -193,9 +198,113 @@ interface PlayerSeason {
   statistics: Array<{
     team: { id: number; name: string; logo: string };
     league: { id: number };
-    games: { appearences: number | null; minutes: number | null; rating: string | null };
-    goals: { total: number | null; assists: number | null };
+    games: { appearences: number | null; minutes: number | null; rating: string | null; position?: string | null };
+    goals: { total: number | null; assists: number | null; conceded?: number | null; saves?: number | null };
+    shots?: { total: number | null; on: number | null };
+    passes?: { total: number | null; key: number | null; accuracy: number | null };
+    tackles?: { total: number | null; blocks: number | null; interceptions: number | null };
+    duels?: { total: number | null; won: number | null };
+    dribbles?: { attempts: number | null; success: number | null };
+    fouls?: { drawn: number | null; committed: number | null };
+    cards?: { yellow: number | null; yellowred: number | null; red: number | null };
+    penalty?: { won: number | null; commited: number | null; scored: number | null; missed: number | null; saved: number | null };
   }>;
+}
+
+/** Linha da tabela de jogadores: soma dos clubes do jogador no campeonato. */
+interface PlayerStatsRow {
+  id: number;
+  name: string;
+  photo: string;
+  /** Clube onde o jogador mais jogou no campeonato. */
+  team: TeamRef;
+  /** G (goleiro), D, M ou F (atacante). */
+  position: string | null;
+  appearances: number;
+  minutes: number;
+  /** Média das notas, com peso pelos minutos; `null` sem nota. */
+  rating: number | null;
+  goals: number;
+  assists: number;
+  shots: number;
+  shotsOn: number;
+  passes: number;
+  keyPasses: number;
+  /** Acerto no passe (%), com peso pelos passes de cada clube; `null` sem passes. */
+  passAccuracy: number | null;
+  tackles: number;
+  interceptions: number;
+  blocks: number;
+  duels: number;
+  duelsWon: number;
+  dribbles: number;
+  dribblesWon: number;
+  foulsDrawn: number;
+  foulsCommitted: number;
+  yellowCards: number;
+  redCards: number;
+  penaltiesScored: number;
+  penaltiesMissed: number;
+  penaltiesWon: number;
+  penaltiesCommitted: number;
+  saves: number;
+  goalsConceded: number;
+  penaltiesSaved: number;
+}
+
+const POSITIONS: Record<string, string> = { Goalkeeper: 'G', Defender: 'D', Midfielder: 'M', Attacker: 'F' };
+
+/** Junta as linhas do jogador no Brasileirão (uma por clube) numa só. */
+function playerStatsRow(item: PlayerSeason, stats: PlayerSeason['statistics']): PlayerStatsRow {
+  const sum = (pick: (s: PlayerSeason['statistics'][number]) => number | null | undefined) =>
+    stats.reduce((total, s) => total + (pick(s) ?? 0), 0);
+  const main = [...stats].sort((a, b) => (b.games.minutes ?? 0) - (a.games.minutes ?? 0))[0];
+
+  const rated = stats.filter((s) => s.games.rating && s.games.minutes);
+  const ratedMinutes = rated.reduce((t, s) => t + (s.games.minutes ?? 0), 0);
+  const passes = sum((s) => s.passes?.total);
+  const withAccuracy = stats.filter((s) => s.passes?.total && s.passes.accuracy != null);
+  const accuracyPasses = withAccuracy.reduce((t, s) => t + (s.passes?.total ?? 0), 0);
+
+  return {
+    id: item.player.id,
+    name: item.player.name,
+    photo: item.player.photo,
+    team: { id: main.team.id, name: main.team.name, logo: main.team.logo },
+    position: POSITIONS[main.games.position ?? ''] ?? null,
+    appearances: sum((s) => s.games.appearences),
+    minutes: sum((s) => s.games.minutes),
+    rating: ratedMinutes
+      ? round2(rated.reduce((t, s) => t + Number(s.games.rating) * (s.games.minutes ?? 0), 0) / ratedMinutes)
+      : null,
+    goals: sum((s) => s.goals.total),
+    assists: sum((s) => s.goals.assists),
+    shots: sum((s) => s.shots?.total),
+    shotsOn: sum((s) => s.shots?.on),
+    passes,
+    keyPasses: sum((s) => s.passes?.key),
+    passAccuracy: accuracyPasses
+      ? Math.round(withAccuracy.reduce((t, s) => t + (s.passes?.accuracy ?? 0) * (s.passes?.total ?? 0), 0) / accuracyPasses)
+      : null,
+    tackles: sum((s) => s.tackles?.total),
+    interceptions: sum((s) => s.tackles?.interceptions),
+    blocks: sum((s) => s.tackles?.blocks),
+    duels: sum((s) => s.duels?.total),
+    duelsWon: sum((s) => s.duels?.won),
+    dribbles: sum((s) => s.dribbles?.attempts),
+    dribblesWon: sum((s) => s.dribbles?.success),
+    foulsDrawn: sum((s) => s.fouls?.drawn),
+    foulsCommitted: sum((s) => s.fouls?.committed),
+    yellowCards: sum((s) => s.cards?.yellow),
+    redCards: sum((s) => (s.cards?.red ?? 0) + (s.cards?.yellowred ?? 0)),
+    penaltiesScored: sum((s) => s.penalty?.scored),
+    penaltiesMissed: sum((s) => s.penalty?.missed),
+    penaltiesWon: sum((s) => s.penalty?.won),
+    penaltiesCommitted: sum((s) => s.penalty?.commited),
+    saves: sum((s) => s.goals.saves),
+    goalsConceded: sum((s) => s.goals.conceded),
+    penaltiesSaved: sum((s) => s.penalty?.saved),
+  };
 }
 
 interface UpstreamResponse {
@@ -368,6 +477,10 @@ function roundParam(url: URL): string {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+function playerStatsKey(season: string): string {
+  return `${PLAYER_STATS_PATH}?league=${BRASILEIRAO}&season=${season}&v=${PLAYER_STATS_VERSION}`;
 }
 
 function topRatedKey(season: string): string {
@@ -544,6 +657,55 @@ export class ApiCache extends DurableObject<Env> {
     return { httpStatus: 503, error: 'Ranking de notas sendo montado, tente em alguns minutos' };
   }
 
+  /** Tabela de jogadores da temporada. Como o ranking de notas: devolve a última montada e, se velha, agenda outra. */
+  async playerStats(): Promise<CacheResult | CacheError> {
+    const entry = this.read(playerStatsKey(this.env.SEASON));
+    const age = entry ? Math.floor((Date.now() - entry.fetchedAt) / 1000) : 0;
+    const fresh = !!entry && age < entry.ttl;
+    if (!fresh) await this.startCrawl();
+    if (entry) return { body: entry.body, status: fresh ? 'HIT' : 'STALE', age, ttl: entry.ttl };
+    // Primeira vez: as páginas de `players` podem já estar todas no cache (ranking de notas); aí monta na hora.
+    const pages = this.cachedPlayerPages();
+    if (pages) {
+      this.buildPlayerStats(pages, await this.leagueTeamIds());
+      const built = this.read(playerStatsKey(this.env.SEASON));
+      if (built) return { body: built.body, status: 'MISS', age: 0, ttl: built.ttl };
+    }
+    return { httpStatus: 503, error: 'Tabela de jogadores sendo montada, tente em alguns minutos' };
+  }
+
+  /** Total de páginas de `players`, se todas estão no cache; `null` se falta alguma. */
+  private cachedPlayerPages(): number | null {
+    const first = this.read(playersPageKey(this.env.SEASON, 1));
+    if (!first) return null;
+    const total = (JSON.parse(first.body) as ApiBody).paging?.total ?? 1;
+    for (let page = 2; page <= total; page++) if (!this.read(playersPageKey(this.env.SEASON, page))) return null;
+    return total;
+  }
+
+  /** Monta a tabela de jogadores: uma linha por jogador com jogos no Brasileirão, por clubes da Série A. */
+  private buildPlayerStats(pages: number, teams: Set<number> | null) {
+    const rows: PlayerStatsRow[] = [];
+    for (let page = 1; page <= pages; page++) {
+      const entry = this.read(playersPageKey(this.env.SEASON, page));
+      if (!entry) continue;
+      for (const item of (JSON.parse(entry.body) as { response: PlayerSeason[] }).response) {
+        const stats = item.statistics.filter(
+          (s) => String(s.league.id) === BRASILEIRAO && (s.games.appearences ?? 0) > 0 && (!teams || teams.has(s.team.id)),
+        );
+        if (stats.length) rows.push(playerStatsRow(item, stats));
+      }
+    }
+    const maxApps = Math.max(0, ...rows.map((r) => r.appearances));
+    const body = {
+      updatedAt: new Date().toISOString(),
+      // Mesmo critério de "Regulares" do ranking de notas.
+      minAppearances: Math.ceil(maxApps * TOP_RATED_MIN_APPEARANCES),
+      players: rows,
+    };
+    this.store(playerStatsKey(this.env.SEASON), JSON.stringify(body), TOP_RATED_TTL);
+  }
+
   private async startCrawl() {
     // Durante a execução do alarme, getAlarm() volta null; `crawling` cobre esse intervalo.
     if (this.crawling || (await this.ctx.storage.getAlarm()) !== null) return;
@@ -624,6 +786,7 @@ export class ApiCache extends DurableObject<Env> {
     const body = { updatedAt: new Date().toISOString(), maxAppearances: maxApps, minAppearances, response, all };
     this.store(topRatedKey(this.env.SEASON), JSON.stringify(body), TOP_RATED_TTL);
     this.buildTeamSeasonRatings(pages, teams);
+    this.buildPlayerStats(pages, teams);
   }
 
   /** Nota média de cada time na temporada: notas dos jogadores, com peso pelos minutos jogados pelo clube. */
@@ -897,11 +1060,13 @@ export default {
       const result =
         url.pathname === `/${TOP_RATED_PATH}`
           ? await stub.topRated()
-          : url.pathname === `/${TEAM_RATINGS_PATH}`
-            ? await stub.teamRatings()
-            : url.pathname === `/${ROUND_TEAM_PATH}`
-              ? await stub.roundTeam(roundParam(url))
-              : await stub.serve(cacheKey(url));
+          : url.pathname === `/${PLAYER_STATS_PATH}`
+            ? await stub.playerStats()
+            : url.pathname === `/${TEAM_RATINGS_PATH}`
+              ? await stub.teamRatings()
+              : url.pathname === `/${ROUND_TEAM_PATH}`
+                ? await stub.roundTeam(roundParam(url))
+                : await stub.serve(cacheKey(url));
       if ('error' in result) return Response.json({ error: result.error }, { status: result.httpStatus, headers: cors });
       const maxAge = Math.max(0, result.ttl - result.age);
       return new Response(result.body, {

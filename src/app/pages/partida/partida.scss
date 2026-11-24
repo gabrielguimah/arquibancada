@@ -1,0 +1,352 @@
+$muted: var(--muted);
+
+.page {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+// Seções abaixo do cabeçalho: lance a lance (1/3) e escalações (2/3), lado a lado.
+.sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+// Seletor só no celular.
+.tabs {
+  display: none;
+}
+
+// Celular: uma seção por vez, escolhida no seletor abaixo do cabeçalho.
+@media (max-width: 900px) {
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--button-bg);
+
+    button {
+      flex: 1;
+      padding: 8px 12px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: $muted;
+      cursor: pointer;
+
+      &[aria-selected='true'] {
+        background: var(--surface);
+        color: var(--accent);
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  .sections {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 12px;
+
+    &[data-tab='timeline'] .lineups,
+    &[data-tab='lineups'] .timeline {
+      display: none;
+    }
+  }
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--button-text);
+  text-decoration: none;
+
+  mat-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.header {
+  display: grid;
+  gap: 14px;
+  padding: 20px 16px 16px;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px var(--shadow);
+
+  &.live {
+    box-shadow: inset 3px 0 0 var(--live), 0 1px 2px var(--shadow);
+  }
+}
+
+// Times nas pontas, placar no meio: as três colunas centralizadas, como num placar de estádio.
+.scoreboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+}
+
+.team {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+
+  &.home {
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  img {
+    flex-shrink: 0;
+    object-fit: contain;
+  }
+
+  .name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.center {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 96px;
+
+  .live-dot {
+    margin-bottom: 2px;
+  }
+}
+
+.score {
+  display: flex;
+  gap: 10px;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+
+  &.kickoff {
+    font-size: 1.5rem;
+  }
+
+  .dash {
+    color: $muted;
+    font-weight: 500;
+  }
+
+  .live & {
+    color: var(--live-text);
+  }
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: $muted;
+  font-variant-numeric: tabular-nums;
+
+  .live & {
+    color: var(--live-text);
+    font-weight: 700;
+  }
+}
+
+// Lances: mandante à direita (perto do placar), visitante à esquerda, ícone do tipo no meio. Uma
+// linha por tipo (gols, cartões vermelhos, pênaltis perdidos), coladas umas nas outras.
+.scorers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: $muted;
+
+  ul {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .home {
+    text-align: right;
+  }
+
+  // Coluna do meio com largura fixa: os ícones de todas as linhas ficam um embaixo do outro.
+  .icon {
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+
+    mat-icon {
+      width: 16px;
+      height: 16px;
+      font-size: 16px;
+    }
+  }
+
+  & + & {
+    margin-top: -8px;
+  }
+}
+
+// Cartão vermelho: retângulo em pé, como nos cards de jogo.
+.red-card {
+  flex-shrink: 0;
+  width: 8px;
+  height: 11px;
+  border-radius: 1.5px;
+  background: #dc2626;
+}
+
+// Pênalti perdido: "P" riscado num círculo.
+.missed {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border: 1.2px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: line-through;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 20px;
+  margin: 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+  font-size: 0.78rem;
+  color: $muted;
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+
+  img {
+    object-fit: contain;
+  }
+}
+
+.sep {
+  color: var(--subtle);
+}
+
+.message {
+  justify-items: center;
+  text-align: center;
+
+  p {
+    margin: 0;
+    color: $muted;
+  }
+
+  a {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--button-text);
+  }
+}
+
+// Celular: nomes embaixo dos escudos, para caberem.
+@media (max-width: 560px) {
+  .scoreboard {
+    gap: 10px;
+  }
+
+  .team {
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+
+    &.home {
+      flex-direction: column-reverse;
+      text-align: center;
+    }
+
+    .name {
+      font-size: 0.9rem;
+      white-space: normal;
+    }
+  }
+
+  .score {
+    font-size: 1.6rem;
+  }
+}
+
+/* Esqueleto */
+
+.sk-name {
+  width: 110px;
+  height: 16px;
+}
+
+.sk-crest {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.sk-score {
+  width: 80px;
+  height: 32px;
+}
+
+.sk-status {
+  width: 60px;
+  height: 11px;
+  margin-top: 4px;
+}
+
+.sk-meta {
+  width: 320px;
+  max-width: 100%;
+  height: 12px;
+  margin: 0 auto;
+}
