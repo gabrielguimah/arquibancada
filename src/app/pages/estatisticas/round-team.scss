@@ -34,51 +34,9 @@ $muted: var(--muted);
   color: $muted;
 }
 
-// Mesmo seletor de rodada da Classificação.
+// Seletor de rodada (o mesmo da Classificação, em tamanho compacto).
 .round-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   margin-bottom: 12px;
-
-  button {
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: var(--button-bg);
-    color: var(--button-text);
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-      background: var(--button-bg-hover);
-    }
-
-    &:disabled {
-      opacity: 0.3;
-      cursor: default;
-    }
-  }
-
-  mat-form-field {
-    width: 150px;
-  }
-}
-
-.sk-nav-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-}
-
-.sk-nav-select {
-  width: 150px;
-  height: 40px;
-  border-radius: 4px;
 }
 
 // Campo visto de cima, ataque em cima; listras e linhas brancas.

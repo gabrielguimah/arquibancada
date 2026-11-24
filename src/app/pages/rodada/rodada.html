@@ -22,46 +22,14 @@
     }
 
     <!-- Seletor em esqueleto enquanto as partidas carregam (junto com os cards). -->
-    @if ((loading() || !rounds().length) && !error()) {
-      <div class="round-nav" aria-hidden="true">
-        <span class="sk sk-nav-btn"></span>
-        <span class="sk sk-nav-select"></span>
-        <span class="sk sk-nav-btn"></span>
-      </div>
-    } @else if (rounds().length) {
-      <div class="round-nav">
-        <button
-          type="button"
-          (click)="step(-1)"
-          [disabled]="roundIndex() <= 0"
-          aria-label="Rodada anterior"
-        >
-          <mat-icon>chevron_left</mat-icon>
-        </button>
-        <div class="round-select">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dense select-pill">
-            <mat-select
-              panelClass="select-panel"
-              hideSingleSelectionIndicator
-              aria-label="Escolher rodada"
-              [value]="round()"
-              (selectionChange)="selectRound($event.value)"
-            >
-              @for (r of rounds(); track r) {
-                <mat-option [value]="r">{{ roundName(r) }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        </div>
-        <button
-          type="button"
-          (click)="step(1)"
-          [disabled]="roundIndex() >= rounds().length - 1"
-          aria-label="Próxima rodada"
-        >
-          <mat-icon>chevron_right</mat-icon>
-        </button>
-      </div>
+    @if (!error() || rounds().length) {
+      <app-round-nav
+        class="round-nav"
+        [rounds]="rounds()"
+        [round]="round()"
+        [loading]="(loading() || !rounds().length) && !error()"
+        (roundChange)="selectRound($event)"
+      />
     }
 
     @if (error()) {

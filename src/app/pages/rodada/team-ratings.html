@@ -1,3 +1,10 @@
+<!-- Título e filtro em esqueleto enquanto as tabelas carregam (ou esperam o resto da página). -->
+@if (!showToolbar()) {
+  <div class="toolbar" aria-hidden="true">
+    <span class="sk sk-title"></span>
+    <span class="sk sk-sort"></span>
+  </div>
+} @else {
 <div class="toolbar">
   <h2>Times</h2>
   <label class="sort">
@@ -17,6 +24,7 @@
     </mat-form-field>
   </label>
 </div>
+}
 
 @if (message() && ready()) {
   <p class="message">{{ message() }}</p>

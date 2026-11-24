@@ -45,6 +45,8 @@ export class TeamRatingsTables {
   ready = input(true);
 
   private data = signal<TeamRatings | null>(null);
+  /** Título e filtro aparecem junto com as tabelas (ou com o aviso, se não carregarem). */
+  protected showToolbar = computed(() => this.ready() && (this.data() !== null || this.message() !== null));
   protected message = signal<string | null>(null);
   // Página atual de cada tabela.
   protected page = signal<Record<RatingTable['id'], number>>({ season: 1, last5: 1 });

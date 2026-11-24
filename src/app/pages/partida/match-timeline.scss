@@ -129,7 +129,8 @@ $muted: var(--muted);
 .text {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  // Centro, e não linha de base: a chuteira ao lado do assistente deslocava a base do texto dele.
+  align-items: center;
   gap: 2px 6px;
   min-width: 0;
 

@@ -1,13 +1,12 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { MatFormField } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
-import { MatOption, MatSelect } from '@angular/material/select';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { ApiFootball, Fixture, Standing } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { FixtureCard, TZ, isLive, todayInBrasilia } from '../../shared/fixture-card';
 import { FixtureCardSkeleton } from '../../shared/fixture-card-skeleton';
 import { LiveFixtures } from '../../shared/live-fixtures';
+import { RoundNav } from '../../shared/round-nav';
 import { FINISHED, liveStandings } from './live-standings';
 import { TeamRatingsTables } from './team-ratings';
 
@@ -50,10 +49,8 @@ interface FormResult {
     FixtureCard,
     FixtureCardSkeleton,
     MatIcon,
-    MatFormField,
-    MatSelect,
-    MatOption,
     TeamRatingsTables,
+    RoundNav,
   ],
   templateUrl: './rodada.html',
   styleUrl: './rodada.scss',
@@ -89,7 +86,6 @@ export class Rodada {
     () => !!this.error() || (this.standings().length > 0 && this.fixturesLoaded()),
   );
 
-  protected roundIndex = computed(() => this.rounds().indexOf(this.round() ?? ''));
   protected hasLive = computed(() =>
     [...this.roundView(), ...this.todayView()].some((f) => isLive(f)),
   );
@@ -151,11 +147,6 @@ export class Rodada {
       },
       error: () => this.fail(),
     });
-  }
-
-  protected step(delta: number) {
-    const next = this.rounds()[this.roundIndex() + delta];
-    if (next) this.selectRound(next);
   }
 
   protected selectRound(round: string) {
@@ -274,7 +265,6 @@ export class Rodada {
     this.error.set('Não foi possível carregar os dados. Tentando de novo em instantes…');
   }
 
-  protected roundName = roundName;
 
   // Critérios de desempate do Campeonato Brasileiro (regulamento da CBF), na ordem.
   protected tiebreakRules = [
@@ -341,10 +331,4 @@ function zoneOf(s: Standing): Zone | null {
   if (d.includes('Sudamericana')) return { id: 'sulamericana', label: 'Sul-Americana' };
   if (d.includes('Relegation')) return { id: 'rebaixamento', label: 'Rebaixamento' };
   return null;
-}
-
-/** "Regular Season - 36" → "36ª rodada" */
-function roundName(round: string | null): string {
-  const n = round?.match(/(\d+)$/)?.[1];
-  return n ? `${n}ª rodada` : (round ?? '');
 }

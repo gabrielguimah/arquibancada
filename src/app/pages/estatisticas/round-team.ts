@@ -1,10 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { MatFormField } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
-import { MatOption, MatSelect } from '@angular/material/select';
 import { forkJoin } from 'rxjs';
 import { ApiFootball, RoundPlayer, RoundTeam } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { RoundNav } from '../../shared/round-nav';
 import { ratingClass } from '../../shared/rating';
 
 // Linhas do campo, do ataque (em cima) ao goleiro (embaixo), na formação 4-3-3.
@@ -18,7 +17,7 @@ const LINES: Array<{ position: RoundPlayer['position']; count: number }> = [
 /** Time da rodada em 4-3-3 (melhores notas por posição), com seletor de rodada. */
 @Component({
   selector: 'app-round-team',
-  imports: [Crest, MatFormField, MatSelect, MatOption, MatIcon],
+  imports: [Crest, MatIcon, RoundNav],
   templateUrl: './round-team.html',
   styleUrl: './round-team.scss',
 })
@@ -31,7 +30,6 @@ export class RoundTeamCard {
   protected loading = signal(true);
   protected error = signal(false);
 
-  protected roundIndex = computed(() => this.rounds().indexOf(this.round() ?? ''));
   protected lines = computed(() => {
     const players = this.team()?.players ?? [];
     return LINES.map((l) => ({ ...l, players: players.filter((p) => p.position === l.position) }));
@@ -56,7 +54,6 @@ export class RoundTeamCard {
   protected skeletonLines = LINES.map((l) => ({ ...l, slots: Array.from({ length: l.count }, (_, i) => i) }));
 
   protected ratingClass = ratingClass;
-  protected roundName = roundName;
 
   constructor() {
     forkJoin([this.api.rounds(), this.api.currentRound()]).subscribe({
@@ -66,11 +63,6 @@ export class RoundTeamCard {
       },
       error: () => this.fail(),
     });
-  }
-
-  protected step(delta: number) {
-    const next = this.rounds()[this.roundIndex() + delta];
-    if (next) this.select(next);
   }
 
   /** `fallback`: na abertura, se a rodada atual ainda não tem jogo encerrado, mostra a anterior. */
@@ -138,8 +130,3 @@ function compareRoundPlayers(a: RoundPlayer, b: RoundPlayer): number {
   );
 }
 
-/** "Regular Season - 36" → "36ª rodada" */
-function roundName(round: string | null): string {
-  const n = round?.match(/(\d+)$/)?.[1];
-  return n ? `${n}ª rodada` : (round ?? '');
-}

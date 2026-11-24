@@ -37,6 +37,9 @@ describe('Esqueletos de carregamento', () => {
     expect(el.querySelectorAll('.skeleton app-fixture-card-skeleton').length).toBeGreaterThan(0);
     expect(el.querySelectorAll('.tabela tr.sk-row').length).toBe(20);
     expect(el.querySelectorAll('app-team-ratings .rows[aria-busy="true"] .sk').length).toBeGreaterThan(0);
+    // Título e filtro da seção Times também em esqueleto.
+    expect(el.querySelector('app-team-ratings .toolbar .sk-title')).toBeTruthy();
+    expect(el.querySelector('app-team-ratings .toolbar mat-select')).toBeNull();
   });
 
   it('Estatísticas: os três quadros, o time da rodada e a tabela de jogadores', () => {
