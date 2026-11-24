@@ -191,8 +191,8 @@ $muted: var(--muted);
   }
 }
 
-// Melhor da rodada: estrela branca num círculo azul elétrico (a cor da nota 10), e foto com borda de destaque.
-// O contorno marinho e a sombra da estrela garantem que o branco apareça sobre o azul claro.
+// Melhor da rodada: estrela branca num círculo azul elétrico (a cor da nota 10) com contorno branco,
+// e foto com borda de destaque. A sombra da estrela garante que o branco apareça sobre o azul claro.
 .star {
   position: absolute;
   left: -8px;
@@ -203,7 +203,7 @@ $muted: var(--muted);
   justify-content: center;
   width: 20px;
   height: 20px;
-  border: 1.5px solid var(--rating-100-text);
+  border: 1.5px solid #fff;
   border-radius: 50%;
   background: var(--rating-100);
   box-sizing: border-box;

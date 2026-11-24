@@ -23,7 +23,14 @@ export interface Fixture {
     date: string;
     timestamp: number;
     venue: { name: string | null; city: string | null };
-    status: { long: string; short: string; elapsed: number | null; extra: number | null };
+    status: {
+      long: string;
+      short: string;
+      elapsed: number | null;
+      extra: number | null;
+      /** Só com bola rolando, vindo do Worker: instante (ms) em que o relógio do período marcaria 00:00. */
+      clockStart?: number;
+    };
   };
   teams: { home: Team; away: Team };
   goals: { home: number | null; away: number | null };
@@ -49,6 +56,10 @@ export interface Standing {
   form: string | null;
   description: string | null;
   all: { played: number; win: number; draw: number; lose: number; goals: { for: number; against: number } };
+  /** Só na classificação ao vivo: posições ganhas (+) ou perdidas (−) com os jogos em andamento. */
+  change?: number;
+  /** Só na classificação ao vivo: o primeiro resultado de `form` é o parcial de um jogo em andamento. */
+  liveForm?: boolean;
 }
 
 /** Item de `players/topscorers` e `players/topassists`. */
@@ -227,6 +238,14 @@ export class ApiFootball {
         this.http.get<ApiResponse<Fixture[]>>(`${API_URL}/fixtures`, { params: { ids: chunk.join('-') } }).pipe(map((r) => r.response)),
       ),
     ).pipe(map((parts) => renameFixtures(parts.flat())));
+  }
+
+  /**
+   * Jogos encerrados da temporada (só para a classificação ao vivo saber quais a API já contou).
+   * Mesma chave que o Worker usa nas estatísticas dos times, então o cache é compartilhado.
+   */
+  finishedFixtures(): Observable<Fixture[]> {
+    return this.get<Fixture[]>('fixtures', { status: 'FT-AET-PEN' });
   }
 
   standings(): Observable<Standing[]> {

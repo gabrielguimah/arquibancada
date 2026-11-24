@@ -8,14 +8,17 @@ import { Crest } from '../../shared/crest';
 import { FixtureCard, TZ, isLive, todayInBrasilia } from '../../shared/fixture-card';
 import { FixtureCardSkeleton } from '../../shared/fixture-card-skeleton';
 import { LiveFixtures } from '../../shared/live-fixtures';
+import { FINISHED, liveStandings } from './live-standings';
 import { TeamRatingsTables } from './team-ratings';
 
 // Jogos encerrados: os eventos deles (cartões) vêm de uma busca própria, com cache longo no Worker.
 // Os jogos ao vivo vêm de LiveFixtures, compartilhado com os avisos de gol.
-const FINISHED = new Set(['FT', 'AET', 'PEN', 'AWD', 'WO']);
+
+// Jogo encerrado há menos que isso pode ainda não estar na classificação da API (ela demora a atualizar).
+const STANDINGS_LAG_MS = 6 * 3600_000;
 
 // Intervalo de atualização das listas: com jogo rolando, 1 min (o Worker guarda as listas por 1 min;
-// placar, relógio e cartões ao vivo chegam a cada 30 s por LiveFixtures). Sem jogo, 5 min.
+// placar, relógio e cartões ao vivo chegam a cada 15 s por LiveFixtures). Sem jogo, 5 min.
 const REFRESH_LIVE_MS = 60_000;
 const REFRESH_IDLE_MS = 5 * 60_000;
 
@@ -34,7 +37,11 @@ interface StandingGroup {
   rows: Standing[];
 }
 
-type FormResult = 'V' | 'E' | 'D';
+interface FormResult {
+  result: 'V' | 'E' | 'D';
+  /** Parcial de jogo em andamento. */
+  live: boolean;
+}
 
 @Component({
   selector: 'app-rodada',
@@ -64,6 +71,8 @@ export class Rodada {
   // null até a primeira resposta: a seção "Partidas de hoje" mostra o esqueleto.
   protected today = signal<Fixture[] | null>(null);
   protected standings = signal<Standing[]>([]);
+  // Jogos encerrados da temporada: só carregados com jogo rolando ou encerrado há pouco (classificação ao vivo).
+  private seasonFinished = signal<Fixture[] | null>(null);
   protected error = signal<string | null>(null);
   protected loading = signal(true);
 
@@ -105,9 +114,14 @@ export class Rodada {
     }));
   });
 
+  // Classificação com os jogos em andamento (e os encerrados que a API ainda não contou).
+  private liveTable = computed(() =>
+    liveStandings(this.standings(), [...this.roundView(), ...this.todayView()], this.seasonFinished()),
+  );
+
   protected standingGroups = computed<StandingGroup[]>(() => {
     const groups: StandingGroup[] = [];
-    for (const s of this.standings()) {
+    for (const s of this.liveTable()) {
       const zone = zoneOf(s);
       const last = groups.at(-1);
       if (last && last.zone?.id === zone?.id) last.rows.push(s);
@@ -171,6 +185,7 @@ export class Rodada {
           this.nextRoundStart.set(
             nextStarts.length ? nextStarts[Math.floor(nextStarts.length / 2)] : null,
           );
+          this.loadSeasonFinished([...fixtures, ...today]);
           this.error.set(null);
           this.loading.set(false);
           this.timer = setTimeout(
@@ -183,6 +198,27 @@ export class Rodada {
           this.timer = setTimeout(() => this.load(), REFRESH_LIVE_MS);
         },
       });
+  }
+
+  /**
+   * Só com jogo rolando ou encerrado há pouco a classificação ao vivo precisa saber quais jogos a API
+   * já contou; fora disso, não baixa a lista da temporada. Se a busca falhar, conta só os em andamento.
+   */
+  private loadSeasonFinished(fixtures: Fixture[]) {
+    const now = Date.now();
+    const recent = this.withLive(fixtures).some(
+      (f) =>
+        isLive(f) ||
+        (FINISHED.has(f.fixture.status.short) && now - f.fixture.timestamp * 1000 < STANDINGS_LAG_MS),
+    );
+    if (!recent) {
+      this.seasonFinished.set(null);
+      return;
+    }
+    this.api
+      .finishedFixtures()
+      .pipe(catchError(() => of(null)))
+      .subscribe((list) => this.seasonFinished.set(list));
   }
 
   private withLive(list: Fixture[]): Fixture[] {
@@ -236,7 +272,11 @@ export class Rodada {
     { term: 'D', meaning: 'Derrotas' },
     { term: 'SG', meaning: 'Saldo de gols' },
     { term: 'Gols', meaning: 'Gols marcados : gols sofridos' },
-    { term: 'Últimas 5', meaning: 'Resultados dos últimos 5 jogos, do mais antigo ao mais recente (V, E, D)' },
+    {
+      term: 'Últimas 5',
+      meaning:
+        'Resultados dos últimos 5 jogos, do mais antigo ao mais recente (V, E, D); com contorno azul, o parcial do jogo em andamento',
+    },
   ];
   // Uma rodada tem 10 jogos; 6 cards de esqueleto já preenchem a tela.
   protected skeletonCards = [0, 1, 2, 3, 4, 5];
@@ -247,13 +287,19 @@ export class Rodada {
     return start !== null && f.fixture.timestamp > start;
   }
 
-  /** Últimos 5 jogos, do mais antigo para o mais recente (a API manda o mais recente primeiro). */
+  /**
+   * Últimos 5 jogos, do mais antigo para o mais recente (a API manda o mais recente primeiro).
+   * Com jogo em andamento, o mais recente é o resultado parcial dele.
+   */
   protected form(s: Standing): FormResult[] {
-    const map: Record<string, FormResult> = { W: 'V', D: 'E', L: 'D' };
-    return [...(s.form ?? '')]
-      .reverse()
-      .map((c) => map[c])
-      .filter(Boolean);
+    const map: Record<string, FormResult['result']> = { W: 'V', D: 'E', L: 'D' };
+    const results = [...(s.form ?? '')].map((c, i) => ({ result: map[c], live: i === 0 && !!s.liveForm }));
+    return results.filter((r) => r.result).reverse();
+  }
+
+  protected moveLabel(change: number): string {
+    const n = Math.abs(change);
+    return `${change > 0 ? 'Subiu' : 'Caiu'} ${n} ${n === 1 ? 'posição' : 'posições'} com os jogos em andamento`;
   }
 
   protected legend = computed(() => {

@@ -52,9 +52,6 @@
               }
             </mat-select>
           </mat-form-field>
-          @if (hasLive()) {
-            <span class="live-badge">Ao vivo</span>
-          }
         </div>
         <button
           type="button"
@@ -119,12 +116,25 @@
                 </tr>
               }
               @for (s of g.rows; track s.team.id) {
-                <tr>
+                <tr [class.playing]="liveTeams().has(s.team.id)">
                   <td class="pos">
                     <span>{{ s.rank }}</span>
                   </td>
                   <td class="clube">
-                    <img crest [src]="s.team.logo" alt="" width="20" height="20" loading="lazy" />
+                    <!-- Escudo com as posições ganhas/perdidas no canto superior direito, num círculo. -->
+                    <span class="crest-wrap">
+                      <img crest [src]="s.team.logo" alt="" width="26" height="26" loading="lazy" />
+                      @if (s.change) {
+                        <small
+                          class="move"
+                          [class.up]="s.change > 0"
+                          [class.down]="s.change < 0"
+                          [attr.aria-label]="moveLabel(s.change)"
+                          [attr.title]="moveLabel(s.change)"
+                          >{{ s.change > 0 ? '▲' : '▼' }}{{ s.change > 0 ? s.change : -s.change }}</small
+                        >
+                      }
+                    </span>
                     {{ s.team.name }}
                     @if (liveTeams().has(s.team.id)) {
                       <span
@@ -144,7 +154,13 @@
                   <td class="forma">
                     <span class="chips">
                       @for (r of form(s); track $index) {
-                        <span class="chip" [class]="'r-' + r">{{ r }}</span>
+                        <span
+                          class="chip"
+                          [class]="'r-' + r.result"
+                          [class.live]="r.live"
+                          [attr.title]="r.live ? 'Jogo em andamento: resultado parcial' : null"
+                          >{{ r.result }}</span
+                        >
                       }
                     </span>
                   </td>
@@ -181,6 +197,10 @@
           }
           <dt><span class="live-dot" aria-hidden="true"></span></dt>
           <dd>Time jogando agora</dd>
+          <dt class="move-legend">
+            <span class="move up" aria-hidden="true">▲1</span><span class="move down" aria-hidden="true">▼1</span>
+          </dt>
+          <dd>Posições ganhas ou perdidas com os jogos em andamento, em relação à classificação oficial</dd>
         </dl>
       </details>
     } @else if (!error()) {

@@ -38,7 +38,7 @@ describe('LiveFixtures', () => {
       ],
     });
     const live = TestBed.inject(LiveFixtures);
-    expect(await live.poll(NOW)).toBe(30_000);
+    expect(await live.poll(NOW)).toBe(15_000);
     // 3: a lista ainda diz "não iniciado", mas o horário já passou (a lista tem cache de 1 min).
     expect(asked).toEqual([1, 2, 3]);
     expect([...live.byId().keys()]).toEqual([1, 2, 3]);

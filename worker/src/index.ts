@@ -44,6 +44,21 @@ const ROUND_TEAM_FORMATION: Record<string, number> = { G: 1, D: 4, M: 3, F: 3 };
 
 const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 
+// Relógio dos jogos ao vivo. A API só informa o minuto, e ele não vira a cada 60 s certinhos (num
+// mesmo jogo, minutos de 33 s e de 71 s). O Worker, que vê os dados assim que saem da API, marca cada
+// virada de minuto no meio entre a última busca com o minuto anterior e a primeira com o novo, e daí
+// tira quando o período teria começado. A estimativa é a mediana das últimas viradas: as irregulares
+// da API se compensam, sem o relógio ir se adiantando aos poucos. Vai para o site em
+// `fixture.status.clockStart`, para quem abre a página no meio do minuto já ver o relógio acertado.
+const CLOCK_RUNNING = new Set(['1H', '2H', 'ET']);
+const CLOCK_RUNNING_RE = /"short":\s*"(1H|2H|ET)"/;
+// Estimativas de jogos que já acabaram são apagadas depois disso.
+const CLOCK_MAX_AGE_MS = 6 * 3600_000;
+// Virada vista com buscas mais espaçadas que isso é imprecisa demais para entrar na mediana.
+const CLOCK_MAX_GAP_MS = 40_000;
+// Quantas viradas recentes entram na mediana.
+const CLOCK_SAMPLES = 20;
+
 // Endpoints liberados e por quanto tempo (segundos) cada resposta fica em cache.
 // `fixtures` tem TTL dinâmico, calculado a partir dos jogos da resposta.
 const ROUTES: Record<string, number | ((body: ApiBody, key: string) => number)> = {
@@ -64,7 +79,56 @@ const ROUTES: Record<string, number | ((body: ApiBody, key: string) => number)> 
 interface ApiBody {
   errors?: unknown[] | Record<string, string>;
   paging?: { current: number; total: number };
-  response?: Array<{ fixture?: { timestamp?: number; status?: { short?: string } } }>;
+  response?: Array<{
+    fixture?: {
+      id?: number;
+      timestamp?: number;
+      status?: { short?: string; elapsed?: number | null; extra?: number | null; clockStart?: number };
+    };
+  }>;
+}
+
+interface ClockAnchor {
+  period: string;
+  /** Maior minuto já visto neste período (com acréscimo somado). */
+  minute: number;
+  /** Última busca à API em que o jogo ainda estava nesse minuto. */
+  lastAt: number;
+  /** Início do período estimado por cada virada de minuto recente. */
+  samples: number[];
+  /** Instante (ms) em que o relógio do período marcaria 00:00: a mediana das amostras. */
+  start: number;
+}
+
+/** Junta o minuto `minute`, visto na busca feita em `at`, à estimativa do relógio. */
+function observeClock(anchor: ClockAnchor | undefined, period: string, minute: number, at: number): ClockAnchor {
+  // Primeira vez no período: só se sabe que o minuto já começou; fica no início dele até a primeira virada.
+  if (!anchor || anchor.period !== period) {
+    return { period, minute, lastAt: at, samples: [], start: at - (minute - 1) * 60_000 };
+  }
+  // Dado mais velho que o já visto (outra lista da API, ainda sem a virada): ignora.
+  if (minute < anchor.minute) return anchor;
+  if (minute === anchor.minute) return { ...anchor, lastAt: at };
+
+  // Virou o minuto entre `lastAt` e `at`. Só entra na mediana se as buscas foram próximas e virou um só.
+  if (minute !== anchor.minute + 1 || at - anchor.lastAt > CLOCK_MAX_GAP_MS) {
+    return { ...anchor, minute, lastAt: at };
+  }
+  const turn = (anchor.lastAt + at) / 2;
+  const samples = [...anchor.samples, Math.round(turn - (minute - 1) * 60_000)].slice(-CLOCK_SAMPLES);
+  return { period, minute, lastAt: at, samples, start: median(samples) };
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+/** Período do relógio; a prorrogação tem um intervalo curto no meio sem mudar o status. */
+function clockPeriod(short: string, elapsed: number): string {
+  if (short !== 'ET') return short;
+  return elapsed > 105 ? 'ET2' : 'ET1';
 }
 
 interface FixtureDetail {
@@ -345,6 +409,8 @@ export class ApiCache extends DurableObject<Env> {
       this.ctx.storage.sql.exec(`
         CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, body TEXT NOT NULL, fetched_at INTEGER NOT NULL, ttl INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS quota (day TEXT PRIMARY KEY, used INTEGER NOT NULL, remaining INTEGER);
+        DROP TABLE IF EXISTS clock;
+        CREATE TABLE IF NOT EXISTS live_clock (fixture INTEGER PRIMARY KEY, anchor TEXT NOT NULL, start INTEGER NOT NULL);
       `);
     });
   }
@@ -360,6 +426,21 @@ export class ApiCache extends DurableObject<Env> {
       this.inflight.set(key, pending);
     }
     return pending;
+  }
+
+  /** O que o site recebe: a resposta em cache e, nos jogos com bola rolando, o início estimado do relógio. */
+  async serve(key: string): Promise<CacheResult | CacheError> {
+    const result = await this.get(key);
+    if ('error' in result || !key.startsWith('fixtures?') || !CLOCK_RUNNING_RE.test(result.body)) return result;
+    const body: ApiBody = JSON.parse(result.body);
+    for (const { fixture: f } of body.response ?? []) {
+      const short = f?.status?.short ?? '';
+      if (!f?.id || !f.status || !CLOCK_RUNNING.has(short) || f.status.elapsed == null) continue;
+      const anchor = this.clockAnchor(f.id);
+      // A resposta em cache pode ser de antes de o período mudar: só vale a estimativa do mesmo período.
+      if (anchor?.period === clockPeriod(short, f.status.elapsed)) f.status.clockStart = anchor.start;
+    }
+    return { ...result, body: JSON.stringify(body) };
   }
 
   status() {
@@ -410,7 +491,34 @@ export class ApiCache extends DurableObject<Env> {
     const route = ROUTES[key.split('?')[0]];
     const ttl = typeof route === 'function' ? route(body, key) : route;
     this.store(key, text, ttl);
+    if (key.startsWith('fixtures?')) this.observeClocks(body, Date.now());
     return { body: text, status: 'MISS', age: 0, ttl };
+  }
+
+  /** Anota o minuto de cada jogo com bola rolando, recém-chegado da API, na estimativa do relógio. */
+  private observeClocks(body: ApiBody, at: number) {
+    for (const { fixture: f } of body.response ?? []) {
+      const short = f?.status?.short ?? '';
+      const elapsed = f?.status?.elapsed;
+      if (!f?.id || !CLOCK_RUNNING.has(short) || elapsed == null) continue;
+      const anchor = this.clockAnchor(f.id);
+      const next = observeClock(anchor, clockPeriod(short, elapsed), elapsed + (f.status?.extra ?? 0), at);
+      if (next === anchor) continue;
+      this.ctx.storage.sql.exec(
+        'INSERT OR REPLACE INTO live_clock (fixture, anchor, start) VALUES (?, ?, ?)',
+        f.id,
+        JSON.stringify(next),
+        next.start,
+      );
+    }
+    this.ctx.storage.sql.exec('DELETE FROM live_clock WHERE start < ?', at - CLOCK_MAX_AGE_MS);
+  }
+
+  private clockAnchor(fixture: number): ClockAnchor | undefined {
+    const row = this.ctx.storage.sql
+      .exec<{ anchor: string }>('SELECT anchor FROM live_clock WHERE fixture = ?', fixture)
+      .toArray()[0];
+    return row ? (JSON.parse(row.anchor) as ClockAnchor) : undefined;
   }
 
   private store(key: string, body: string, ttl: number) {
@@ -793,7 +901,7 @@ export default {
             ? await stub.teamRatings()
             : url.pathname === `/${ROUND_TEAM_PATH}`
               ? await stub.roundTeam(roundParam(url))
-              : await stub.get(cacheKey(url));
+              : await stub.serve(cacheKey(url));
       if ('error' in result) return Response.json({ error: result.error }, { status: result.httpStatus, headers: cors });
       const maxAge = Math.max(0, result.ttl - result.age);
       return new Response(result.body, {

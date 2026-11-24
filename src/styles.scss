@@ -152,9 +152,15 @@ html {
   // Paleta ativa: `palette-brasil`, `palette-esporte` ou `palette-marinho`.
   @include palette-marinho;
 
-  // "Atrasado" em violeta, para não se confundir com o destaque das paletas.
-  --tag-bg: light-dark(#efe9f8, #2c2340);
-  --tag-text: light-dark(#5b3f91, #c8b5f0);
+  // Ao vivo (bolinha, borda do card, relógio, placar, time jogando na tabela). No escuro, o azul elétrico
+  // da estrela de melhor da rodada (nota 10); no claro, um azul mais escuro, porque o #00FFFF sobre
+  // branco não dá para ler (contraste 1,25:1; o #0057FF passa de 5:1).
+  --live: light-dark(#0057ff, var(--rating-100));
+  --live-text: var(--live);
+
+  // "Atrasado" nas cores da paleta ativa (as mesmas dos botões).
+  --tag-bg: var(--button-bg);
+  --tag-text: var(--button-text);
   // Gramado do campo (time da rodada): verde em todas as paletas, mais escuro no modo escuro.
   --pitch: light-dark(#2f8150, #1d5235);
   --pitch-stripe: light-dark(#2a7648, #1a4a30);
@@ -291,14 +297,14 @@ html, body {
   }
 }
 
-/* Bolinha vermelha piscando: jogo ao vivo (cards de partida e tabela). */
+/* Bolinha azul piscando: jogo ao vivo (cards de partida e tabela). */
 .live-dot {
   display: inline-block;
   flex-shrink: 0;
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #d62828;
+  background: var(--live);
   animation: live-blink 1.2s ease-in-out infinite;
 }
 

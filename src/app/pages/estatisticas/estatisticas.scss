@@ -188,8 +188,8 @@ $row-height: 51px;
     box-sizing: border-box;
     width: 36px;
     height: 36px;
-    // Borda fina na cor de destaque da paleta (marinho no claro, azul elétrico no escuro).
-    border: 1.5px solid var(--accent);
+    // Borda fina branca, como a da estrela de melhor da rodada.
+    border: 1.5px solid #fff;
     border-radius: 50%;
     background: var(--line-strong);
     object-fit: cover;

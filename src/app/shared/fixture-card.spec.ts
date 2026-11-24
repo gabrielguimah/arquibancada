@@ -27,10 +27,10 @@ function render(f: Fixture): HTMLElement {
 }
 
 describe('FixtureCard', () => {
-  it('mostra a bolinha ao vivo, o período e o relógio no lugar do horário', () => {
+  it('mostra a bolinha ao vivo e o relógio no lugar do horário, sem nome do período', () => {
     const el = render(fixture('2H', 67, [1, 0]));
     expect(el.querySelector('.live-dot')).toBeTruthy();
-    expect(el.querySelector('.state')?.textContent).toContain('2º tempo');
+    expect(el.querySelector('.state')?.textContent?.trim()).toBe('');
     // Minuto 67 = de 66:00 a 66:59 de jogo; os segundos começam do zero quando o minuto chega.
     expect(el.querySelector('.clock')?.textContent?.trim()).toBe('66:00');
     expect(el.querySelector('time')).toBeNull();
@@ -40,7 +40,17 @@ describe('FixtureCard', () => {
     const f = fixture('1H', 45, [0, 0]);
     f.fixture.status.extra = 5;
     f.fixture.id = 2;
-    expect(render(f).querySelector('.clock')?.textContent?.trim()).toBe("45'+04:00");
+    expect(render(f).querySelector('.clock')?.textContent?.trim()).toBe("45'+5");
+  });
+
+  it('no intervalo, mostra "Intervalo" no lugar do horário de início', () => {
+    const f = fixture('HT', 45, [1, 0]);
+    f.fixture.id = 4;
+    const el = render(f);
+    expect(el.querySelector('.clock')?.textContent?.trim()).toBe('Intervalo');
+    expect(el.querySelector('time')).toBeNull();
+    expect(el.querySelector('.live-dot')).toBeTruthy();
+    expect(el.querySelector('.state')?.textContent?.trim()).toBe('');
   });
 
   it('mostra um cartão vermelho por expulsão, ao lado do time', () => {

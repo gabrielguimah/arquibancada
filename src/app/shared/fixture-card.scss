@@ -1,4 +1,5 @@
-$live: #d62828;
+$live: var(--live);
+$live-text: var(--live-text);
 $muted: var(--muted);
 
 :host {
@@ -44,13 +45,17 @@ $muted: var(--muted);
   gap: 4px;
 
   .live & {
-    color: $live;
+    color: $live-text;
     font-weight: 600;
   }
 }
 
+// "Atrasado": entre os nomes e o placar, no meio da altura dos dois times.
 .tag {
-  margin-top: 2px;
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  // Um pouco afastado do placar, mais perto dos nomes.
+  margin-right: 16px;
   padding: 0 6px;
   border-radius: 999px;
   background: var(--tag-bg);
@@ -62,15 +67,24 @@ $muted: var(--muted);
 }
 
 .teams {
+  // Uma grade para os dois times (escudo, nome, placar), com uma coluna a mais para o "Atrasado".
   display: grid;
-  gap: 6px;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+
+  &.delayed {
+    grid-template-columns: 26px minmax(0, 1fr) auto auto;
+
+    .goals {
+      grid-column: 4;
+    }
+  }
 }
 
+// Cada time ocupa uma linha da grade de `.teams`.
 .team {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
+  display: contents;
   font-size: 0.9rem;
 
   img {
@@ -99,7 +113,7 @@ $muted: var(--muted);
   }
 
   .live & .goals {
-    color: $live;
+    color: $live-text;
   }
 }
 
@@ -107,7 +121,7 @@ $muted: var(--muted);
 .clock {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: $live;
+  color: $live-text;
   white-space: nowrap;
 }
 

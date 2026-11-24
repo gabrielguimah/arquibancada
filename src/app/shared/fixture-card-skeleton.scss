@@ -38,14 +38,14 @@
 
 .sk-team {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 12px;
+  grid-template-columns: 26px minmax(0, 1fr) 12px;
   align-items: center;
   gap: 10px;
 }
 
 .sk-crest {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
 }
 

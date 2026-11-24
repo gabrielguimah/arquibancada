@@ -3,8 +3,9 @@ import { firstValueFrom } from 'rxjs';
 import { ApiFootball, Fixture } from '../api/api-football';
 import { isLive, todayInBrasilia } from './fixture-card';
 
-// Com jogo rolando, pergunta a cada 30 s (o Worker guarda jogo ao vivo por 15 s).
-const POLL_LIVE_MS = 30_000;
+// Com jogo rolando, pergunta a cada 15 s: o mesmo tempo que o Worker guarda jogo ao vivo, então não gasta
+// mais chamadas à API, e o Worker vê as viradas de minuto com mais precisão (relógio do jogo).
+const POLL_LIVE_MS = 15_000;
 // Sem jogo rolando: espera até pouco antes do próximo início, no máximo 30 min.
 const POLL_IDLE_MAX_MS = 30 * 60_000;
 // Jogos passam a ser acompanhados este tempo antes do início, para pegar o apito inicial na hora.

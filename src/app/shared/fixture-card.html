@@ -3,10 +3,12 @@
   <div class="status">
     @if (clock(); as c) {
       <span class="clock" aria-label="Tempo de jogo">{{ c }}</span>
+    } @else if (halftime()) {
+      <span class="clock">Intervalo</span>
     } @else {
       <time [attr.datetime]="f.fixture.date">{{ kickoff() }}</time>
     }
-    @if (status()) {
+    @if (status() || live()) {
       <span class="state">
         @if (live()) {
           <span class="live-dot" aria-label="Ao vivo"></span>
@@ -14,16 +16,13 @@
         {{ status() }}
       </span>
     }
-    @if (delayed()) {
-      <span class="tag" title="Jogo desta rodada disputado depois da rodada seguinte">Atrasado</span>
-    }
   </div>
 
-  <div class="teams">
+  <div class="teams" [class.delayed]="delayed()">
     @for (side of sides; track side) {
       @let team = f.teams[side];
       <div class="team" [class.winner]="team.winner === true" [class.loser]="team.winner === false">
-        <img crest [src]="team.logo" [alt]="" width="22" height="22" loading="lazy" />
+        <img crest [src]="team.logo" [alt]="" width="26" height="26" loading="lazy" />
         <span class="name">
           {{ team.name }}
           @for (card of redCards()[side]; track $index) {
@@ -32,6 +31,9 @@
         </span>
         <span class="goals">{{ f.goals[side] ?? '' }}</span>
       </div>
+    }
+    @if (delayed()) {
+      <span class="tag" title="Jogo desta rodada disputado depois da rodada seguinte">Atrasado</span>
     }
   </div>
 </article>

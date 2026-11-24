@@ -45,8 +45,10 @@ export class FixtureCard {
       case 'NS':
       case 'TBD':
         return '';
+      // Intervalo: vai na linha de cima, no lugar do horário; aqui fica só a bolinha de ao vivo.
       case 'HT':
-        return 'Intervalo';
+      case 'BT':
+        return '';
       case 'FT':
       case 'AET':
       case 'PEN':
@@ -58,15 +60,11 @@ export class FixtureCard {
       case 'SUSP':
       case 'INT':
         return 'Interrompido';
-      // Bola rolando: o relógio fica na linha de cima; aqui vai o período.
+      // Bola rolando: o relógio já diz o período; aqui fica só a bolinha de ao vivo.
       case '1H':
-        return '1º tempo';
       case '2H':
-        return '2º tempo';
       case 'ET':
-        return 'Prorrogação';
-      case 'BT':
-        return 'Intervalo';
+        return elapsed != null ? '' : long;
       case 'P':
         return 'Pênaltis';
       default:
@@ -74,7 +72,10 @@ export class FixtureCard {
     }
   });
 
-  /** Relógio do jogo ("67:12", "45'+04:26") no lugar do horário, enquanto a bola rola. */
+  /** Intervalo do jogo ou antes da prorrogação: "Intervalo" no lugar do horário de início. */
+  protected halftime = computed(() => ['HT', 'BT'].includes(this.fixture().fixture.status.short));
+
+  /** Relógio do jogo ("67:12", "45'+2") no lugar do horário, enquanto a bola rola. */
   protected clock = computed(() => liveClock(this.fixture()));
 
   /** Cartões vermelhos de cada time (inclui o segundo amarelo), pelos eventos da partida; um item por cartão. */

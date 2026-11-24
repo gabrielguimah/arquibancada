@@ -33,7 +33,7 @@ describe('GoalNotifier', () => {
     const live = TestBed.inject(LiveFixtures);
 
     // Primeira olhada: o gol que já existia não gera aviso.
-    expect(await live.poll()).toBe(30_000);
+    expect(await live.poll()).toBe(15_000);
     expect(notifier.toasts()).toEqual([]);
 
     current = fixture([goal(10, 'Pedro'), goal(55, 'Bruno Henrique', 'Normal Goal', 'Arrascaeta'), goal(58, 'Plata', 'Missed Penalty')]);
