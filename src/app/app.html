@@ -5,56 +5,59 @@
     <a routerLink="/estatisticas" routerLinkActive="active">Estatísticas</a>
   </nav>
   <span class="tag">Brasileirão {{ season }}</span>
-  @if (notifications.supported) {
-    <button
-      type="button"
-      class="bell"
-      [class.on]="notifications.enabled()"
-      (click)="toggleNotifications()"
-      [matTooltip]="bellTip()"
-      [attr.aria-label]="bellTip()"
-      [attr.aria-pressed]="notifications.enabled()"
+  <!-- Notificações, teste, som e tema: um bloco só (no celular, se faltar espaço, desce inteiro). -->
+  <div class="actions">
+    @if (notifications.supported) {
+      <button
+        type="button"
+        class="bell"
+        [class.on]="notifications.enabled()"
+        (click)="toggleNotifications()"
+        [matTooltip]="bellTip()"
+        [attr.aria-label]="bellTip()"
+        [attr.aria-pressed]="notifications.enabled()"
+      >
+        <mat-icon>{{ notifications.enabled() ? 'notifications_active' : 'notifications_off' }}</mat-icon>
+      </button>
+    }
+    @if (notifications.supported && notifications.enabled()) {
+      <!-- Teste das notificações por push: o Worker manda uma notificação daqui a 10 s. -->
+      <button
+        type="button"
+        class="bell"
+        [class.on]="notifications.testAt() !== null"
+        (click)="sendTest()"
+        [matTooltip]="testTip()"
+        [attr.aria-label]="testTip()"
+      >
+        <mat-icon>{{ notifications.testAt() !== null ? 'hourglass_top' : 'timer' }}</mat-icon>
+      </button>
+    }
+    @if (sounds.supported) {
+      <!-- Som dos avisos de gol (sino no gol, bloop no anulado): liga e desliga. -->
+      <button
+        type="button"
+        class="bell"
+        [class.on]="sounds.enabled()"
+        (click)="toggleSound()"
+        [matTooltip]="sounds.enabled() ? 'Som dos avisos de gol ligado (clique para desligar)' : 'Som dos avisos de gol desligado (clique para ligar)'"
+        [attr.aria-label]="sounds.enabled() ? 'Desligar som dos avisos de gol' : 'Ligar som dos avisos de gol'"
+        [attr.aria-pressed]="sounds.enabled()"
+      >
+        <mat-icon>{{ sounds.enabled() ? 'volume_up' : 'volume_off' }}</mat-icon>
+      </button>
+    }
+    <mat-slide-toggle
+      class="theme-toggle"
+      labelPosition="before"
+      hideIcon
+      [checked]="theme.dark()"
+      (change)="theme.setDark($event.checked)"
+      aria-label="Modo escuro"
     >
-      <mat-icon>{{ notifications.enabled() ? 'notifications_active' : 'notifications_off' }}</mat-icon>
-    </button>
-  }
-  @if (notifications.supported && notifications.enabled()) {
-    <!-- Teste das notificações por push: o Worker manda uma notificação daqui a 10 s. -->
-    <button
-      type="button"
-      class="bell"
-      [class.on]="notifications.testAt() !== null"
-      (click)="sendTest()"
-      [matTooltip]="testTip()"
-      [attr.aria-label]="testTip()"
-    >
-      <mat-icon>{{ notifications.testAt() !== null ? 'hourglass_top' : 'timer' }}</mat-icon>
-    </button>
-  }
-  @if (sounds.supported) {
-    <!-- Som dos avisos de gol (sino no gol, bloop no anulado): liga e desliga. -->
-    <button
-      type="button"
-      class="bell"
-      [class.on]="sounds.enabled()"
-      (click)="toggleSound()"
-      [matTooltip]="sounds.enabled() ? 'Som dos avisos de gol ligado (clique para desligar)' : 'Som dos avisos de gol desligado (clique para ligar)'"
-      [attr.aria-label]="sounds.enabled() ? 'Desligar som dos avisos de gol' : 'Ligar som dos avisos de gol'"
-      [attr.aria-pressed]="sounds.enabled()"
-    >
-      <mat-icon>{{ sounds.enabled() ? 'volume_up' : 'volume_off' }}</mat-icon>
-    </button>
-  }
-  <mat-slide-toggle
-    class="theme-toggle"
-    labelPosition="before"
-    hideIcon
-    [checked]="theme.dark()"
-    (change)="theme.setDark($event.checked)"
-    aria-label="Modo escuro"
-  >
-    <mat-icon aria-hidden="true">{{ theme.dark() ? 'dark_mode' : 'light_mode' }}</mat-icon>
-  </mat-slide-toggle>
+      <mat-icon aria-hidden="true">{{ theme.dark() ? 'dark_mode' : 'light_mode' }}</mat-icon>
+    </mat-slide-toggle>
+  </div>
 </header>
 
 <main>

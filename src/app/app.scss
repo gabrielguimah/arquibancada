@@ -59,6 +59,13 @@ nav {
   opacity: 0.8;
 }
 
+// Sino, teste, som e switch de tema, juntos à direita.
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 // Sino das notificações de gol (no cabeçalho, ao lado do switch de tema).
 .bell {
   display: grid;
@@ -121,6 +128,7 @@ nav {
 // No celular, as abas descem para uma linha própria, abaixo do logo.
 @media (max-width: 560px) {
   .topbar {
+    column-gap: 8px;
     padding: 12px 16px 10px;
   }
 
@@ -134,14 +142,32 @@ nav {
     display: none;
   }
 
-  // Sino e switch juntos, à direita do logo (sem sino, o switch vai sozinho para a direita).
-  .bell,
-  .theme-toggle {
+  // Sem o rótulo, o bloco de ícones vai para a direita do logo, mais compacto para caber na mesma linha.
+  .actions {
+    gap: 0;
     margin-left: auto;
   }
 
-  .bell + .theme-toggle,
-  .bell + .bell {
-    margin-left: 0;
+  .bell {
+    width: 32px;
+  }
+
+  .logo {
+    font-size: 1.1rem;
+
+    img {
+      height: 26px;
+    }
+  }
+}
+
+// Celulares mais estreitos: um pouco mais compacto, para o bloco de ícones caber ao lado do logo.
+@media (max-width: 380px) {
+  .bell {
+    width: 28px;
+  }
+
+  .logo {
+    font-size: 1rem;
   }
 }
