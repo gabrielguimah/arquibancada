@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { teamName } from '../../src/app/api/team-names';
+import { GoalAlert, GoalEvent, WatchState, detectGoals, minuteLabel } from '../../src/app/shared/goal-detect';
 import { PushTarget, Vapid, b64urlDecode, sendPush } from './web-push';
 
 // Avisos de gol por Web Push: chegam no celular e no computador mesmo com o site fechado. Um Durable
@@ -20,19 +21,13 @@ const MAX_SUBSCRIPTIONS = 20_000;
 const MAX_FAILURES = 10;
 // Notificação de teste (botão do site): chega este tempo depois do clique (dá tempo de sair do site).
 const TEST_DELAY_MS = 10_000;
+// ...e o gol de teste é anulado este tempo depois.
+const TEST_CANCEL_AFTER_MS = 5_000;
 // Só serviços de push conhecidos (Chrome/Android, Firefox, Safari/iPhone, Edge): o Worker não manda
 // requisições para qualquer endereço.
 const PUSH_HOSTS = /(^|\.)(googleapis\.com|mozilla\.com|mozaws\.net|push\.apple\.com|notify\.windows\.com)$/;
 
 const LIVE = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
-const GOAL_DETAILS = new Set(['Normal Goal', 'Own Goal', 'Penalty']);
-// Gol anulado pelo VAR: "Goal cancelled" ou "Goal Disallowed - <motivo>" (mesmo texto do site).
-const CANCEL_REASONS: Record<string, string> = {
-  'Goal cancelled': '',
-  'Goal Disallowed - offside': 'impedimento',
-  'Goal Disallowed - handball': 'mão na bola',
-  'Goal Disallowed - foul': 'falta',
-};
 const PROGRESS: Record<string, number> = { TBD: 0, NS: 0, '1H': 1, HT: 2, '2H': 3, BT: 4, ET: 5, P: 6, AET: 7, PEN: 7, FT: 7 };
 
 interface PushTeam {
@@ -41,14 +36,7 @@ interface PushTeam {
   logo: string;
 }
 
-export interface PushEvent {
-  time: { elapsed: number | null; extra: number | null };
-  team: PushTeam;
-  player: { id: number | null; name: string | null };
-  assist: { id: number | null; name: string | null };
-  type: string;
-  detail: string;
-}
+export type PushEvent = GoalEvent;
 
 export interface PushFixture {
   fixture: { id: number; timestamp: number; status: { short: string; elapsed: number | null; extra?: number | null } };
@@ -57,87 +45,14 @@ export interface PushFixture {
   events?: PushEvent[];
 }
 
-/** O que o Worker lembra de cada jogo acompanhado, entre uma verificação e outra. */
-export interface WatchState {
-  /** Ids de eventos já vistos e gols já avisados como anulados (`x:` + jogo:time:jogador). */
-  seen: string[];
-  /** Gols na lista da última verificação (para notar um gol que some: anulado). */
-  goals: Array<[string, PushEvent]>;
-  score: number;
-  /** Gols de cada time na lista da última verificação. */
-  perTeam: Record<number, number>;
-}
-
-export interface GoalAlert {
-  id: string;
-  type: 'goal' | 'cancelled';
-  event: PushEvent;
-  reason?: string;
-}
-
-/**
- * Gols novos e gols anulados de um jogo desde a última verificação (`prev`). A primeira vez que o jogo é
- * visto só guarda o estado, sem avisar. Mesmas regras dos avisos do site (GoalNotifier), mais uma: a API
- * às vezes corrige um gol (minuto, autor) e ele ganha outro id; só conta como gol novo se o time tem
- * mais gols na lista que antes.
- */
-export function detectGoals(prev: WatchState | undefined, f: PushFixture): { state: WatchState; alerts: GoalAlert[] } {
-  const seen = new Set(prev?.seen);
-  const goals = new Map<string, PushEvent>();
-  const perTeam: Record<number, number> = {};
-  const fresh: Array<[string, PushEvent]> = [];
-  const alerts: GoalAlert[] = [];
-
-  for (const e of f.events ?? []) {
-    const id = eventId(f, e);
-    if (e.type === 'Goal' && GOAL_DETAILS.has(e.detail)) {
-      goals.set(id, e);
-      perTeam[e.team.id] = (perTeam[e.team.id] ?? 0) + 1;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      if (prev) fresh.push([id, e]);
-    } else if (e.type === 'Var' && e.detail in CANCEL_REASONS) {
-      const key = `x:${cancelKey(f, e)}`;
-      if (seen.has(id) || seen.has(key)) continue;
-      seen.add(id);
-      seen.add(key);
-      if (prev) alerts.push({ id, type: 'cancelled', event: e, reason: CANCEL_REASONS[e.detail] || undefined });
-    }
-  }
-
-  // Gols novos de cada time: no máximo quantos a lista ganhou (os últimos); o resto é correção.
-  for (const teamId of new Set(fresh.map(([, e]) => e.team.id))) {
-    const added = (perTeam[teamId] ?? 0) - (prev?.perTeam[teamId] ?? 0);
-    const ofTeam = fresh.filter(([, e]) => e.team.id === teamId);
-    for (const [id, event] of ofTeam.slice(Math.max(0, ofTeam.length - Math.max(0, added)))) alerts.push({ id, type: 'goal', event });
-  }
-
-  // Gol que estava na lista e sumiu, com o placar diminuindo: anulado (às vezes sem evento do VAR).
-  const score = (f.goals.home ?? 0) + (f.goals.away ?? 0);
-  if (prev && score < prev.score) {
-    for (const [id, e] of prev.goals) {
-      const key = `x:${cancelKey(f, e)}`;
-      if (goals.has(id) || seen.has(key)) continue;
-      seen.add(key);
-      alerts.push({ id: `sumiu:${id}`, type: 'cancelled', event: e });
-    }
-  }
-
-  // Gol e anulação na mesma verificação: só a anulação (o gol nem chegou a ser avisado).
-  const cancelledNow = new Set(alerts.filter((a) => a.type === 'cancelled').map((a) => cancelKey(f, a.event)));
-  const result = alerts.filter((a) => a.type === 'cancelled' || !cancelledNow.has(cancelKey(f, a.event)));
-  result.sort((a, b) => minuteOrder(a.event) - minuteOrder(b.event));
-  return { state: { seen: [...seen], goals: [...goals], score, perTeam }, alerts: result };
-}
-
 /** Conteúdo da notificação (o service worker do site mostra como veio). Mesmo texto dos avisos do site. */
-export function alertPayload(f: PushFixture, a: GoalAlert) {
+export function alertPayload(f: PushFixture, a: GoalAlert<PushEvent>) {
   const home = teamName(f.teams.home);
   const away = teamName(f.teams.away);
   const team = teamName(a.event.team);
   const score = `${home} ${f.goals.home ?? 0} × ${f.goals.away ?? 0} ${away}`;
   const extra = a.event.detail === 'Penalty' ? ' (pênalti)' : a.event.detail === 'Own Goal' ? ' (contra)' : '';
-  const who = `${a.event.player.name ?? ''} ${minute(a.event)}${extra}`.trim();
+  const who = `${a.event.player.name ?? ''} ${minuteLabel(a.event)}${extra}`.trim();
   const second =
     a.type === 'cancelled' ? `Anulado pelo VAR${a.reason ? `: ${a.reason}` : ''}` : a.event.assist.name ? `Assistência: ${a.event.assist.name}` : '';
   return {
@@ -148,23 +63,9 @@ export function alertPayload(f: PushFixture, a: GoalAlert) {
     tag: a.id,
     // Relativo ao site (o service worker completa): clicar abre a partida.
     path: `partida/${f.fixture.id}`,
+    // Som do site, se ele estiver aberto (sino no gol, bloop no anulado).
+    sound: a.type,
   };
-}
-
-function eventId(f: PushFixture, e: PushEvent): string {
-  return `${f.fixture.id}:${e.type}:${e.time.elapsed}:${e.time.extra ?? 0}:${e.team.id}:${e.player.id ?? e.player.name}`;
-}
-
-function cancelKey(f: PushFixture, e: PushEvent): string {
-  return `${f.fixture.id}:${e.team.id}:${e.player.id ?? e.player.name}`;
-}
-
-function minute(e: PushEvent): string {
-  return `${e.time.elapsed ?? ''}${e.time.extra ? `+${e.time.extra}` : ''}'`;
-}
-
-function minuteOrder(e: PushEvent): number {
-  return (e.time.elapsed ?? 0) * 100 + (e.time.extra ?? 0);
 }
 
 /** Situação e placar da lista do dia, se ela estiver mais adiantada que a busca por id (como no site). */
@@ -261,30 +162,64 @@ export class GoalPush extends DurableObject<Env> {
   }
 
   /**
-   * Notificação de teste para um navegador já inscrito, daqui a 10 s (uma por navegador: clicar de novo
-   * reagenda). Devolve quando ela sai, ou `null` se o navegador não está inscrito.
+   * Notificações de teste para um navegador já inscrito: um gol daqui a 10 s e, 5 s depois, o mesmo gol
+   * anulado pelo VAR (um teste por navegador: clicar de novo reagenda). Devolve quando o gol sai, ou
+   * `null` se o navegador não está inscrito.
    */
   async testPush(endpoint: unknown): Promise<number | null> {
     if (typeof endpoint !== 'string') return null;
     const sql = this.ctx.storage.sql;
     if (!sql.exec('SELECT 1 FROM subs WHERE endpoint = ?', endpoint).toArray().length) return null;
     const at = Date.now() + TEST_DELAY_MS;
-    const payload = {
-      title: '⚽ Gol de teste!',
-      body: 'Se você está vendo isto com o site fechado, as notificações de gol estão funcionando.',
-      tag: 'arquibancada-teste',
+    // Um gol de mentira, montado igual aos de verdade (mesmo texto, escudo e som).
+    const flamengo = { id: 127, name: 'Flamengo', logo: 'https://media.api-sports.io/football/teams/127.png' };
+    const palmeiras = { id: 121, name: 'Palmeiras', logo: 'https://media.api-sports.io/football/teams/121.png' };
+    const event: PushEvent = {
+      time: { elapsed: 23, extra: null },
+      team: flamengo,
+      player: { id: null, name: 'Pedro' },
+      assist: { id: null, name: 'Arrascaeta' },
+      type: 'Goal',
+      detail: 'Normal Goal',
+    };
+    const fixture: PushFixture = {
+      fixture: { id: 0, timestamp: Math.floor(at / 1000), status: { short: '1H', elapsed: 23 } },
+      teams: { home: flamengo, away: palmeiras },
+      goals: { home: 1, away: 0 },
+      events: [event],
+    };
+    const goal = {
+      ...alertPayload(fixture, { id: `arquibancada-teste-${at}`, type: 'goal', event }),
+      // A partida não existe: o clique abre o site.
+      path: '',
+      // Aparece mesmo com o site na frente. Um id (`tag`) por teste: o site toca o som de cada um.
+      always: true,
+    };
+    // Logo depois, o VAR anula o gol (placar volta a 0 x 0).
+    const var_: PushEvent = { ...event, assist: { id: null, name: null }, type: 'Var', detail: 'Goal Disallowed - offside' };
+    const cancelled = {
+      ...alertPayload(
+        { ...fixture, goals: { home: 0, away: 0 }, events: [event, var_] },
+        { id: `arquibancada-teste-${at}-anulado`, type: 'cancelled', event: var_, reason: 'impedimento' },
+      ),
+      path: '',
       always: true,
     };
     sql.exec('DELETE FROM outbox WHERE endpoint = ? AND not_before > 0', endpoint);
     // `created` = hora do envio: a validade (10 min) conta a partir dela.
-    sql.exec(
-      'INSERT INTO outbox (endpoint, payload, ttl, created, not_before) VALUES (?, ?, ?, ?, ?)',
-      endpoint,
-      JSON.stringify(payload),
-      GOAL_TTL_S,
-      at,
-      at,
-    );
+    for (const [payload, when] of [
+      [goal, at],
+      [cancelled, at + TEST_CANCEL_AFTER_MS],
+    ] as const) {
+      sql.exec(
+        'INSERT INTO outbox (endpoint, payload, ttl, created, not_before) VALUES (?, ?, ?, ?, ?)',
+        endpoint,
+        JSON.stringify(payload),
+        GOAL_TTL_S,
+        when,
+        when,
+      );
+    }
     const alarm = await this.ctx.storage.getAlarm();
     if (alarm === null || alarm > at) await this.ctx.storage.setAlarm(at);
     return at;

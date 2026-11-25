@@ -137,11 +137,19 @@ describe('GoalNotifier: som', () => {
     return played;
   }
 
-  it('toca o grito no gol novo com o site na frente', async () => {
+  it('toca o som no gol novo com o site na frente', async () => {
     expect(await newGoal(false)).toEqual(['goal']);
   });
 
-  it('não toca quando vai notificação do sistema (ela já tem o som dela)', async () => {
-    expect(await newGoal(true)).toEqual([]);
+  it('toca também com o site em segundo plano (a notificação do sistema pode vir muda)', async () => {
+    expect(await newGoal(true)).toEqual(['goal']);
+  });
+
+  it('o mesmo gol pelo push e pela página toca uma vez só', async () => {
+    const played = await newGoal(false);
+    const notifier = TestBed.inject(GoalNotifier);
+    notifier.pushArrived(notifier.toasts()[0].id, 'goal');
+    notifier.pushArrived('outro-gol', 'cancelled');
+    expect(played).toEqual(['goal', 'cancelled']);
   });
 });
