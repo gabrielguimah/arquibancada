@@ -1,5 +1,5 @@
 import { Fixture, FixtureEvent } from '../../api/api-football';
-import { TimelineEvent, timeline } from './timeline';
+import { TimelineEvent, TimelineItem, timeline } from './timeline';
 
 const botafogo = { id: 120, name: 'Botafogo', logo: '' };
 const saoPaulo = { id: 126, name: 'São Paulo', logo: '' };
@@ -57,10 +57,16 @@ function match(): Fixture {
   };
 }
 
+function describeItem(i: TimelineItem): string {
+  if (i.type === 'divider') return `— ${i.label} ${i.score}`;
+  if (i.type === 'note') return `(${i.text})`;
+  return `${i.minute} ${i.side} ${i.kind}`;
+}
+
 describe('Lance a lance', () => {
   it('em ordem cronológica, com "Intervalo" e "Fim de jogo" e o placar de cada um', () => {
     const items = timeline(match());
-    const summary = items.map((i) => (i.type === 'divider' ? `— ${i.label} ${i.score}` : `${i.minute} ${i.side} ${i.kind}`));
+    const summary = items.map(describeItem);
     expect(summary).toEqual([
       "23' away yellow",
       "28' away goal",
@@ -95,5 +101,30 @@ describe('Lance a lance', () => {
     f.fixture.status.short = '1H';
     f.events = f.events!.slice(0, 2);
     expect(timeline(f).some((i) => i.type === 'divider')).toBe(false);
+  });
+
+  it('etapa encerrada sem nenhum lance ganha um aviso; a etapa em andamento, não', () => {
+    const f = match();
+    f.events = f.events!.filter((e) => e.time.elapsed! > 45);
+    f.score!.halftime = { home: 0, away: 0 };
+    expect(timeline(f).map(describeItem).slice(0, 2)).toEqual(['(Nenhum lance marcante no 1º tempo)', '— Intervalo 0 - 0']);
+
+    f.fixture.status.short = '2H';
+    f.events = [];
+    expect(timeline(f).map(describeItem)).toEqual(['(Nenhum lance marcante no 1º tempo)', '— Intervalo 0 - 0']);
+
+    f.fixture.status.short = 'FT';
+    expect(timeline(f).map(describeItem)).toEqual([
+      '(Nenhum lance marcante no 1º tempo)',
+      '— Intervalo 0 - 0',
+      '(Nenhum lance marcante no 2º tempo)',
+      '— Fim de jogo 1 - 1',
+    ]);
+  });
+
+  it('prorrogação encerrada sem lances também ganha o aviso, depois do "Fim do tempo normal"', () => {
+    const f = match();
+    f.fixture.status.short = 'PEN';
+    expect(timeline(f).map(describeItem).slice(-3)).toEqual(['— Fim do tempo normal 1 - 1', '(Nenhum lance marcante na prorrogação)', '— Fim de jogo 1 - 1']);
   });
 });

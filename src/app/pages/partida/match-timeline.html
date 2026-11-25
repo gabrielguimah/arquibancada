@@ -6,13 +6,15 @@
     }
   </h2>
 
-  @if (items().length) {
+  @if (items().length || running()) {
     <ol class="items">
       @for (item of items(); track $index) {
         @if (item.type === 'divider') {
           <li class="divider">
             <span>{{ item.label }} <strong>{{ item.score }}</strong></span>
           </li>
+        } @else if (item.type === 'note') {
+          <li class="note">{{ item.text }}</li>
         } @else {
           <!-- Mandante: minuto à esquerda; visitante: minuto à direita (a ordem visual inverte no CSS). -->
           <li class="event" [class]="item.side + ' ' + item.kind" [attr.aria-label]="labels[item.kind] + ', ' + item.minute">
@@ -57,6 +59,12 @@
             </span>
           </li>
         }
+      }
+      @if (running()) {
+        <!-- Com a bola rolando, a próxima linha é sempre esta: três pontinhos animados. -->
+        <li class="typing" aria-label="Partida em andamento">
+          <span></span><span></span><span></span>
+        </li>
       }
     </ol>
   } @else {

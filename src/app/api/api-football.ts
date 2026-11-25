@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import { teamName } from './team-names';
+import { venueWithCity } from './venue-names';
 
 /** Worker da Cloudflare que guarda a chave e faz cache das respostas da API-Football. */
 export const API_URL = 'https://arquibancada-api.arquibancada-api.workers.dev';
@@ -120,6 +121,17 @@ export interface FixtureEvent {
   detail: string;
   /** Motivo do cartão ("Foul", "Time Wasting"…), quando a API informa. */
   comments?: string | null;
+}
+
+/** Jogo do "Onde assistir" da CBF (via Worker): times e canais de transmissão. */
+export interface Broadcast {
+  /** Id do time na API-Football; `null` se o Worker não conhece o clube (aí vale o nome). */
+  home: number | null;
+  away: number | null;
+  homeName: string;
+  awayName: string;
+  time: string;
+  channels: string[];
 }
 
 export interface Standing {
@@ -378,6 +390,17 @@ export class ApiFootball {
   }
 
   /** Desfalques (lesionados, suspensos, dúvidas) dos dois times de uma partida. */
+  /**
+   * Canais de transmissão dos jogos da Série A num dia (AAAA-MM-DD, Brasília), do site da CBF. Lista vazia
+   * se a CBF não tiver ou falhar.
+   */
+  broadcasts(date: string): Observable<Broadcast[]> {
+    return this.http.get<{ games: Broadcast[] }>(`${API_URL}/onde-assistir`, { params: { date } }).pipe(
+      map((r) => r.games ?? []),
+      catchError(() => of([])),
+    );
+  }
+
   injuries(fixtureId: number): Observable<Injury[]> {
     return this.http
       .get<ApiResponse<Injury[]>>(`${API_URL}/injuries`, { params: { fixture: fixtureId } })
@@ -441,6 +464,8 @@ function rename<T extends Team>(team: T): T {
 function renameFixtures(fixtures: Fixture[]): Fixture[] {
   return fixtures.map((f) => ({
     ...f,
+    // Cidade do estádio corrigida (a API manda sem acento, traduzida ou errada).
+    fixture: f.fixture?.venue ? { ...f.fixture, venue: venueWithCity(f.fixture.venue) } : f.fixture,
     teams: { home: rename(f.teams.home), away: rename(f.teams.away) },
     events: f.events?.map((e) => ({ ...e, team: rename(e.team) })),
     lineups: f.lineups?.map((l) => ({ ...l, team: rename(l.team) })),

@@ -128,8 +128,10 @@ $muted: var(--muted);
   border-radius: 12px;
   box-shadow: 0 1px 2px var(--shadow);
 
+  // Faixa de ao vivo à esquerda, no fundo do card (com sombra interna, os cantos arredondados deixavam
+  // um fio azul em volta do card no celular).
   &.live {
-    box-shadow: inset 3px 0 0 var(--live), 0 1px 2px var(--shadow);
+    background-image: linear-gradient(to right, var(--live) 3px, transparent 3px);
   }
 }
 
@@ -172,13 +174,11 @@ $muted: var(--muted);
   gap: 2px;
   min-width: 96px;
 
-  .live-dot {
-    margin-bottom: 2px;
-  }
 }
 
 .score {
   display: flex;
+  align-items: center;
   gap: 10px;
   font-size: 2rem;
   font-weight: 700;
@@ -192,6 +192,12 @@ $muted: var(--muted);
   .dash {
     color: $muted;
     font-weight: 500;
+  }
+
+  // Bolinha de ao vivo no lugar do traço, um pouco maior que a das listas.
+  .live-dot {
+    width: 10px;
+    height: 10px;
   }
 
   .live & {
@@ -304,6 +310,46 @@ $muted: var(--muted);
 
   img {
     object-fit: contain;
+  }
+}
+
+.watch-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+  // Colada no placar: anula boa parte do espaço entre as linhas do card.
+  margin: -10px 0 -12px;
+}
+
+.watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--live-text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: color-mix(in srgb, var(--live-text) 12%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--live-text);
+    outline-offset: 2px;
   }
 }
 

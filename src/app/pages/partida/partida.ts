@@ -15,6 +15,9 @@ import { liveClock } from '../../shared/live-clock';
 import { LiveFixtures } from '../../shared/live-fixtures';
 import { Highlight, HighlightKind, highlights, statusLabel } from './match-header';
 import { matchStats } from './stats';
+import { channelsFor } from './broadcast';
+import { SIMULATE_LIVE, simulateLive } from './live-simulation';
+import { MatMenu, MatMenuTrigger } from '@angular/material/menu';
 
 interface HighlightRow {
   kind: HighlightKind;
@@ -45,6 +48,8 @@ const IDLE_CHECK_MS = 30 * 60_000;
 
 const NOT_STARTED = new Set(['NS', 'TBD']);
 const FINISHED = new Set(['FT', 'AET', 'PEN']);
+// Jogo que não vai mais passar (encerrado, adiado, cancelado, abandonado, W.O.): sem "Onde assistir".
+const OVER = new Set([...FINISHED, 'PST', 'CANC', 'ABD', 'AWD', 'WO']);
 
 /**
  * Daqui a quanto tempo buscar a partida de novo; `null` para parar (adiada, cancelada, encerrada há
@@ -67,7 +72,7 @@ export function refreshDelay(f: Fixture, now: number): number | null {
 /** Página de uma partida (`/partida/:id`): por enquanto, o cabeçalho com placar, gols e informações. */
 @Component({
   selector: 'app-partida',
-  imports: [Crest, LineupsSkeleton, MatIcon, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
+  imports: [Crest, LineupsSkeleton, MatIcon, MatMenu, MatMenuTrigger, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
   templateUrl: './partida.html',
   styleUrl: './partida.scss',
 })
@@ -86,7 +91,9 @@ export class Partida {
   private loaded = signal<Fixture | null>(null);
   protected fixture = computed(() => {
     const f = this.loaded();
-    return (f && this.liveFixtures.byId().get(f.fixture.id)) ?? f;
+    const current = (f && this.liveFixtures.byId().get(f.fixture.id)) ?? f;
+    // SÓ PARA TESTES (remover com live-simulation.ts): no `ng serve`, a partida aparece rolando.
+    return current && SIMULATE_LIVE ? simulateLive(current) : current;
   });
   protected loading = signal(true);
   /** Lesionados, suspensos e dúvidas dos dois times; vazio se a API não tiver (ou falhar). */
@@ -98,6 +105,13 @@ export class Partida {
   private extrasPending = signal(0);
   protected extrasLoading = computed(() => this.extrasPending() > 0);
   protected error = signal<string | null>(null);
+  /** Canais de transmissão (do "Onde assistir" da CBF); vazio: o botão não aparece. */
+  protected channels = signal<string[]>([]);
+  /** "Onde assistir" só antes e durante o jogo: encerrado (ou adiado, cancelado), some. */
+  protected showChannels = computed(() => {
+    const f = this.fixture();
+    return this.channels().length > 0 && !!f && !OVER.has(f.fixture.status.short);
+  });
 
   /** A API só manda estatísticas depois do início: sem elas, o card some no computador. */
   protected hasStats = computed(() => {
@@ -181,6 +195,7 @@ export class Partida {
       this.injuries.set([]);
       this.coaches.set({});
       this.extrasPending.set(0);
+      this.channels.set([]);
       this.error.set(null);
       this.loading.set(true);
       if (!Number.isInteger(id) || id <= 0) {
@@ -211,8 +226,10 @@ export class Partida {
           this.notFound();
           return;
         }
+        const first = !this.loaded();
         this.loaded.set(f);
         this.loadCoaches(f);
+        if (first && !OVER.has(f.fixture.status.short)) this.loadBroadcasts(f);
         this.title.setTitle(`${f.teams.home.name} x ${f.teams.away.name} · Arquibancada`);
         const next = refreshDelay(f, Date.now());
         if (next !== null) this.timer = setTimeout(() => this.load(id), next);
@@ -244,6 +261,14 @@ export class Partida {
         error: () => undefined,
       });
     }
+  }
+
+  /** Onde assistir, uma vez por partida aberta (a lista é do dia do jogo, no horário de Brasília). */
+  private loadBroadcasts(f: Fixture) {
+    const date = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(f.fixture.date));
+    this.api.broadcasts(date).subscribe((games) => {
+      if (this.loaded()?.fixture.id === f.fixture.id) this.channels.set(channelsFor(f, games));
+    });
   }
 
   private notFound() {

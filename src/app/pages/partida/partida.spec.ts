@@ -2,7 +2,7 @@ import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { ApiFootball, Fixture, FixtureEvent } from '../../api/api-football';
+import { ApiFootball, Broadcast, Fixture, FixtureEvent } from '../../api/api-football';
 import { highlights } from './match-header';
 import { Partida, refreshDelay } from './partida';
 
@@ -73,13 +73,17 @@ describe('Lances do cabeçalho', () => {
 });
 
 describe('Página da partida', () => {
+  // "Onde assistir" da CBF no dia (cada teste define).
+  let broadcasts: Broadcast[] = [];
+  beforeEach(() => (broadcasts = []));
+
   function render(f: Fixture | null, id = '1492463') {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [Partida],
       providers: [
         provideRouter([]),
-        { provide: ApiFootball, useValue: { fixture: () => of(f), injuries: () => of([]), coach: () => of(null) } },
+        { provide: ApiFootball, useValue: { fixture: () => of(f), injuries: () => of([]), coach: () => of(null), broadcasts: () => of(broadcasts) } },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id })) } },
       ],
     });
@@ -130,12 +134,32 @@ describe('Página da partida', () => {
     expect(tabs[2].getAttribute('aria-selected')).toBe('true');
   });
 
-  it('ao vivo, a bolinha fica acima do placar (e não na linha do relógio)', () => {
-    const el = render(match([1, 0], [], '2H'));
-    expect(el.querySelector('.header')?.classList).toContain('live');
-    const center = el.querySelector('.center')!;
-    expect(center.firstElementChild?.classList).toContain('live-dot');
-    expect(el.querySelector('.status .live-dot')).toBeNull();
+  it('ao vivo, a bolinha fica no lugar do traço do placar; encerrado, volta o traço', () => {
+    const live = render(match([1, 0], [], '2H'));
+    expect(live.querySelector('.header')?.classList).toContain('live');
+    expect(live.querySelector('.score .live-dot')).not.toBeNull();
+    expect(live.querySelector('.score .dash')).toBeNull();
+    expect(live.querySelector('.status .live-dot')).toBeNull();
+    const done = render(match([1, 0], []));
+    expect(done.querySelector('.score .live-dot')).toBeNull();
+    expect(done.querySelector('.score .dash')).not.toBeNull();
+  });
+
+  it('"Onde assistir" só aparece se a CBF tiver canais, e só antes e durante o jogo', () => {
+    expect(render(match([0, 0], [], '2H')).querySelector('.watch')).toBeNull();
+    broadcasts = [{ home: botafogo.id, away: saoPaulo.id, homeName: 'Botafogo', awayName: 'São Paulo', time: '20:00', channels: ['Premiere'] }];
+    expect(render(match([0, 0], [], '2H')).querySelector('.watch')?.textContent).toContain('Onde assistir');
+    expect(render(match([0, 0], [], 'NS')).querySelector('.watch')).not.toBeNull();
+    expect(render(match([0, 0], [], 'FT')).querySelector('.watch')).toBeNull();
+  });
+
+  it('lance a lance: com a bola rolando, a última linha são os três pontinhos; no intervalo e no fim, não', () => {
+    const rolling = render(match([1, 0], [goal(botafogo, 'Tiquinho Soares', 20)], '2H'));
+    expect(rolling.querySelector('.items > li:last-child')?.classList).toContain('typing');
+    // Sem nenhum lance ainda, os pontinhos aparecem no lugar do "Nenhum lance ainda".
+    expect(render(match([0, 0], [], '1H')).querySelector('.typing')).not.toBeNull();
+    expect(render(match([1, 0], [goal(botafogo, 'Tiquinho Soares', 20)], 'HT')).querySelector('.typing')).toBeNull();
+    expect(render(match([1, 0], [goal(botafogo, 'Tiquinho Soares', 20)], 'FT')).querySelector('.typing')).toBeNull();
   });
 
   it('partida que não existe mostra o aviso', () => {

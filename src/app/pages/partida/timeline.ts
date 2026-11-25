@@ -26,11 +26,24 @@ export interface TimelineDivider {
   score: string;
 }
 
-export type TimelineItem = TimelineEvent | TimelineDivider;
+/** Aviso de etapa encerrada sem nenhum lance ("Nenhum lance marcante no 1º tempo"). */
+export interface TimelineNote {
+  type: 'note';
+  text: string;
+}
+
+export type TimelineItem = TimelineEvent | TimelineDivider | TimelineNote;
 
 const FINISHED = new Set(['FT', 'AET', 'PEN']);
 // A partir destes status, o 1º tempo já acabou (aparece o separador do intervalo).
 const AFTER_FIRST_HALF = new Set(['HT', '2H', 'ET', 'BT', 'P', 'FT', 'AET', 'PEN']);
+// A partir destes, o 2º tempo já acabou.
+const AFTER_SECOND_HALF = new Set(['ET', 'BT', 'P', 'FT', 'AET', 'PEN']);
+// Teve prorrogação (em andamento ou encerrada).
+const EXTRA_TIME = new Set(['ET', 'BT', 'P', 'AET', 'PEN']);
+// A prorrogação já acabou.
+const AFTER_EXTRA_TIME = new Set(['P', 'AET', 'PEN']);
+const PERIOD_NAMES = ['', 'no 1º tempo', 'no 2º tempo', 'na prorrogação'];
 
 // Motivos de cartão (campo `comments` da API).
 const CARD_REASONS: Record<string, string> = {
@@ -136,12 +149,19 @@ export function timeline(f: Fixture): TimelineItem[] {
   const short = f.fixture.status.short;
   const score = (s?: { home: number | null; away: number | null }) =>
     s && s.home !== null && s.away !== null ? `${s.home} - ${s.away}` : null;
+  // Etapa encerrada sem nenhum lance ganha um aviso (a que está em andamento, não: lá ficam os três
+  // pontinhos do lance a lance).
+  const closed = [false, AFTER_FIRST_HALF.has(short), AFTER_SECOND_HALF.has(short), AFTER_EXTRA_TIME.has(short)];
   for (const p of [1, 2, 3]) {
-    result.push(...items.filter((i) => i.period === p).map(({ period: _, ...item }) => item));
+    const ofPeriod = items.filter((i) => i.period === p);
+    result.push(...ofPeriod.map(({ period: _, ...item }) => item));
+    if (!ofPeriod.length && closed[p] && (p < 3 || EXTRA_TIME.has(short))) {
+      result.push({ type: 'note', text: `Nenhum lance marcante ${PERIOD_NAMES[p]}` });
+    }
     if (p === 1 && AFTER_FIRST_HALF.has(short)) {
       result.push({ type: 'divider', label: 'Intervalo', score: score(f.score?.halftime) ?? scoreUntil(items, 1) });
     }
-    if (p === 2 && items.some((i) => i.period === 3)) {
+    if (p === 2 && (items.some((i) => i.period === 3) || EXTRA_TIME.has(short))) {
       result.push({ type: 'divider', label: 'Fim do tempo normal', score: score(f.score?.fulltime) ?? scoreUntil(items, 2) });
     }
   }

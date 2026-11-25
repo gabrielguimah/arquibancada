@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
+import { BROADCASTS_PATH, broadcastsTtl, fetchBroadcasts, validDate } from './broadcasts';
 import { GoalPush } from './goal-push';
 
 export { GoalPush };
@@ -675,6 +676,27 @@ export class ApiCache extends DurableObject<Env> {
     this.memory.set(key, entry);
   }
 
+  /**
+   * "Onde assistir" de um dia (canais dos jogos da Série A, do site da CBF), guardado conforme
+   * `broadcastsTtl`. Se a CBF falhar, devolve a última cópia (mesmo vencida), ou erro.
+   */
+  async broadcasts(date: string): Promise<CacheResult | CacheError> {
+    const key = `${BROADCASTS_PATH}?date=${date}`;
+    const entry = this.read(key);
+    const age = entry ? Math.floor((Date.now() - entry.fetchedAt) / 1000) : 0;
+    if (entry && age < entry.ttl) return { body: entry.body, status: 'HIT', age, ttl: entry.ttl };
+    try {
+      const body = JSON.stringify({ date, games: await fetchBroadcasts(date) });
+      const ttl = broadcastsTtl(date);
+      this.store(key, body, ttl);
+      return { body, status: 'MISS', age: 0, ttl };
+    } catch (err) {
+      console.error('onde assistir: CBF falhou', err);
+      if (entry) return { body: entry.body, status: 'STALE', age, ttl: 300 + age };
+      return { httpStatus: 502, error: 'Canais indisponíveis no momento' };
+    }
+  }
+
   /** Ranking de notas da temporada. Devolve o último montado e, se estiver velho, agenda outro. */
   async topRated(): Promise<CacheResult | CacheError> {
     const key = topRatedKey(this.env.SEASON);
@@ -1068,6 +1090,13 @@ function cacheKey(url: URL): string {
   return `${path}?${new URLSearchParams(params)}`;
 }
 
+/** Data do "Onde assistir" (`?date=AAAA-MM-DD`). */
+function dateParam(url: URL): string {
+  const date = url.searchParams.get('date');
+  if (!validDate(date)) throw new HttpError(400, 'Use date=AAAA-MM-DD');
+  return date;
+}
+
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get('origin') ?? '';
   const allowed = env.ALLOWED_ORIGINS.split(',').includes(origin);
@@ -1132,7 +1161,9 @@ export default {
               ? await stub.teamRatings()
               : url.pathname === `/${ROUND_TEAM_PATH}`
                 ? await stub.roundTeam(roundParam(url))
-                : await stub.serve(cacheKey(url));
+                : url.pathname === `/${BROADCASTS_PATH}`
+                  ? await stub.broadcasts(dateParam(url))
+                  : await stub.serve(cacheKey(url));
       if ('error' in result) return Response.json({ error: result.error }, { status: result.httpStatus, headers: cors });
       const maxAge = Math.max(0, result.ttl - result.age);
       return new Response(result.body, {

@@ -20,7 +20,7 @@ $muted: var(--muted);
   transition: background-color 0.15s;
 
   &:hover {
-    background: var(--surface-hover);
+    background-color: var(--surface-hover);
   }
 
   &:focus-visible {
@@ -28,8 +28,10 @@ $muted: var(--muted);
     outline-offset: 2px;
   }
 
+  // Faixa de ao vivo à esquerda, no fundo do card (com sombra interna, os cantos arredondados deixavam
+  // um fio azul em volta do card no celular).
   &.live {
-    box-shadow: inset 3px 0 0 $live, 0 1px 2px var(--shadow);
+    background-image: linear-gradient(to right, $live 3px, transparent 3px);
   }
 }
 

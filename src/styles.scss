@@ -340,6 +340,65 @@ html {
   }
 }
 
+// Popup "Onde assistir" da página da partida: lista de canais (não clicáveis).
+.watch-menu {
+  @include mat.menu-overrides(
+    (
+      container-color: var(--surface),
+    )
+  );
+
+  &.mat-mdc-menu-panel {
+    min-width: 200px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow), 0 2px 6px rgb(0 0 0 / 0.08);
+  }
+
+  .mat-mdc-menu-content {
+    padding: 12px 14px;
+    color: var(--text);
+  }
+
+  .watch-title {
+    margin-bottom: 8px;
+    color: var(--live-text);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .watch-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+    }
+
+    .mat-icon {
+      width: 20px;
+      height: 20px;
+      font-size: 20px;
+      color: var(--muted);
+    }
+  }
+
+  .watch-source {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.72rem;
+  }
+}
+
 // Ícones alinhados ao texto ao redor; o tamanho segue o font-size de quem usa.
 .mat-icon {
   vertical-align: middle;

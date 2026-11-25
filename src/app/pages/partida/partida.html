@@ -3,6 +3,16 @@
 
   @if (fixture(); as f) {
     <section class="header" [class.live]="live()" aria-label="Partida">
+      @if (showChannels()) {
+        <!-- Canais do "Onde assistir" da CBF, logo acima do placar; abrem num popup ao clicar. Sem canais, a
+             linha nem existe (o card não ganha espaço vazio). -->
+        <div class="watch-row">
+          <button type="button" class="watch" [matMenuTriggerFor]="watchMenu">
+            <mat-icon aria-hidden="true">live_tv</mat-icon>
+            Onde assistir
+          </button>
+        </div>
+      }
       <div class="scoreboard">
         <div class="team home">
           <span class="name">{{ f.teams.home.name }}</span>
@@ -10,13 +20,16 @@
         </div>
 
         <div class="center">
-          <!-- Bolinha de ao vivo acima do placar. -->
-          @if (live()) {
-            <span class="live-dot" aria-label="Ao vivo"></span>
-          }
           @if (started()) {
-            <span class="score" [attr.aria-label]="f.goals.home + ' a ' + f.goals.away">
-              {{ f.goals.home }}<span class="dash">-</span>{{ f.goals.away }}
+            <!-- Ao vivo, a bolinha fica no lugar do traço (o card não cresce). -->
+            <span class="score" [attr.aria-label]="f.goals.home + ' a ' + f.goals.away + (live() ? ', ao vivo' : '')">
+              {{ f.goals.home }}
+              @if (live()) {
+                <span class="live-dot" aria-hidden="true"></span>
+              } @else {
+                <span class="dash">-</span>
+              }
+              {{ f.goals.away }}
             </span>
           } @else {
             <span class="score kickoff">{{ kickoff().time }}</span>
@@ -80,6 +93,15 @@
           </li>
         }
       </ul>
+      <mat-menu #watchMenu="matMenu" class="watch-menu">
+        <div class="watch-title">Onde assistir</div>
+        <ul class="watch-list">
+          @for (c of channels(); track c) {
+            <li><mat-icon aria-hidden="true">tv</mat-icon>{{ c }}</li>
+          }
+        </ul>
+        <div class="watch-source">Fonte: CBF</div>
+      </mat-menu>
     </section>
 
     <ng-container [ngTemplateOutlet]="tabsBar" />
