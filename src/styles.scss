@@ -222,6 +222,12 @@ html {
   }
 }
 
+// Painéis flutuantes (lista dos seletores, menu de configurações, "Onde assistir"): mesmos cantos e sombra.
+@mixin floating-panel {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px var(--shadow), 0 2px 6px rgb(0 0 0 / 0.08);
+}
+
 // Lista de opções dos seletores: cantos arredondados, opções em pílula e a atual destacada.
 .select-panel {
   @include mat.select-overrides(
@@ -241,8 +247,7 @@ html {
 
   &.mat-mdc-select-panel {
     padding: 6px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px var(--shadow), 0 2px 6px rgb(0 0 0 / 0.08);
+    @include floating-panel;
   }
 
   .mat-mdc-option {
@@ -269,8 +274,7 @@ html {
 
   &.mat-mdc-menu-panel {
     min-width: 260px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px var(--shadow), 0 2px 6px rgb(0 0 0 / 0.08);
+    @include floating-panel;
   }
 
   .mat-mdc-menu-content {
@@ -350,8 +354,7 @@ html {
 
   &.mat-mdc-menu-panel {
     min-width: 200px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px var(--shadow), 0 2px 6px rgb(0 0 0 / 0.08);
+    @include floating-panel;
   }
 
   .mat-mdc-menu-content {

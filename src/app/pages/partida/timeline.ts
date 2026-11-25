@@ -1,6 +1,7 @@
 import { Fixture, FixtureEvent } from '../../api/api-football';
 import { shortName } from './lineups';
 import { goalSideOf, isGoal, minuteValue } from './match-header';
+import { FINISHED, PROGRESS } from '../../shared/fixture-status';
 
 export type TimelineKind = 'goal' | 'missed-penalty' | 'yellow' | 'red' | 'second-yellow' | 'sub' | 'var';
 
@@ -34,15 +35,8 @@ export interface TimelineNote {
 
 export type TimelineItem = TimelineEvent | TimelineDivider | TimelineNote;
 
-const FINISHED = new Set(['FT', 'AET', 'PEN']);
-// A partir destes status, o 1º tempo já acabou (aparece o separador do intervalo).
-const AFTER_FIRST_HALF = new Set(['HT', '2H', 'ET', 'BT', 'P', 'FT', 'AET', 'PEN']);
-// A partir destes, o 2º tempo já acabou.
-const AFTER_SECOND_HALF = new Set(['ET', 'BT', 'P', 'FT', 'AET', 'PEN']);
 // Teve prorrogação (em andamento ou encerrada).
 const EXTRA_TIME = new Set(['ET', 'BT', 'P', 'AET', 'PEN']);
-// A prorrogação já acabou.
-const AFTER_EXTRA_TIME = new Set(['P', 'AET', 'PEN']);
 const PERIOD_NAMES = ['', 'no 1º tempo', 'no 2º tempo', 'na prorrogação'];
 
 // Motivos de cartão (campo `comments` da API).
@@ -151,14 +145,17 @@ export function timeline(f: Fixture): TimelineItem[] {
     s && s.home !== null && s.away !== null ? `${s.home} - ${s.away}` : null;
   // Etapa encerrada sem nenhum lance ganha um aviso (a que está em andamento, não: lá ficam os três
   // pontinhos do lance a lance).
-  const closed = [false, AFTER_FIRST_HALF.has(short), AFTER_SECOND_HALF.has(short), AFTER_EXTRA_TIME.has(short)];
+  // Etapas encerradas, pela ordem das situações: 1º tempo a partir do intervalo, 2º a partir do intervalo
+  // da prorrogação (ou do fim), prorrogação a partir dos pênaltis.
+  const progress = PROGRESS[short] ?? 0;
+  const closed = [false, progress >= PROGRESS['HT'], progress >= PROGRESS['BT'], EXTRA_TIME.has(short) && progress >= PROGRESS['P']];
   for (const p of [1, 2, 3]) {
     const ofPeriod = items.filter((i) => i.period === p);
     result.push(...ofPeriod.map(({ period: _, ...item }) => item));
-    if (!ofPeriod.length && closed[p] && (p < 3 || EXTRA_TIME.has(short))) {
+    if (!ofPeriod.length && closed[p]) {
       result.push({ type: 'note', text: `Nenhum lance marcante ${PERIOD_NAMES[p]}` });
     }
-    if (p === 1 && AFTER_FIRST_HALF.has(short)) {
+    if (p === 1 && closed[1]) {
       result.push({ type: 'divider', label: 'Intervalo', score: score(f.score?.halftime) ?? scoreUntil(items, 1) });
     }
     if (p === 2 && (items.some((i) => i.period === 3) || EXTRA_TIME.has(short))) {

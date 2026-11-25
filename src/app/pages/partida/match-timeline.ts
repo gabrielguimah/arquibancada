@@ -2,10 +2,8 @@ import { Component, computed, input } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { Fixture } from '../../api/api-football';
 import { isLive } from '../../shared/fixture-card';
+import { RUNNING } from '../../shared/fixture-status';
 import { timeline } from './timeline';
-
-// Bola rolando: 1º e 2º tempo, prorrogação e pênaltis (no intervalo, suspenso ou encerrado, não).
-const RUNNING = new Set(['1H', '2H', 'ET', 'P', 'LIVE']);
 
 /** Lance a lance: mandante à esquerda, visitante à direita, do primeiro lance (em cima) ao último. */
 @Component({

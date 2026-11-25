@@ -2,6 +2,9 @@ import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiFootball, Fixture } from '../api/api-football';
 import { isLive, todayInBrasilia } from './fixture-card';
+import { fresher } from './fixture-status';
+
+export { fresher };
 
 // Com jogo rolando, pergunta a cada 15 s: o mesmo tempo que o Worker guarda jogo ao vivo, então não gasta
 // mais chamadas à API, e o Worker vê as viradas de minuto com mais precisão (relógio do jogo).
@@ -73,21 +76,4 @@ export class LiveFixtures {
       .filter((ms) => ms > 0);
     return Math.min(POLL_IDLE_MAX_MS, ...upcoming);
   }
-}
-
-// Ordem das situações de um jogo, para saber qual de duas respostas está mais adiantada.
-const PROGRESS: Record<string, number> = { TBD: 0, NS: 0, '1H': 1, HT: 2, '2H': 3, BT: 4, ET: 5, P: 6, AET: 7, PEN: 7, FT: 7 };
-
-/**
- * A busca por id (com eventos) e a lista do dia têm caches separados no Worker e na API, e às vezes a
- * lista já mostra o jogo começado (ou o gol) enquanto a busca por id ainda não. Fica com a situação e o
- * placar da mais adiantada; eventos, escalações e notas vêm sempre da busca por id.
- */
-export function fresher(byId: Fixture, listed: Fixture | undefined): Fixture {
-  if (!listed) return byId;
-  const progress = (f: Fixture) => [PROGRESS[f.fixture.status.short] ?? 0, f.fixture.status.elapsed ?? 0, f.fixture.status.extra ?? 0];
-  const [a, b] = [progress(byId), progress(listed)];
-  const ahead = b[0] - a[0] || b[1] - a[1] || b[2] - a[2];
-  if (ahead <= 0) return byId;
-  return { ...byId, fixture: { ...byId.fixture, status: listed.fixture.status }, goals: listed.goals, score: listed.score ?? byId.score };
 }

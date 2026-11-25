@@ -1,6 +1,8 @@
 import { DurableObject } from 'cloudflare:workers';
 import { BROADCASTS_PATH, broadcastsTtl, fetchBroadcasts, validDate } from './broadcasts';
+import { keyFor } from './cache-key';
 import { GoalPush } from './goal-push';
+import { FINISHED as FINISHED_STATUSES, LIVE_STATUSES } from '../../src/app/shared/fixture-status';
 
 export { GoalPush };
 
@@ -44,7 +46,6 @@ const TEAM_RATINGS_PATH = 'teams/ratings';
 const TEAM_RATINGS_VERSION = 3;
 const TEAM_LAST_MATCHES = 5;
 const TEAM_STATS_TTL = 3600;
-const FINISHED_STATUSES = new Set(['FT', 'AET', 'PEN']);
 // Grupos fixos de rodadas: a chave do cache de cada grupo só muda quando um jogo dele termina.
 const ROUNDS_PER_CALL = 2;
 
@@ -55,7 +56,6 @@ const ROUND_TEAM_VERSION = 2;
 const ROUND_TEAM_MIN_MINUTES = 45;
 const ROUND_TEAM_FORMATION: Record<string, number> = { G: 1, D: 4, M: 3, F: 3 };
 
-const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 
 // Relógio dos jogos ao vivo. A API só informa o minuto, e ele não vira a cada 60 s certinhos (num
 // mesmo jogo, minutos de 33 s e de 71 s). O Worker, que vê os dados assim que saem da API, marca cada
@@ -678,23 +678,34 @@ export class ApiCache extends DurableObject<Env> {
 
   /**
    * "Onde assistir" de um dia (canais dos jogos da Série A, do site da CBF), guardado conforme
-   * `broadcastsTtl`. Se a CBF falhar, devolve a última cópia (mesmo vencida), ou erro.
+   * `broadcastsTtl`. Vencido, responde na hora com a cópia e atualiza em segundo plano (uma busca só,
+   * mesmo com vários pedidos juntos); se a CBF falhar, fica a cópia antiga.
    */
   async broadcasts(date: string): Promise<CacheResult | CacheError> {
-    const key = `${BROADCASTS_PATH}?date=${date}`;
+    // v2: canais já com o nome que o site mostra.
+    const key = `${BROADCASTS_PATH}/v2?date=${date}`;
     const entry = this.read(key);
     const age = entry ? Math.floor((Date.now() - entry.fetchedAt) / 1000) : 0;
     if (entry && age < entry.ttl) return { body: entry.body, status: 'HIT', age, ttl: entry.ttl };
-    try {
-      const body = JSON.stringify({ date, games: await fetchBroadcasts(date) });
-      const ttl = broadcastsTtl(date);
-      this.store(key, body, ttl);
-      return { body, status: 'MISS', age: 0, ttl };
-    } catch (err) {
-      console.error('onde assistir: CBF falhou', err);
-      if (entry) return { body: entry.body, status: 'STALE', age, ttl: 300 + age };
-      return { httpStatus: 502, error: 'Canais indisponíveis no momento' };
+
+    let pending = this.inflight.get(key);
+    if (!pending) {
+      pending = fetchBroadcasts(date)
+        .then((games): CacheResult => {
+          const body = JSON.stringify({ date, games });
+          const ttl = broadcastsTtl(date);
+          this.store(key, body, ttl);
+          return { body, status: 'MISS', age: 0, ttl };
+        })
+        .catch((err): CacheError => {
+          console.error('onde assistir: CBF falhou', err);
+          return { httpStatus: 502, error: 'Canais indisponíveis no momento' };
+        })
+        .finally(() => this.inflight.delete(key));
+      this.inflight.set(key, pending);
     }
+    if (entry) return { body: entry.body, status: 'STALE', age, ttl: 300 + age };
+    return pending;
   }
 
   /** Ranking de notas da temporada. Devolve o último montado e, se estiver velho, agenda outro. */
@@ -1085,9 +1096,8 @@ function cacheKey(url: URL): string {
   const league = url.searchParams.get('league');
   if (league !== null && league !== BRASILEIRAO) throw new HttpError(400, 'Somente league=71');
 
-  const params = [...url.searchParams.entries()].sort(([a], [b]) => a.localeCompare(b));
-  if (params.length === 0) throw new HttpError(400, 'Parâmetros obrigatórios');
-  return `${path}?${new URLSearchParams(params)}`;
+  if ([...url.searchParams.keys()].length === 0) throw new HttpError(400, 'Parâmetros obrigatórios');
+  return keyFor(path, url.searchParams.entries());
 }
 
 /** Data do "Onde assistir" (`?date=AAAA-MM-DD`). */
@@ -1104,15 +1114,12 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
 }
 
 /**
- * Notificações de gol por push (`/push/...`): a chave pública do servidor (GET `/push/key`), inscrever
- * e cancelar (POST com a inscrição do navegador, em JSON). `null` se não for um desses caminhos.
+ * Notificações de gol por push (`/push/...`): inscrever e cancelar (POST com a inscrição do navegador, em
+ * JSON; o site manda como texto simples, sem preflight). A chave pública fica no próprio site. `null` se não for um desses caminhos.
  */
 async function pushRoute(request: Request, env: Env, url: URL, cors: Record<string, string>): Promise<Response | null> {
   if (!url.pathname.startsWith('/push/')) return null;
   const stub = env.GOAL_PUSH.getByName('push');
-  if (request.method === 'GET' && url.pathname === '/push/key') {
-    return Response.json({ key: env.VAPID_PUBLIC_KEY }, { headers: { ...cors, 'cache-control': 'public, max-age=86400' } });
-  }
   if (request.method === 'GET' && url.pathname === '/push/status') return Response.json(await stub.status(), { headers: cors });
   if (request.method !== 'POST') return new Response('Método não permitido', { status: 405, headers: cors });
   // Só do site: outras origens nem passariam do CORS no navegador.

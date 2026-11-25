@@ -11,12 +11,12 @@ import { LineupsSkeleton, StatsSkeleton, TimelineSkeleton } from './match-skelet
 import { NgTemplateOutlet } from '@angular/common';
 import { MatchTimeline } from './match-timeline';
 import { TZ, isLive } from '../../shared/fixture-card';
+import { FINISHED, OVER, dayInBrasilia } from '../../shared/fixture-status';
 import { liveClock } from '../../shared/live-clock';
 import { LiveFixtures } from '../../shared/live-fixtures';
 import { Highlight, HighlightKind, highlights, statusLabel } from './match-header';
 import { matchStats } from './stats';
 import { channelsFor } from './broadcast';
-import { SIMULATE_LIVE, simulateLive } from './live-simulation';
 import { MatMenu, MatMenuTrigger } from '@angular/material/menu';
 
 interface HighlightRow {
@@ -47,9 +47,7 @@ const AFTER_KICKOFF_MS = 3 * 3600_000;
 const IDLE_CHECK_MS = 30 * 60_000;
 
 const NOT_STARTED = new Set(['NS', 'TBD']);
-const FINISHED = new Set(['FT', 'AET', 'PEN']);
-// Jogo que não vai mais passar (encerrado, adiado, cancelado, abandonado, W.O.): sem "Onde assistir".
-const OVER = new Set([...FINISHED, 'PST', 'CANC', 'ABD', 'AWD', 'WO']);
+
 
 /**
  * Daqui a quanto tempo buscar a partida de novo; `null` para parar (adiada, cancelada, encerrada há
@@ -91,9 +89,7 @@ export class Partida {
   private loaded = signal<Fixture | null>(null);
   protected fixture = computed(() => {
     const f = this.loaded();
-    const current = (f && this.liveFixtures.byId().get(f.fixture.id)) ?? f;
-    // SÓ PARA TESTES (remover com live-simulation.ts): no `ng serve`, a partida aparece rolando.
-    return current && SIMULATE_LIVE ? simulateLive(current) : current;
+    return (f && this.liveFixtures.byId().get(f.fixture.id)) ?? f;
   });
   protected loading = signal(true);
   /** Lesionados, suspensos e dúvidas dos dois times; vazio se a API não tiver (ou falhar). */
@@ -265,7 +261,7 @@ export class Partida {
 
   /** Onde assistir, uma vez por partida aberta (a lista é do dia do jogo, no horário de Brasília). */
   private loadBroadcasts(f: Fixture) {
-    const date = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(f.fixture.date));
+    const date = dayInBrasilia(new Date(f.fixture.date));
     this.api.broadcasts(date).subscribe((games) => {
       if (this.loaded()?.fixture.id === f.fixture.id) this.channels.set(channelsFor(f, games));
     });

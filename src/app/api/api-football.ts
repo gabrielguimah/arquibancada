@@ -3,13 +3,17 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import { teamName } from './team-names';
 import { venueWithCity } from './venue-names';
+import { Broadcast } from './broadcast';
+
+export type { Broadcast };
 
 /** Worker da Cloudflare que guarda a chave e faz cache das respostas da API-Football. */
 export const API_URL = 'https://arquibancada-api.arquibancada-api.workers.dev';
+/** Chave pública do push dos gols (VAPID_PUBLIC_KEY do Worker; a privada fica só no Worker). */
+export const PUSH_PUBLIC_KEY = 'BPBtZ1D5G9-BambgG_IYtrJj3vr2UuXAcLprfLyo5hai_JVrlwvRkACAm4SwVFI4D9_486xV_z5VvmUPGe-qHZA';
 export const LEAGUE = 71;
 export const SEASON = 2026;
 
-export const LIVE_STATUSES = ['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE'];
 
 export interface Team {
   id: number;
@@ -121,17 +125,6 @@ export interface FixtureEvent {
   detail: string;
   /** Motivo do cartão ("Foul", "Time Wasting"…), quando a API informa. */
   comments?: string | null;
-}
-
-/** Jogo do "Onde assistir" da CBF (via Worker): times e canais de transmissão. */
-export interface Broadcast {
-  /** Id do time na API-Football; `null` se o Worker não conhece o clube (aí vale o nome). */
-  home: number | null;
-  away: number | null;
-  homeName: string;
-  awayName: string;
-  time: string;
-  channels: string[];
 }
 
 export interface Standing {

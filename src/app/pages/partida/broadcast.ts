@@ -1,15 +1,5 @@
 import { Broadcast, Fixture } from '../../api/api-football';
 
-// Nomes dos canais como a CBF manda → como o site mostra.
-const CHANNEL_NAMES: Record<string, string> = {
-  sportv: 'SporTV',
-  'amazon prime': 'Prime Video',
-  'amazon prime video': 'Prime Video',
-  'youtube / cazé tv': 'CazéTV (YouTube)',
-  'cazé tv': 'CazéTV',
-  'ge tv': 'ge tv (YouTube)',
-};
-
 /**
  * Canais do jogo, pela lista do "Onde assistir" da CBF no dia. Casa pelo id dos times (a tabela do Worker)
  * e, para clube fora da tabela, pelo nome. Sem o jogo na lista: lista vazia (a seção não aparece).
@@ -19,11 +9,7 @@ export function channelsFor(f: Fixture, games: Broadcast[]): string[] {
   const game =
     games.find((g) => g.home === home.id && g.away === away.id) ??
     games.find((g) => sameTeam(g.home, g.homeName, home) && sameTeam(g.away, g.awayName, away));
-  return [...new Set((game?.channels ?? []).map(channelName))];
-}
-
-export function channelName(name: string): string {
-  return CHANNEL_NAMES[name.trim().toLowerCase()] ?? name.trim();
+  return game?.channels ?? [];
 }
 
 function sameTeam(id: number | null, cbfName: string, team: { id: number; name: string }): boolean {

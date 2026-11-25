@@ -1,5 +1,5 @@
 import { Broadcast, Fixture } from '../../api/api-football';
-import { channelName, channelsFor } from './broadcast';
+import { channelsFor } from './broadcast';
 
 const fixture = (home: { id: number; name: string }, away: { id: number; name: string }) =>
   ({ teams: { home: { ...home, logo: '' }, away: { ...away, logo: '' } } }) as Fixture;
@@ -9,7 +9,6 @@ const game = (extra: Partial<Broadcast>): Broadcast => ({
   away: 131,
   homeName: 'Atlético Mineiro',
   awayName: 'Corinthians',
-  time: '20:00',
   channels: ['Premiere'],
   ...extra,
 });
@@ -18,9 +17,9 @@ describe('Onde assistir', () => {
   const atletico = { id: 1062, name: 'Atlético-MG' };
   const corinthians = { id: 131, name: 'Corinthians' };
 
-  it('acha o jogo pelos ids dos times e mostra os canais com o nome do site', () => {
-    const games = [game({ home: 127, away: 128, channels: ['Globo'] }), game({ channels: ['Premiere', 'Sportv', 'Amazon Prime'] })];
-    expect(channelsFor(fixture(atletico, corinthians), games)).toEqual(['Premiere', 'SporTV', 'Prime Video']);
+  it('acha o jogo pelos ids dos times', () => {
+    const games = [game({ home: 127, away: 128, channels: ['Globo'] }), game({ channels: ['Premiere', 'SporTV'] })];
+    expect(channelsFor(fixture(atletico, corinthians), games)).toEqual(['Premiere', 'SporTV']);
   });
 
   it('mandante e visitante trocados não são o mesmo jogo', () => {
@@ -30,10 +29,5 @@ describe('Onde assistir', () => {
   it('clube que o Worker não conhece: casa pelo nome (sem acento e sem "SAF")', () => {
     const games = [game({ home: null, homeName: 'Coritiba SAF', away: null, awayName: 'Grêmio', channels: ['Globo'] })];
     expect(channelsFor(fixture({ id: 147, name: 'Coritiba' }, { id: 130, name: 'Gremio' }), games)).toEqual(['Globo']);
-  });
-
-  it('nomes de canal desconhecidos ficam como vieram', () => {
-    expect(channelName(' Record ')).toBe('Record');
-    expect(channelName('YouTube / Cazé TV')).toBe('CazéTV (YouTube)');
   });
 });

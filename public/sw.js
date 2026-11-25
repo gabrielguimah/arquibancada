@@ -1,6 +1,7 @@
-// Service worker do Arquibancada: só serve para as notificações de gol. Não guarda nada em cache.
-// - Avisos da própria página (site aberto em segundo plano), via `showNotification`.
-// - Push do Worker (site fechado, celular bloqueado): o evento `push` abaixo.
+// Service worker do Arquibancada: só serve para as notificações de gol. Não guarda nada em cache. É ele
+// quem mostra todas, para nunca aparecer o mesmo aviso duas vezes (ver `firstShow`):
+// - avisos da própria página (site aberto em segundo plano), pelo evento `message`;
+// - push do Worker (site fechado, celular bloqueado), pelo evento `push`.
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
@@ -24,21 +25,36 @@ self.addEventListener('push', (event) => {
       // Abas do site abertas (mesmo em segundo plano) tocam o som do site: no PC, a notificação do
       // sistema pode vir sem som. A página toca uma vez só por gol, mesmo se ela também o detectar.
       if (data.sound) clients.forEach((c) => c.postMessage({ source: 'arquibancada-push', tag: data.tag, sound: data.sound }));
-      const options = { body: data.body, icon: data.icon || 'icon-192.png', tag: data.tag, data: { path: data.path || '' } };
-      // Aviso de gol já mostrado (o serviço de push entregou de novo, ou a página mostrou antes): não
-      // repete. Se ele ainda está na tela, "mostra" por cima com a mesma tag, sem som (nada muda para quem
-      // vê; o navegador exige uma notificação para cada push).
-      if (data.sound && data.tag && !(await firstShow(data.tag))) {
-        const open = await self.registration.getNotifications({ tag: data.tag });
-        if (open.length) return self.registration.showNotification(data.title, { ...options, silent: true });
-        return;
-      }
       const onScreen = clients.some((c) => c.focused && c.visibilityState === 'visible');
-      if (onScreen && !data.always && !SAFARI) return;
-      return self.registration.showNotification(data.title, options);
+      // Aviso de gol (com `sound`): uma vez só. Os outros (confirmação de inscrição) sempre.
+      return show(data, { once: !!data.sound, skip: onScreen && !data.always && !SAFARI });
     }),
   );
 });
+
+// Aviso da própria página (site aberto em segundo plano, sem push): mostra daqui, com a mesma regra.
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data && data.source === 'arquibancada-page' && data.notification && data.notification.title) {
+    event.waitUntil(show(data.notification, { once: true, skip: false }));
+  }
+});
+
+/**
+ * Mostra a notificação. `once`: aviso de gol já mostrado (o serviço de push entregou de novo, ou a página
+ * mostrou antes) não repete; se ele ainda está na tela, "mostra" por cima com a mesma tag, sem som (nada
+ * muda para quem vê; o navegador exige uma notificação para cada push). `skip`: não mostra (site na frente,
+ * a página já avisa), mas conta como mostrado.
+ */
+async function show(data, { once, skip }) {
+  const options = { body: data.body, icon: data.icon || 'icon-192.png', tag: data.tag, data: { path: data.path || '' } };
+  if (once && data.tag && !(await firstShow(data.tag))) {
+    const open = await self.registration.getNotifications({ tag: data.tag });
+    if (open.length) return self.registration.showNotification(data.title, { ...options, silent: true });
+    return;
+  }
+  if (!skip) return self.registration.showNotification(data.title, options);
+}
 
 // Clique na notificação: abre a partida (ou o site) numa aba do site já aberta, ou numa nova.
 self.addEventListener('notificationclick', (event) => {
@@ -67,12 +83,13 @@ self.addEventListener('pushsubscriptionchange', (event) => {
   );
 });
 
+// JSON enviado como texto simples (sem a consulta CORS prévia); o Worker lê o JSON do texto.
 function post(path, body) {
-  return fetch(API_URL + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
+  return fetch(API_URL + path, { method: 'POST', body: JSON.stringify(body) }).catch(() => null);
 }
 
-// Avisos já mostrados, no IndexedDB: o mesmo banco que a página usa (browser-notifications.ts), para que
-// um aviso nunca apareça duas vezes, venha da página ou do push. Registros com mais de 2 dias são apagados.
+// Avisos já mostrados (tag e hora), no IndexedDB, para que um aviso nunca apareça duas vezes, venha da
+// página ou do push. Registros com mais de 2 dias são apagados.
 function firstShow(tag) {
   return new Promise((resolve) => {
     try {

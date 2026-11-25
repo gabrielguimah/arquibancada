@@ -1,20 +1,21 @@
 import { Component, computed, input } from '@angular/core';
-import { Fixture, LIVE_STATUSES } from '../api/api-football';
+import { Fixture } from '../api/api-football';
+import { LIVE_STATUSES, TZ, dayInBrasilia } from './fixture-status';
 import { RouterLink } from '@angular/router';
 import { Crest } from './crest';
 import { liveClock } from './live-clock';
 
-export const TZ = 'America/Sao_Paulo';
+export { TZ };
 
 const RED_CARDS = new Set(['Red Card', 'Second Yellow card']);
 
 /** Data de hoje em Brasília, no formato AAAA-MM-DD. */
 export function todayInBrasilia(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
+  return dayInBrasilia();
 }
 
 export function isLive(f: Fixture): boolean {
-  return LIVE_STATUSES.includes(f.fixture.status.short);
+  return LIVE_STATUSES.has(f.fixture.status.short);
 }
 
 /** Card compacto de partida: horário e situação à esquerda, times empilhados, placar à direita. */

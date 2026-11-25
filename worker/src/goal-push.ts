@@ -1,6 +1,8 @@
 import { DurableObject } from 'cloudflare:workers';
 import { teamName } from '../../src/app/api/team-names';
 import { GoalAlert, GoalEvent, WatchState, detectGoals, notificationText } from '../../src/app/shared/goal-detect';
+import { LIVE_STATUSES, TZ, dayInBrasilia, fresher } from '../../src/app/shared/fixture-status';
+import { keyFor } from './cache-key';
 import { PushTarget, Vapid, b64urlDecode, sendPush } from './web-push';
 
 // Avisos de gol por Web Push: chegam no celular e no computador mesmo com o site fechado. Um Durable
@@ -12,7 +14,7 @@ const CHECK_LIVE_MS = 15_000;
 const CHECK_IDLE_MAX_MS = 30 * 60_000;
 // Jogos passam a ser acompanhados este tempo antes do início (estado inicial 0 x 0 guardado).
 const KICKOFF_MARGIN_MS = 5 * 60_000;
-// Envios por execução do alarme (limite de subrequisições do Worker); o resto vai na próxima, 1 s depois.
+// Envios por execução do alarme (limite de subrequisições do Worker); o resto vai na execução seguinte.
 const SENDS_PER_RUN = 40;
 // Mensagem de gol guardada pelo serviço de push por até 10 min (aparelho sem sinal); depois, perdeu a graça.
 const GOAL_TTL_S = 600;
@@ -23,26 +25,21 @@ const MAX_FAILURES = 10;
 // requisições para qualquer endereço.
 const PUSH_HOSTS = /(^|\.)(googleapis\.com|mozilla\.com|mozaws\.net|push\.apple\.com|notify\.windows\.com)$/;
 
-const LIVE = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
-const PROGRESS: Record<string, number> = { TBD: 0, NS: 0, '1H': 1, HT: 2, '2H': 3, BT: 4, ET: 5, P: 6, AET: 7, PEN: 7, FT: 7 };
-
 interface PushTeam {
   id: number;
   name: string;
   logo: string;
 }
 
-export type PushEvent = GoalEvent;
-
-export interface PushFixture {
+interface PushFixture {
   fixture: { id: number; timestamp: number; status: { short: string; elapsed: number | null; extra?: number | null } };
   teams: { home: PushTeam; away: PushTeam };
   goals: { home: number | null; away: number | null };
-  events?: PushEvent[];
+  events?: GoalEvent[];
 }
 
 /** Conteúdo da notificação (o service worker do site mostra como veio). Mesmo texto dos avisos do site. */
-export function alertPayload(f: PushFixture, a: GoalAlert<PushEvent>) {
+function alertPayload(f: PushFixture, a: GoalAlert) {
   const names = { home: teamName(f.teams.home), away: teamName(f.teams.away), team: teamName(a.event.team) };
   return {
     ...notificationText(a, names, f.goals),
@@ -56,31 +53,13 @@ export function alertPayload(f: PushFixture, a: GoalAlert<PushEvent>) {
   };
 }
 
-/** Situação e placar da lista do dia, se ela estiver mais adiantada que a busca por id (como no site). */
-function fresher(byId: PushFixture, listed: PushFixture | undefined): PushFixture {
-  if (!listed) return byId;
-  const progress = (f: PushFixture) => [PROGRESS[f.fixture.status.short] ?? 0, f.fixture.status.elapsed ?? 0, f.fixture.status.extra ?? 0];
-  const [a, b] = [progress(byId), progress(listed)];
-  const ahead = b[0] - a[0] || b[1] - a[1] || b[2] - a[2];
-  return ahead > 0 ? { ...byId, fixture: { ...byId.fixture, status: listed.fixture.status }, goals: listed.goals } : byId;
-}
-
-/** Chave de cache igual à que o Worker monta para o site (parâmetros em ordem alfabética). */
-function apiKey(path: string, params: Record<string, string>): string {
-  return `${path}?${new URLSearchParams(Object.entries(params).sort(([a], [b]) => a.localeCompare(b)))}`;
-}
-
-function brasiliaDay(now: number): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(now));
-}
-
 interface SubscriptionInput {
   endpoint?: unknown;
   keys?: { p256dh?: unknown; auth?: unknown };
 }
 
 /** Inscrição recebida do site, conferida; `null` se inválida ou de um serviço de push desconhecido. */
-export function validSubscription(input: SubscriptionInput | null): PushTarget | null {
+function validSubscription(input: SubscriptionInput | null): PushTarget | null {
   const endpoint = input?.endpoint;
   const p256dh = input?.keys?.p256dh;
   const auth = input?.keys?.auth;
@@ -113,8 +92,11 @@ export class GoalPush extends DurableObject<Env> {
     const sub = validSubscription(input);
     if (!sub) return { ok: false, error: 'Inscrição inválida' };
     const sql = this.ctx.storage.sql;
-    const exists = sql.exec('SELECT 1 FROM subs WHERE endpoint = ?', sub.endpoint).toArray().length > 0;
-    if (!exists && this.subscriptions() >= MAX_SUBSCRIPTIONS) return { ok: false, error: 'Limite de inscrições atingido' };
+    const current = sql.exec<{ p256dh: string; auth: string }>('SELECT p256dh, auth FROM subs WHERE endpoint = ?', sub.endpoint).toArray()[0];
+    // Já inscrito com as mesmas chaves (o site confirma de tempos em tempos): nada a gravar nem acordar.
+    if (current?.p256dh === sub.p256dh && current.auth === sub.auth) return { ok: true };
+    const exists = !!current;
+    if (!exists && this.countSubscriptions() >= MAX_SUBSCRIPTIONS) return { ok: false, error: 'Limite de inscrições atingido' };
     sql.exec(
       'INSERT INTO subs (endpoint, p256dh, auth, created) VALUES (?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, failures = 0',
       sub.endpoint,
@@ -146,18 +128,18 @@ export class GoalPush extends DurableObject<Env> {
 
   /** Chamado pelo cron: religa o alarme se ele parou por algum motivo e há inscritos. */
   async wake() {
-    if (this.subscriptions() > 0 && (await this.ctx.storage.getAlarm()) === null) await this.ctx.storage.setAlarm(Date.now());
+    if (this.hasSubscriptions() && (await this.ctx.storage.getAlarm()) === null) await this.ctx.storage.setAlarm(Date.now());
   }
 
   status() {
     const outbox = this.ctx.storage.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM outbox').one().n;
     const watching = this.ctx.storage.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM watch').one().n;
-    return { subscriptions: this.subscriptions(), outbox, watching };
+    return { subscriptions: this.countSubscriptions(), outbox, watching };
   }
 
   async alarm() {
     const now = Date.now();
-    if (this.subscriptions() === 0) {
+    if (!this.hasSubscriptions()) {
       // Ninguém inscrito: para de acompanhar (a próxima inscrição religa).
       this.ctx.storage.sql.exec('DELETE FROM outbox');
       await this.ctx.storage.delete('nextCheck');
@@ -175,15 +157,21 @@ export class GoalPush extends DurableObject<Env> {
       await this.ctx.storage.put('nextCheck', next);
     }
     const more = await this.drain();
-    await this.ctx.storage.setAlarm(more ? Date.now() + 1000 : next);
+    // Sobrou fila: o próximo lote sai já.
+    await this.ctx.storage.setAlarm(more ? Date.now() : next);
   }
 
-  private subscriptions(): number {
+  private hasSubscriptions(): boolean {
+    return this.ctx.storage.sql.exec('SELECT 1 FROM subs LIMIT 1').toArray().length > 0;
+  }
+
+  private countSubscriptions(): number {
     return this.ctx.storage.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM subs').one().n;
   }
 
+  // `get` (e não `serve`): o push não usa o relógio estimado que `serve` acrescenta à resposta.
   private async fixtures(key: string): Promise<PushFixture[]> {
-    const result = await this.env.API_CACHE.getByName('global').serve(key);
+    const result = await this.env.API_CACHE.getByName('global').get(key);
     if ('error' in result) throw new Error(result.error);
     return (JSON.parse(result.body) as { response?: PushFixture[] }).response ?? [];
   }
@@ -193,10 +181,10 @@ export class GoalPush extends DurableObject<Env> {
     const sql = this.ctx.storage.sql;
     sql.exec('DELETE FROM watch WHERE updated < ?', now - 24 * 3600_000);
     const today = await this.fixtures(
-      apiKey('fixtures', { date: brasiliaDay(now), league: '71', season: this.env.SEASON, timezone: 'America/Sao_Paulo' }),
+      keyFor('fixtures', { date: dayInBrasilia(now), league: '71', season: this.env.SEASON, timezone: TZ }),
     );
     const watch = today.filter(
-      (f) => LIVE.has(f.fixture.status.short) || (f.fixture.status.short === 'NS' && f.fixture.timestamp * 1000 - now < KICKOFF_MARGIN_MS),
+      (f) => LIVE_STATUSES.has(f.fixture.status.short) || (f.fixture.status.short === 'NS' && f.fixture.timestamp * 1000 - now < KICKOFF_MARGIN_MS),
     );
     if (!watch.length) {
       const upcoming = today
@@ -210,7 +198,7 @@ export class GoalPush extends DurableObject<Env> {
     const ids = watch.map((f) => f.fixture.id);
     const detailed: PushFixture[] = [];
     // Em blocos de 20, na ordem da lista: a mesma chave que o site usa, então o cache é compartilhado.
-    for (let i = 0; i < ids.length; i += 20) detailed.push(...(await this.fixtures(apiKey('fixtures', { ids: ids.slice(i, i + 20).join('-') }))));
+    for (let i = 0; i < ids.length; i += 20) detailed.push(...(await this.fixtures(keyFor('fixtures', { ids: ids.slice(i, i + 20).join('-') }))));
 
     for (const raw of detailed) {
       const f = fresher(raw, listed.get(raw.fixture.id));
@@ -264,7 +252,7 @@ export class GoalPush extends DurableObject<Env> {
         }
       }),
     );
-    return sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM outbox').one().n > 0;
+    return sql.exec('SELECT 1 FROM outbox LIMIT 1').toArray().length > 0;
   }
 
   private failed(endpoint: string) {

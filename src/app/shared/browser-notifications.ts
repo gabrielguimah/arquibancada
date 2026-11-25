@@ -1,7 +1,10 @@
 import { Injectable, signal } from '@angular/core';
-import { API_URL } from '../api/api-football';
+import { API_URL, PUSH_PUBLIC_KEY } from '../api/api-football';
 
 const STORAGE_KEY = 'arquibancada:notificacoes';
+// Última confirmação da inscrição com o Worker ({ endpoint, at }): no máximo uma por dia, não uma por visita.
+const SYNC_KEY = 'arquibancada:push';
+const SYNC_EVERY_MS = 24 * 3600_000;
 
 export interface SystemNotification {
   title: string;
@@ -37,7 +40,7 @@ export class BrowserNotifications {
   constructor() {
     if (!this.supported || !this.enabled()) return;
     this.register();
-    // A cada visita, confirma a inscrição com o Worker (ele pode ter apagado uma inscrição expirada).
+    // Confirma a inscrição com o Worker (ele pode ter apagado uma inscrição expirada), uma vez por dia.
     this.pushReady = this.subscribePush();
   }
 
@@ -65,16 +68,15 @@ export class BrowserNotifications {
   }
 
   /**
-   * Mostra no sistema se estiver ativado, o site não estiver na frente e o push não cuidar disso. Nunca
-   * mostra duas vezes o mesmo aviso (`tag`), nem se o push também o trouxer (ver `firstShow`).
+   * Mostra no sistema se estiver ativado, o site não estiver na frente e o push não cuidar disso. Quem
+   * mostra é o service worker (sw.js), o mesmo que mostra os do push: ele nunca mostra duas vezes o mesmo
+   * aviso (`tag`), venha da página ou do push.
    */
   async show(n: SystemNotification) {
     if (!this.willNotify() || (await this.pushReady)) return;
-    if (n.tag && !(await firstShow(n.tag))) return;
-    const registration = await this.register();
-    const options: NotificationOptions = { body: n.body, icon: n.icon, tag: n.tag };
-    if (registration) await registration.showNotification(n.title, options);
-    else new Notification(n.title, options);
+    const worker = (await this.register())?.active;
+    if (worker) worker.postMessage({ source: 'arquibancada-page', notification: n });
+    else new Notification(n.title, { body: n.body, icon: n.icon, tag: n.tag });
   }
 
   /** Inscreve este navegador no push do Worker (ou confirma a inscrição que já existe); devolve se deu certo. */
@@ -83,8 +85,7 @@ export class BrowserNotifications {
     try {
       if (!(await this.register())) return false;
       const registration = await navigator.serviceWorker.ready;
-      const { key } = (await (await fetch(`${API_URL}/push/key`)).json()) as { key: string };
-      const serverKey = base64UrlToBytes(key);
+      const serverKey = base64UrlToBytes(PUSH_PUBLIC_KEY);
       let subscription = await registration.pushManager.getSubscription();
       // Inscrição feita com outra chave do servidor (trocada): não serve mais.
       if (subscription && !sameBytes(subscription.options.applicationServerKey, serverKey)) {
@@ -92,16 +93,15 @@ export class BrowserNotifications {
         subscription = null;
       }
       subscription ??= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: serverKey });
-      const res = await fetch(`${API_URL}/push/subscribe`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(subscription),
-      });
+      const synced = readJson<{ endpoint: string; at: number }>(SYNC_KEY);
+      if (synced?.endpoint === subscription.endpoint && Date.now() - synced.at < SYNC_EVERY_MS) return true;
+      const res = await postToWorker('/push/subscribe', subscription);
       // Desligado enquanto inscrevia: desfaz.
       if (!this.enabled()) {
         void this.unsubscribePush();
         return false;
       }
+      if (res.ok) writeJson(SYNC_KEY, { endpoint: subscription.endpoint, at: Date.now() });
       return res.ok;
     } catch {
       return false;
@@ -110,16 +110,13 @@ export class BrowserNotifications {
 
   private async unsubscribePush() {
     this.pushReady = Promise.resolve(false);
+    writeJson(SYNC_KEY, null);
     if (!('PushManager' in window)) return;
     try {
       const registration = await this.register();
       const subscription = await registration?.pushManager.getSubscription();
       if (!subscription) return;
-      await fetch(`${API_URL}/push/unsubscribe`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ endpoint: subscription.endpoint }),
-      }).catch(() => undefined);
+      await postToWorker('/push/unsubscribe', { endpoint: subscription.endpoint }).catch(() => undefined);
       await subscription.unsubscribe();
     } catch {
       // Sem como cancelar agora: o Worker apaga a inscrição quando o serviço de push recusar.
@@ -133,53 +130,12 @@ export class BrowserNotifications {
   }
 }
 
-// Avisos já mostrados (pela página ou pelo push), no IndexedDB: o service worker (sw.js) usa o mesmo
-// banco, com o mesmo nome e formato. Guarda a `tag` e a hora; registros com mais de 2 dias são apagados.
-const SHOWN_DB = 'arquibancada-avisos';
-const SHOWN_STORE = 'mostrados';
-const SHOWN_MAX_AGE_MS = 2 * 24 * 3600_000;
-
 /**
- * Primeira vez deste aviso? Marca como mostrado na mesma transação (página e service worker não passam
- * os dois). Sem IndexedDB, deixa mostrar.
+ * POST ao Worker com o corpo em JSON, mas enviado como texto simples: assim o navegador não faz a consulta
+ * CORS prévia (preflight), uma requisição a menos. O Worker lê o JSON do texto.
  */
-function firstShow(tag: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    try {
-      const open = indexedDB.open(SHOWN_DB, 1);
-      open.onupgradeneeded = () => open.result.createObjectStore(SHOWN_STORE);
-      open.onerror = () => resolve(true);
-      open.onsuccess = () => {
-        const db = open.result;
-        let first = true;
-        const tx = db.transaction(SHOWN_STORE, 'readwrite');
-        const store = tx.objectStore(SHOWN_STORE);
-        const now = Date.now();
-        const get = store.get(tag);
-        get.onsuccess = () => {
-          first = get.result === undefined;
-          if (first) store.put(now, tag);
-        };
-        const cursor = store.openCursor();
-        cursor.onsuccess = () => {
-          const c = cursor.result;
-          if (!c) return;
-          if (typeof c.value === 'number' && now - c.value > SHOWN_MAX_AGE_MS) c.delete();
-          c.continue();
-        };
-        tx.oncomplete = () => {
-          db.close();
-          resolve(first);
-        };
-        tx.onerror = tx.onabort = () => {
-          db.close();
-          resolve(true);
-        };
-      };
-    } catch {
-      resolve(true);
-    }
-  });
+function postToWorker(path: string, body: unknown): Promise<Response> {
+  return fetch(`${API_URL}${path}`, { method: 'POST', body: JSON.stringify(body) });
 }
 
 function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
@@ -191,6 +147,23 @@ function sameBytes(a: ArrayBuffer | null, b: Uint8Array): boolean {
   if (!a || a.byteLength !== b.length) return false;
   const view = new Uint8Array(a);
   return view.every((x, i) => x === b[i]);
+}
+
+function readJson<T>(key: string): T | null {
+  try {
+    return JSON.parse(localStorage.getItem(key) ?? 'null') as T | null;
+  } catch {
+    return null;
+  }
+}
+
+function writeJson(key: string, value: unknown) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Armazenamento bloqueado: confirma de novo na próxima visita.
+  }
 }
 
 function readPreference(): string | null {

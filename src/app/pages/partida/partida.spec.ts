@@ -147,7 +147,7 @@ describe('Página da partida', () => {
 
   it('"Onde assistir" só aparece se a CBF tiver canais, e só antes e durante o jogo', () => {
     expect(render(match([0, 0], [], '2H')).querySelector('.watch')).toBeNull();
-    broadcasts = [{ home: botafogo.id, away: saoPaulo.id, homeName: 'Botafogo', awayName: 'São Paulo', time: '20:00', channels: ['Premiere'] }];
+    broadcasts = [{ home: botafogo.id, away: saoPaulo.id, homeName: 'Botafogo', awayName: 'São Paulo', channels: ['Premiere'] }];
     expect(render(match([0, 0], [], '2H')).querySelector('.watch')?.textContent).toContain('Onde assistir');
     expect(render(match([0, 0], [], 'NS')).querySelector('.watch')).not.toBeNull();
     expect(render(match([0, 0], [], 'FT')).querySelector('.watch')).toBeNull();

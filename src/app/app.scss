@@ -100,8 +100,13 @@ nav {
     display: none;
   }
 
-  .logo img {
-    height: 28px;
+  // Respiro entre o logo e as abas: a pílula da aba selecionada não encosta no logo.
+  .logo {
+    margin-right: 8px;
+
+    img {
+      height: 28px;
+    }
   }
 
   nav a {
@@ -118,6 +123,10 @@ nav {
 @media (max-width: 360px) {
   .topbar {
     gap: 6px;
+  }
+
+  .logo {
+    margin-right: 6px;
   }
 
   nav a {
