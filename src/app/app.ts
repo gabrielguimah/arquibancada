@@ -1,6 +1,6 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
-import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { SEASON } from './api/api-football';
@@ -12,7 +12,7 @@ import { ThemeService } from './shared/theme';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIcon, MatSlideToggle, MatTooltip, GoalToasts],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIcon, MatMenu, MatMenuItem, MatMenuTrigger, MatTooltip, GoalToasts],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -21,26 +21,6 @@ export class App {
   protected readonly theme = inject(ThemeService);
   protected readonly notifications = inject(BrowserNotifications);
   protected readonly sounds = inject(GoalSounds);
-  protected readonly bellTip = computed(() =>
-    this.notifications.enabled()
-      ? 'Notificações de gol ligadas (clique para desligar)'
-      : this.notifications.permission() === 'denied'
-        ? 'Notificações bloqueadas no navegador: libere nas configurações do site'
-        : 'Receber notificações de gol, mesmo com o site fechado',
-  );
-
-  /** Botão de teste: dica com a hora em que a notificação de teste chega. */
-  protected readonly testTip = computed(() => {
-    const at = this.notifications.testAt();
-    if (at === null) return 'Testar: receber uma notificação de gol daqui a 10 s (dá tempo de sair do site)';
-    return 'Notificação de teste a caminho: saia do site ou bloqueie o celular';
-  });
-
-  protected async sendTest() {
-    if (!(await this.notifications.sendTest())) {
-      alert('Não foi possível agendar o teste. Confira se as notificações estão permitidas para o site.');
-    }
-  }
 
   /** Desligar as notificações desliga também o som. */
   protected async toggleNotifications() {

@@ -1,4 +1,4 @@
-import { GoalEvent, GoalFixture, WatchState, detectGoals } from './goal-detect';
+import { GoalEvent, GoalFixture, WatchState, detectGoals, notificationText } from './goal-detect';
 
 const home = { id: 130, name: 'Grêmio', logo: '' };
 const away = { id: 131, name: 'Corinthians', logo: '' };
@@ -58,5 +58,24 @@ describe('detectGoals: cada aviso uma vez só', () => {
 
   it('dois gols novos do mesmo time na mesma verificação: os dois', () => {
     expect(run(fx([], 0, 0), fx([goal(20, home, 'A'), goal(22, home, 'B')], 2, 0))).toEqual([[], ["goal A 20'", "goal B 22'"]]);
+  });
+});
+
+describe('notificationText', () => {
+  const names = { home: 'Flamengo', away: 'Palmeiras', team: 'Flamengo' };
+  const event: GoalEvent = { ...goal(23, { id: 127, name: 'Flamengo', logo: '' }, 'Pedro'), assist: { id: null, name: 'Arrascaeta' } };
+
+  it('gol: placar no título; autor, minuto e assistência no texto', () => {
+    expect(notificationText({ id: 'x', type: 'goal', event }, names, { home: 1, away: 0 })).toEqual({
+      title: '⚽ Flamengo 1 × 0 Palmeiras',
+      body: "Gol do Flamengo! Pedro 23'\nAssistência: Arrascaeta",
+    });
+  });
+
+  it('gol anulado: placar já corrigido no título e o motivo do VAR', () => {
+    expect(notificationText({ id: 'x', type: 'cancelled', event: varCancel(event), reason: 'impedimento' }, names, { home: 0, away: 0 })).toEqual({
+      title: '🚫 Flamengo 0 × 0 Palmeiras',
+      body: "Gol anulado do Flamengo — Pedro 23'\nAnulado pelo VAR: impedimento",
+    });
   });
 });

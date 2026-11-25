@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Fixture, FixtureEvent } from '../api/api-football';
 import { BrowserNotifications, SystemNotification } from './browser-notifications';
-import { WatchState, detectGoals, minuteLabel } from './goal-detect';
+import { WatchState, detectGoals, minuteLabel, notificationText } from './goal-detect';
 import { GoalSounds } from './goal-sounds';
 import { LiveFixtures } from './live-fixtures';
 
@@ -86,21 +86,12 @@ export class GoalNotifier {
   }
 }
 
-/** Texto da notificação do sistema (popup no PC, notificação no celular). */
+/** Notificação do sistema (popup no PC, notificação no celular): mesmo texto do push (goal-detect). */
 function systemNotification(t: GoalToast): SystemNotification {
   const { home, away } = t.fixture.teams;
-  const score = `${home.name} ${t.fixture.goals.home ?? 0} × ${t.fixture.goals.away ?? 0} ${away.name}`;
-  const extra = t.kind === 'penalty' ? ' (pênalti)' : t.kind === 'own' ? ' (contra)' : '';
-  const who = `${t.goal.player.name ?? ''} ${t.minute}${extra}`;
-  const second =
-    t.type === 'cancelled'
-      ? `Anulado pelo VAR${t.reason ? `: ${t.reason}` : ''}`
-      : t.goal.assist.name
-        ? `Assistência: ${t.goal.assist.name}`
-        : '';
+  const alert = { id: t.id, type: t.type, event: t.goal, reason: t.reason };
   return {
-    title: t.type === 'cancelled' ? `🚫 Gol anulado do ${t.goal.team.name}` : `⚽ Gol do ${t.goal.team.name}!`,
-    body: [who, second, score].filter(Boolean).join('\n'),
+    ...notificationText(alert, { home: home.name, away: away.name, team: t.goal.team.name }, t.fixture.goals),
     icon: t.goal.team.logo,
     tag: t.id,
   };

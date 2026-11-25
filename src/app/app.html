@@ -1,64 +1,55 @@
 <header class="topbar">
-  <span class="logo"><img src="logo.png" alt="" width="34" height="30" />Arquibancada</span>
+  <span class="logo"><img src="logo.png" alt="" width="34" height="30" /><span class="logo-text">Arquibancada</span></span>
   <nav aria-label="Seções">
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Classificação</a>
     <a routerLink="/estatisticas" routerLinkActive="active">Estatísticas</a>
   </nav>
   <span class="tag">Brasileirão {{ season }}</span>
-  <!-- Notificações, teste, som e tema: um bloco só (no celular, se faltar espaço, desce inteiro). -->
-  <div class="actions">
-    @if (notifications.supported) {
-      <button
-        type="button"
-        class="bell"
-        [class.on]="notifications.enabled()"
-        (click)="toggleNotifications()"
-        [matTooltip]="bellTip()"
-        [attr.aria-label]="bellTip()"
-        [attr.aria-pressed]="notifications.enabled()"
-      >
-        <mat-icon>{{ notifications.enabled() ? 'notifications_active' : 'notifications_off' }}</mat-icon>
-      </button>
-    }
-    @if (notifications.supported && notifications.enabled()) {
-      <!-- Teste das notificações por push: o Worker manda uma notificação daqui a 10 s. -->
-      <button
-        type="button"
-        class="bell"
-        [class.on]="notifications.testAt() !== null"
-        (click)="sendTest()"
-        [matTooltip]="testTip()"
-        [attr.aria-label]="testTip()"
-      >
-        <mat-icon>{{ notifications.testAt() !== null ? 'hourglass_top' : 'timer' }}</mat-icon>
-      </button>
-    }
-    @if (sounds.supported) {
-      <!-- Som dos avisos de gol (sino no gol, bloop no anulado): liga e desliga. -->
-      <button
-        type="button"
-        class="bell"
-        [class.on]="sounds.enabled()"
-        (click)="toggleSound()"
-        [matTooltip]="sounds.enabled() ? 'Som dos avisos de gol ligado (clique para desligar)' : 'Som dos avisos de gol desligado (clique para ligar)'"
-        [attr.aria-label]="sounds.enabled() ? 'Desligar som dos avisos de gol' : 'Ligar som dos avisos de gol'"
-        [attr.aria-pressed]="sounds.enabled()"
-      >
-        <mat-icon>{{ sounds.enabled() ? 'volume_up' : 'volume_off' }}</mat-icon>
-      </button>
-    }
-    <mat-slide-toggle
-      class="theme-toggle"
-      labelPosition="before"
-      hideIcon
-      [checked]="theme.dark()"
-      (change)="theme.setDark($event.checked)"
-      aria-label="Modo escuro"
-    >
-      <mat-icon aria-hidden="true">{{ theme.dark() ? 'dark_mode' : 'light_mode' }}</mat-icon>
-    </mat-slide-toggle>
-  </div>
+  <!-- Configurações (notificações, som, tema): só abrem pelo botão de menu. -->
+  <button type="button" class="menu-button" [matMenuTriggerFor]="settings" aria-label="Configurações" matTooltip="Configurações">
+    <mat-icon>menu</mat-icon>
+  </button>
 </header>
+
+<!-- Cada item liga/desliga sem fechar o menu (fecha clicando fora ou no Esc). -->
+<mat-menu #settings="matMenu" xPosition="before" class="settings-menu">
+  @if (notifications.supported) {
+    <button
+      mat-menu-item
+      role="menuitemcheckbox"
+      [attr.aria-checked]="notifications.enabled()"
+      (click)="$event.stopPropagation(); toggleNotifications()"
+    >
+      <mat-icon>{{ notifications.enabled() ? 'notifications_active' : 'notifications_off' }}</mat-icon>
+      <span class="item">
+        <span class="text">
+          Notificações de gol
+          @if (notifications.permission() === 'denied') {
+            <small>Bloqueadas: libere nas configurações do site</small>
+          }
+        </span>
+        <span class="switch" [class.on]="notifications.enabled()" aria-hidden="true"></span>
+      </span>
+    </button>
+  }
+  @if (sounds.supported) {
+    <!-- Som dos avisos de gol (sino no gol, bloop no anulado). -->
+    <button mat-menu-item role="menuitemcheckbox" [attr.aria-checked]="sounds.enabled()" (click)="$event.stopPropagation(); toggleSound()">
+      <mat-icon>{{ sounds.enabled() ? 'volume_up' : 'volume_off' }}</mat-icon>
+      <span class="item">
+        <span class="text">Som dos avisos</span>
+        <span class="switch" [class.on]="sounds.enabled()" aria-hidden="true"></span>
+      </span>
+    </button>
+  }
+  <button mat-menu-item role="menuitemcheckbox" [attr.aria-checked]="theme.dark()" (click)="$event.stopPropagation(); theme.setDark(!theme.dark())">
+    <mat-icon>{{ theme.dark() ? 'dark_mode' : 'light_mode' }}</mat-icon>
+    <span class="item">
+      <span class="text">Modo escuro</span>
+      <span class="switch" [class.on]="theme.dark()" aria-hidden="true"></span>
+    </span>
+  </button>
+</mat-menu>
 
 <main>
   <router-outlet />

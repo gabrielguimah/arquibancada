@@ -255,6 +255,91 @@ html {
   }
 }
 
+// Menu de configurações (botão de três linhas do cabeçalho): itens com rótulo e chave liga/desliga.
+.settings-menu {
+  @include mat.menu-overrides(
+    (
+      container-color: var(--surface),
+      item-label-text-color: var(--text),
+      item-icon-color: var(--text),
+      item-hover-state-layer-color: var(--surface-hover),
+      item-focus-state-layer-color: var(--surface-hover),
+    )
+  );
+
+  &.mat-mdc-menu-panel {
+    min-width: 260px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow), 0 2px 6px rgb(0 0 0 / 0.08);
+  }
+
+  .mat-mdc-menu-content {
+    padding: 6px;
+  }
+
+  .mat-mdc-menu-item {
+    min-height: 48px;
+    border-radius: 8px;
+  }
+
+  .mat-mdc-menu-item-text {
+    flex: 1;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    font-weight: 600;
+
+    small {
+      font-size: 0.75rem;
+      font-weight: 400;
+      opacity: 0.7;
+    }
+  }
+
+  // Chave liga/desliga só visual (o item inteiro é o botão).
+  .switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 36px;
+    height: 20px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text) 22%, transparent);
+    transition: background 0.15s;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--text);
+      opacity: 0.6;
+      transition: transform 0.15s, background 0.15s, opacity 0.15s;
+    }
+
+    &.on {
+      background: var(--highlight);
+
+      &::after {
+        transform: translateX(16px);
+        background: var(--on-highlight);
+        opacity: 1;
+      }
+    }
+  }
+}
+
 // Ícones alinhados ao texto ao redor; o tamanho segue o font-size de quem usa.
 .mat-icon {
   vertical-align: middle;

@@ -1,6 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { teamName } from '../../src/app/api/team-names';
-import { GoalAlert, GoalEvent, WatchState, detectGoals, minuteLabel } from '../../src/app/shared/goal-detect';
+import { GoalAlert, GoalEvent, WatchState, detectGoals, notificationText } from '../../src/app/shared/goal-detect';
 import { PushTarget, Vapid, b64urlDecode, sendPush } from './web-push';
 
 // Avisos de gol por Web Push: chegam no celular e no computador mesmo com o site fechado. Um Durable
@@ -19,10 +19,6 @@ const GOAL_TTL_S = 600;
 const MAX_SUBSCRIPTIONS = 20_000;
 // Falhas seguidas (fora 404/410, que apagam na hora) até desistir de uma inscrição.
 const MAX_FAILURES = 10;
-// Notificação de teste (botão do site): chega este tempo depois do clique (dá tempo de sair do site).
-const TEST_DELAY_MS = 10_000;
-// ...e o gol de teste é anulado este tempo depois.
-const TEST_CANCEL_AFTER_MS = 5_000;
 // Só serviços de push conhecidos (Chrome/Android, Firefox, Safari/iPhone, Edge): o Worker não manda
 // requisições para qualquer endereço.
 const PUSH_HOSTS = /(^|\.)(googleapis\.com|mozilla\.com|mozaws\.net|push\.apple\.com|notify\.windows\.com)$/;
@@ -47,17 +43,9 @@ export interface PushFixture {
 
 /** Conteúdo da notificação (o service worker do site mostra como veio). Mesmo texto dos avisos do site. */
 export function alertPayload(f: PushFixture, a: GoalAlert<PushEvent>) {
-  const home = teamName(f.teams.home);
-  const away = teamName(f.teams.away);
-  const team = teamName(a.event.team);
-  const score = `${home} ${f.goals.home ?? 0} × ${f.goals.away ?? 0} ${away}`;
-  const extra = a.event.detail === 'Penalty' ? ' (pênalti)' : a.event.detail === 'Own Goal' ? ' (contra)' : '';
-  const who = `${a.event.player.name ?? ''} ${minuteLabel(a.event)}${extra}`.trim();
-  const second =
-    a.type === 'cancelled' ? `Anulado pelo VAR${a.reason ? `: ${a.reason}` : ''}` : a.event.assist.name ? `Assistência: ${a.event.assist.name}` : '';
+  const names = { home: teamName(f.teams.home), away: teamName(f.teams.away), team: teamName(a.event.team) };
   return {
-    title: a.type === 'cancelled' ? `🚫 Gol anulado do ${team}` : `⚽ Gol do ${team}!`,
-    body: [who, second, score].filter(Boolean).join('\n'),
+    ...notificationText(a, names, f.goals),
     icon: a.event.team.logo,
     // Mesma `tag` do aviso do site: um substitui o outro em vez de aparecerem dois.
     tag: a.id,
@@ -117,11 +105,6 @@ export class GoalPush extends DurableObject<Env> {
         CREATE TABLE IF NOT EXISTS watch (fixture INTEGER PRIMARY KEY, state TEXT NOT NULL, updated INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, endpoint TEXT NOT NULL, payload TEXT NOT NULL, ttl INTEGER NOT NULL, created INTEGER NOT NULL);
       `);
-      // `not_before`: envio agendado (notificação de teste); 0 = assim que possível.
-      const hasColumn = this.ctx.storage.sql
-        .exec<{ n: number }>("SELECT COUNT(*) AS n FROM pragma_table_info('outbox') WHERE name = 'not_before'")
-        .one().n;
-      if (!hasColumn) this.ctx.storage.sql.exec('ALTER TABLE outbox ADD COLUMN not_before INTEGER NOT NULL DEFAULT 0');
     });
   }
 
@@ -161,70 +144,6 @@ export class GoalPush extends DurableObject<Env> {
     return { ok: true };
   }
 
-  /**
-   * Notificações de teste para um navegador já inscrito: um gol daqui a 10 s e, 5 s depois, o mesmo gol
-   * anulado pelo VAR (um teste por navegador: clicar de novo reagenda). Devolve quando o gol sai, ou
-   * `null` se o navegador não está inscrito.
-   */
-  async testPush(endpoint: unknown): Promise<number | null> {
-    if (typeof endpoint !== 'string') return null;
-    const sql = this.ctx.storage.sql;
-    if (!sql.exec('SELECT 1 FROM subs WHERE endpoint = ?', endpoint).toArray().length) return null;
-    const at = Date.now() + TEST_DELAY_MS;
-    // Um gol de mentira, montado igual aos de verdade (mesmo texto, escudo e som).
-    const flamengo = { id: 127, name: 'Flamengo', logo: 'https://media.api-sports.io/football/teams/127.png' };
-    const palmeiras = { id: 121, name: 'Palmeiras', logo: 'https://media.api-sports.io/football/teams/121.png' };
-    const event: PushEvent = {
-      time: { elapsed: 23, extra: null },
-      team: flamengo,
-      player: { id: null, name: 'Pedro' },
-      assist: { id: null, name: 'Arrascaeta' },
-      type: 'Goal',
-      detail: 'Normal Goal',
-    };
-    const fixture: PushFixture = {
-      fixture: { id: 0, timestamp: Math.floor(at / 1000), status: { short: '1H', elapsed: 23 } },
-      teams: { home: flamengo, away: palmeiras },
-      goals: { home: 1, away: 0 },
-      events: [event],
-    };
-    const goal = {
-      ...alertPayload(fixture, { id: `arquibancada-teste-${at}`, type: 'goal', event }),
-      // A partida não existe: o clique abre o site.
-      path: '',
-      // Aparece mesmo com o site na frente. Um id (`tag`) por teste: o site toca o som de cada um.
-      always: true,
-    };
-    // Logo depois, o VAR anula o gol (placar volta a 0 x 0).
-    const var_: PushEvent = { ...event, assist: { id: null, name: null }, type: 'Var', detail: 'Goal Disallowed - offside' };
-    const cancelled = {
-      ...alertPayload(
-        { ...fixture, goals: { home: 0, away: 0 }, events: [event, var_] },
-        { id: `arquibancada-teste-${at}-anulado`, type: 'cancelled', event: var_, reason: 'impedimento' },
-      ),
-      path: '',
-      always: true,
-    };
-    sql.exec('DELETE FROM outbox WHERE endpoint = ? AND not_before > 0', endpoint);
-    // `created` = hora do envio: a validade (10 min) conta a partir dela.
-    for (const [payload, when] of [
-      [goal, at],
-      [cancelled, at + TEST_CANCEL_AFTER_MS],
-    ] as const) {
-      sql.exec(
-        'INSERT INTO outbox (endpoint, payload, ttl, created, not_before) VALUES (?, ?, ?, ?, ?)',
-        endpoint,
-        JSON.stringify(payload),
-        GOAL_TTL_S,
-        when,
-        when,
-      );
-    }
-    const alarm = await this.ctx.storage.getAlarm();
-    if (alarm === null || alarm > at) await this.ctx.storage.setAlarm(at);
-    return at;
-  }
-
   /** Chamado pelo cron: religa o alarme se ele parou por algum motivo e há inscritos. */
   async wake() {
     if (this.subscriptions() > 0 && (await this.ctx.storage.getAlarm()) === null) await this.ctx.storage.setAlarm(Date.now());
@@ -256,9 +175,7 @@ export class GoalPush extends DurableObject<Env> {
       await this.ctx.storage.put('nextCheck', next);
     }
     const more = await this.drain();
-    // Próximo envio agendado (teste), se vier antes da próxima verificação.
-    const scheduled = this.ctx.storage.sql.exec<{ at: number | null }>('SELECT MIN(not_before) AS at FROM outbox WHERE not_before > ?', Date.now()).one().at;
-    await this.ctx.storage.setAlarm(more ? Date.now() + 1000 : Math.min(next, scheduled ?? next));
+    await this.ctx.storage.setAlarm(more ? Date.now() + 1000 : next);
   }
 
   private subscriptions(): number {
@@ -315,8 +232,7 @@ export class GoalPush extends DurableObject<Env> {
     sql.exec('DELETE FROM outbox WHERE created + ttl * 1000 < ?', now);
     const batch = sql
       .exec<{ id: number; payload: string; ttl: number; created: number; endpoint: string; p256dh: string; auth: string }>(
-        'SELECT o.id, o.payload, o.ttl, o.created, s.endpoint, s.p256dh, s.auth FROM outbox o JOIN subs s ON s.endpoint = o.endpoint WHERE o.not_before <= ? ORDER BY o.id LIMIT ?',
-        now,
+        'SELECT o.id, o.payload, o.ttl, o.created, s.endpoint, s.p256dh, s.auth FROM outbox o JOIN subs s ON s.endpoint = o.endpoint ORDER BY o.id LIMIT ?',
         SENDS_PER_RUN,
       )
       .toArray();
@@ -348,7 +264,7 @@ export class GoalPush extends DurableObject<Env> {
         }
       }),
     );
-    return sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM outbox WHERE not_before <= ?', Date.now()).one().n > 0;
+    return sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM outbox').one().n > 0;
   }
 
   private failed(endpoint: string) {

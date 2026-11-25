@@ -1101,10 +1101,6 @@ async function pushRoute(request: Request, env: Env, url: URL, cors: Record<stri
     return Response.json(result, { status: result.ok ? 200 : 400, headers: cors });
   }
   if (url.pathname === '/push/unsubscribe') return Response.json(await stub.unsubscribe(body?.endpoint), { headers: cors });
-  if (url.pathname === '/push/test') {
-    const at = await stub.testPush(body?.endpoint);
-    return Response.json(at ? { ok: true, at } : { ok: false, error: 'Navegador não inscrito' }, { status: at ? 200 : 404, headers: cors });
-  }
   return new Response('Não encontrado', { status: 404, headers: cors });
 }
 

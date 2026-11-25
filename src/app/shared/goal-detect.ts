@@ -107,6 +107,26 @@ export function detectGoals<E extends GoalEvent>(prev: WatchState<E> | undefined
   return { state: { seen: [...seen], goals: [...goals], score, perTeam }, alerts: result };
 }
 
+/**
+ * Título e texto da notificação de um aviso, iguais no site e no push. O placar vai no título: no iPhone
+ * a notificação mostra só o ícone do app (o iOS ignora o escudo), então os times aparecem logo de cara.
+ * `names`: nomes dos times como o site mostra.
+ */
+export function notificationText(
+  a: GoalAlert,
+  names: { home: string; away: string; team: string },
+  goals: { home: number | null; away: number | null },
+): { title: string; body: string } {
+  const score = `${names.home} ${goals.home ?? 0} × ${goals.away ?? 0} ${names.away}`;
+  const extra = a.event.detail === 'Penalty' ? ' (pênalti)' : a.event.detail === 'Own Goal' ? ' (contra)' : '';
+  const who = `${a.event.player.name ?? ''} ${minuteLabel(a.event)}${extra}`.trim();
+  if (a.type === 'cancelled') {
+    return { title: `🚫 ${score}`, body: [`Gol anulado do ${names.team} — ${who}`, `Anulado pelo VAR${a.reason ? `: ${a.reason}` : ''}`].join('\n') };
+  }
+  const assist = a.event.assist.name ? `Assistência: ${a.event.assist.name}` : '';
+  return { title: `⚽ ${score}`, body: [`Gol do ${names.team}! ${who}`, assist].filter(Boolean).join('\n') };
+}
+
 export function eventId(f: GoalFixture, e: GoalEvent): string {
   return `${f.fixture.id}:${e.type}:${e.time.elapsed}:${e.time.extra ?? 0}:${e.team.id}:${e.player.id ?? e.player.name}`;
 }

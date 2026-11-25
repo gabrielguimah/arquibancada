@@ -33,9 +33,6 @@ export class BrowserNotifications {
    * uma promessa: um gol logo ao abrir o site espera a confirmação antes de decidir quem mostra.
    */
   private pushReady: Promise<boolean> = Promise.resolve(false);
-  /** Hora (ms) em que chega a notificação de teste pedida pelo botão; `null` se não há teste pendente. */
-  readonly testAt = signal<number | null>(null);
-  private testTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     if (!this.supported || !this.enabled()) return;
@@ -106,34 +103,6 @@ export class BrowserNotifications {
         return false;
       }
       return res.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Pede ao Worker uma notificação de teste para este navegador, daqui a 10 s (dá tempo de sair do site
-   * ou bloquear o celular). Devolve se o pedido foi aceito.
-   */
-  async sendTest(): Promise<boolean> {
-    if (!this.enabled() || !('PushManager' in window)) return false;
-    try {
-      if (!(await this.pushReady)) this.pushReady = this.subscribePush();
-      if (!(await this.pushReady)) return false;
-      const registration = await this.register();
-      const subscription = await registration?.pushManager.getSubscription();
-      if (!subscription) return false;
-      const res = await fetch(`${API_URL}/push/test`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ endpoint: subscription.endpoint }),
-      });
-      if (!res.ok) return false;
-      const { at } = (await res.json()) as { at: number };
-      this.testAt.set(at);
-      clearTimeout(this.testTimer);
-      this.testTimer = setTimeout(() => this.testAt.set(null), Math.max(0, at - Date.now()));
-      return true;
     } catch {
       return false;
     }
