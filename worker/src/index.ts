@@ -1,4 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
+import { GoalPush } from './goal-push';
+
+export { GoalPush };
 
 const UPSTREAM = 'https://v3.football.api-sports.io';
 const BRASILEIRAO = '71';
@@ -1071,13 +1074,54 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   return allowed ? { 'access-control-allow-origin': origin, vary: 'origin' } : {};
 }
 
+/**
+ * Notificações de gol por push (`/push/...`): a chave pública do servidor (GET `/push/key`), inscrever
+ * e cancelar (POST com a inscrição do navegador, em JSON). `null` se não for um desses caminhos.
+ */
+async function pushRoute(request: Request, env: Env, url: URL, cors: Record<string, string>): Promise<Response | null> {
+  if (!url.pathname.startsWith('/push/')) return null;
+  const stub = env.GOAL_PUSH.getByName('push');
+  if (request.method === 'GET' && url.pathname === '/push/key') {
+    return Response.json({ key: env.VAPID_PUBLIC_KEY }, { headers: { ...cors, 'cache-control': 'public, max-age=86400' } });
+  }
+  if (request.method === 'GET' && url.pathname === '/push/status') return Response.json(await stub.status(), { headers: cors });
+  if (request.method !== 'POST') return new Response('Método não permitido', { status: 405, headers: cors });
+  // Só do site: outras origens nem passariam do CORS no navegador.
+  if (!cors['access-control-allow-origin']) return new Response('Origem não permitida', { status: 403 });
+  const text = await request.text();
+  if (text.length > 4096) return new Response('Corpo grande demais', { status: 413, headers: cors });
+  let body: { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } } | null = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return Response.json({ ok: false, error: 'JSON inválido' }, { status: 400, headers: cors });
+  }
+  if (url.pathname === '/push/subscribe') {
+    const result = await stub.subscribe(body);
+    return Response.json(result, { status: result.ok ? 200 : 400, headers: cors });
+  }
+  if (url.pathname === '/push/unsubscribe') return Response.json(await stub.unsubscribe(body?.endpoint), { headers: cors });
+  if (url.pathname === '/push/test') {
+    const at = await stub.testPush(body?.endpoint);
+    return Response.json(at ? { ok: true, at } : { ok: false, error: 'Navegador não inscrito' }, { status: at ? 200 : 404, headers: cors });
+  }
+  return new Response('Não encontrado', { status: 404, headers: cors });
+}
+
 export default {
   async fetch(request, env): Promise<Response> {
     const cors = corsHeaders(request, env);
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: { ...cors, 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' },
+      });
+    }
+    const url = new URL(request.url);
+    const push = await pushRoute(request, env, url, cors);
+    if (push) return push;
     if (request.method !== 'GET') return new Response('Método não permitido', { status: 405, headers: cors });
 
-    const url = new URL(request.url);
     const stub = env.API_CACHE.getByName('global');
 
     if (url.pathname === '/status') return Response.json(await stub.status(), { headers: cors });
@@ -1107,5 +1151,11 @@ export default {
       const status = err instanceof HttpError ? err.status : 500;
       return Response.json({ error: err instanceof Error ? err.message : String(err) }, { status, headers: cors });
     }
+  },
+
+  // Rede de segurança dos avisos de gol: o alarme do GoalPush se reagenda sozinho; o cron só o religa
+  // se ele tiver parado.
+  async scheduled(_controller, env) {
+    await env.GOAL_PUSH.getByName('push').wake();
   },
 } satisfies ExportedHandler<Env>;

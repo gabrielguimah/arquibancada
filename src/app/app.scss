@@ -17,8 +17,9 @@
   font-weight: 700;
   font-size: 1.25rem;
 
-  .mat-icon {
-    width: 30px;
+  img {
+    display: block;
+    width: auto;
     height: 30px;
   }
 }
@@ -139,7 +140,8 @@ nav {
     margin-left: auto;
   }
 
-  .bell + .theme-toggle {
+  .bell + .theme-toggle,
+  .bell + .bell {
     margin-left: 0;
   }
 }

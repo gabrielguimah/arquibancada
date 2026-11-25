@@ -79,7 +79,7 @@ describe('Página da partida', () => {
       imports: [Partida],
       providers: [
         provideRouter([]),
-        { provide: ApiFootball, useValue: { fixture: () => of(f) } },
+        { provide: ApiFootball, useValue: { fixture: () => of(f), injuries: () => of([]), coach: () => of(null) } },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id })) } },
       ],
     });

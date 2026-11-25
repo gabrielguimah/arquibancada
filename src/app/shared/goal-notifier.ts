@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Fixture, FixtureEvent } from '../api/api-football';
 import { BrowserNotifications, SystemNotification } from './browser-notifications';
+import { GoalSounds } from './goal-sounds';
 import { LiveFixtures } from './live-fixtures';
 
 // Aviso some sozinho depois deste tempo.
@@ -36,6 +37,7 @@ export interface GoalToast {
 export class GoalNotifier {
   private live = inject(LiveFixtures);
   private system = inject(BrowserNotifications);
+  private sounds = inject(GoalSounds);
   private seen = new Set<string>();
   private tracked = new Set<number>();
   // Gols e placar da última verificação de cada jogo, para notar quando um gol some (anulado).
@@ -97,6 +99,9 @@ export class GoalNotifier {
 
   private show(toast: GoalToast) {
     this.toasts.update((t) => [...t, toast]);
+    // Notificação do sistema já toca o som dela: o do site só quando ela não aparece (site na frente
+    // ou notificações desligadas), para não tocar dois sons.
+    if (!this.system.willNotify()) this.sounds.play(toast.type);
     void this.system.show(systemNotification(toast));
     setTimeout(() => this.dismiss(toast.id), TOAST_MS);
   }

@@ -1,5 +1,5 @@
 <header class="topbar">
-  <span class="logo"><mat-icon svgIcon="arquibancada" aria-hidden="true" />Arquibancada</span>
+  <span class="logo"><img src="logo.png" alt="" width="34" height="30" />Arquibancada</span>
   <nav aria-label="Seções">
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Classificação</a>
     <a routerLink="/estatisticas" routerLinkActive="active">Estatísticas</a>
@@ -10,12 +10,39 @@
       type="button"
       class="bell"
       [class.on]="notifications.enabled()"
-      (click)="notifications.toggle()"
+      (click)="toggleNotifications()"
       [matTooltip]="bellTip()"
       [attr.aria-label]="bellTip()"
       [attr.aria-pressed]="notifications.enabled()"
     >
       <mat-icon>{{ notifications.enabled() ? 'notifications_active' : 'notifications_off' }}</mat-icon>
+    </button>
+  }
+  @if (notifications.supported && notifications.enabled()) {
+    <!-- Teste das notificações por push: o Worker manda uma notificação daqui a 10 s. -->
+    <button
+      type="button"
+      class="bell"
+      [class.on]="notifications.testAt() !== null"
+      (click)="sendTest()"
+      [matTooltip]="testTip()"
+      [attr.aria-label]="testTip()"
+    >
+      <mat-icon>{{ notifications.testAt() !== null ? 'hourglass_top' : 'timer' }}</mat-icon>
+    </button>
+  }
+  @if (sounds.supported) {
+    <!-- Som dos avisos de gol (sino no gol, bloop no anulado): liga e desliga. -->
+    <button
+      type="button"
+      class="bell"
+      [class.on]="sounds.enabled()"
+      (click)="toggleSound()"
+      [matTooltip]="sounds.enabled() ? 'Som dos avisos de gol ligado (clique para desligar)' : 'Som dos avisos de gol desligado (clique para ligar)'"
+      [attr.aria-label]="sounds.enabled() ? 'Desligar som dos avisos de gol' : 'Ligar som dos avisos de gol'"
+      [attr.aria-pressed]="sounds.enabled()"
+    >
+      <mat-icon>{{ sounds.enabled() ? 'volume_up' : 'volume_off' }}</mat-icon>
     </button>
   }
   <mat-slide-toggle

@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ApiFootball, Fixture, FixtureEvent } from '../api/api-football';
+import { BrowserNotifications } from './browser-notifications';
 import { GoalNotifier } from './goal-notifier';
+import { GoalSounds } from './goal-sounds';
 import { LiveFixtures } from './live-fixtures';
 
 const goal = (elapsed: number, player: string, detail = 'Normal Goal', assist: string | null = null): FixtureEvent => ({
@@ -113,5 +115,33 @@ describe('GoalNotifier: falha da API', () => {
     current = { ...fixture([]), goals: { home: 1, away: 0 } };
     await live.poll();
     expect(notifier.toasts().map((t) => t.type)).toEqual(['goal']);
+  });
+});
+
+describe('GoalNotifier: som', () => {
+  async function newGoal(systemNotifies: boolean) {
+    let current = fixture([]);
+    const played: string[] = [];
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ApiFootball, useValue: { fixturesOn: () => of([current]), fixturesByIds: () => of([current]) } },
+        { provide: GoalSounds, useValue: { play: (type: string) => played.push(type) } },
+        { provide: BrowserNotifications, useValue: { willNotify: () => systemNotifies, show: async () => undefined } },
+      ],
+    });
+    TestBed.inject(GoalNotifier);
+    const live = TestBed.inject(LiveFixtures);
+    await live.poll();
+    current = fixture([goal(30, 'Pedro')]);
+    await live.poll();
+    return played;
+  }
+
+  it('toca o grito no gol novo com o site na frente', async () => {
+    expect(await newGoal(false)).toEqual(['goal']);
+  });
+
+  it('não toca quando vai notificação do sistema (ela já tem o som dela)', async () => {
+    expect(await newGoal(true)).toEqual([]);
   });
 });
