@@ -112,7 +112,7 @@
       </span>
     }
     @if (p.best) {
-      <span class="pos top-left best" aria-label="Melhor da partida"><mat-icon aria-hidden="true">star</mat-icon></span>
+      <span class="pos top-left mvp-star" aria-label="Melhor da partida"><mat-icon aria-hidden="true">star</mat-icon></span>
     }
     @if (p.yellow || p.red) {
       <span class="pos left">
@@ -126,7 +126,7 @@
     }
     @if (p.rating !== null) {
       <span [class]="ratingClass(p.rating) + ' rating pos bottom-right'">{{ formatRating(p.rating) }}</span>
-    } @else {
+    } @else if (started()) {
       <span [class]="noRating.class + ' rating pos bottom-right'" [title]="noRating.title">{{ noRating.label }}</span>
     }
   </span>

@@ -16,8 +16,12 @@
             <img class="mini" playerPhoto [src]="p.photo" alt="" width="28" height="28" loading="lazy" />
             <!-- Gols, assistências, cartão e melhor da partida logo depois do nome; as setas da troca à direita. -->
             <span class="bench-name">
-              {{ p.name }}
+              <span class="player-name">{{ p.name }}</span>
               <span class="name-events">
+                @if (p.best) {
+                  <!-- Melhor da partida que veio do banco: primeiro ícone, o mesmo selo do campo. -->
+                  <span class="mvp-star" aria-label="Melhor da partida"><mat-icon aria-hidden="true">star</mat-icon></span>
+                }
                 @if (p.goals) {
                   <span class="ev-wrap" [attr.aria-label]="p.goals + (p.goals > 1 ? ' gols' : ' gol')">
                     <mat-icon class="ev" aria-hidden="true">sports_soccer</mat-icon>
@@ -44,9 +48,6 @@
                 }
                 @if (p.yellow || p.red) {
                   <span class="card-icon" [class.red]="p.red" [attr.aria-label]="p.red ? 'Expulso' : 'Cartão amarelo'"></span>
-                }
-                @if (p.best) {
-                  <mat-icon class="best" aria-label="Melhor da partida">star</mat-icon>
                 }
               </span>
             </span>

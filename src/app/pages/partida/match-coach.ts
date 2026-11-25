@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { Coach, Team } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
-import { COACH_PLACEHOLDER, CoachPhoto } from '../../shared/player-photo';
+import { PLAYER_PLACEHOLDER, CoachPhoto } from '../../shared/player-photo';
 
 /** Técnico do time: título "Técnico" com o escudo (como "Reservas" e "Desfalques"), foto e nome. */
 @Component({
@@ -54,5 +54,5 @@ import { COACH_PLACEHOLDER, CoachPhoto } from '../../shared/player-photo';
 export class MatchCoach {
   team = input.required<Team>();
   coach = input.required<Coach>();
-  protected placeholder = COACH_PLACEHOLDER;
+  protected placeholder = PLAYER_PLACEHOLDER;
 }

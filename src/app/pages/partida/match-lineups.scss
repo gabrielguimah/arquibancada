@@ -217,13 +217,9 @@ $muted: var(--muted);
 
   }
 
-  .best {
-    width: 14px;
-    height: 14px;
-
-    mat-icon {
-      font-size: 9px;
-    }
+  .mvp-star {
+    --mvp-size: 14px;
+    --mvp-glyph: 9px;
   }
 
   .pitch .ev {
@@ -487,29 +483,14 @@ $muted: var(--muted);
   }
 }
 
-// Foto do melhor da partida com a borda na cor de destaque, como no Time da rodada.
+// Foto do melhor da partida com a borda na cor de destaque, como no Time da rodada; o nome na cor da
+// estrela (azul elétrico, a da nota 10).
 .mvp .player {
   border-color: var(--highlight);
 }
 
-// Melhor da partida: estrela branca num círculo azul elétrico (a cor da nota 10), como a do melhor
-// da rodada, em cima à esquerda da foto.
-.best {
-  display: inline-flex;
-  box-sizing: border-box;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid #fff;
-  border-radius: 50%;
-  background: var(--rating-100);
-
-  mat-icon {
-    @include centered-glyph(11px);
-    color: #fff;
-    font-variation-settings: 'FILL' 1;
-    filter: drop-shadow(0 0 1px rgb(1 37 125 / 0.9));
-  }
-
+.mvp .name {
+  color: var(--rating-100);
 }
 
 .name {

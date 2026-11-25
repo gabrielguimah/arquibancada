@@ -439,6 +439,33 @@ html, body {
   }
 }
 
+/* Melhor da partida: estrela branca num círculo azul elétrico (a cor da nota 10), como a do melhor da
+   rodada. Mesmo selo no campo (em cima à esquerda da foto) e nos reservas (logo depois do nome). O tamanho
+   padrão é 16 px; quem usa pode mudar `--mvp-size` e `--mvp-glyph`. */
+.mvp-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: var(--mvp-size, 16px);
+  height: var(--mvp-size, 16px);
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  background: var(--rating-100);
+
+  .mat-icon {
+    width: auto;
+    height: auto;
+    font-size: var(--mvp-glyph, 11px);
+    line-height: 1;
+    overflow: visible;
+    color: #fff;
+    font-variation-settings: 'FILL' 1;
+    filter: drop-shadow(0 0 1px rgb(1 37 125 / 0.9));
+  }
+}
+
 /* Selo da nota (0–10); a faixa vem de ratingClass() em shared/rating.ts, as cores da paleta. */
 .rating-badge {
   display: inline-block;

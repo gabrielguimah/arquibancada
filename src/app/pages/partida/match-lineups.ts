@@ -11,6 +11,8 @@ import { MatchBench } from './match-bench';
 import { NO_RATING_CLASS, NO_RATING_LABEL, NO_RATING_TITLE, formatRating, ratingClass } from '../../shared/rating';
 import { lineups, pitchPositions, playerTip } from './lineups';
 
+const NOT_STARTED = new Set(['TBD', 'NS', 'PST', 'CANC']);
+
 /**
  * Escalações no campo, com nota, gols, assistências, cartões e substituições de cada jogador; reservas e
  * técnicos embaixo (MatchBench). Campo horizontal no computador (mandante à esquerda), vertical no
@@ -51,6 +53,8 @@ export class MatchLineups {
   protected ratingClass = ratingClass;
   protected formatRating = formatRating;
   protected noRating = { class: NO_RATING_CLASS, label: NO_RATING_LABEL, title: NO_RATING_TITLE };
+  /** Bola já rolou? Antes disso (escalação divulgada, jogo adiado ou cancelado), o campo fica sem selo de nota. */
+  protected started = computed(() => !NOT_STARTED.has(this.fixture().fixture.status.short));
 
   protected tip = playerTip;
 

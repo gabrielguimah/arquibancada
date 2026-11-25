@@ -43,6 +43,9 @@ const BEFORE_KICKOFF_MS = 60 * 60_000;
 const NEAR_KICKOFF_MS = 15 * 60_000;
 // Depois do fim, a API ainda ajusta notas e eventos: segue atualizando até 3 h depois do início.
 const AFTER_KICKOFF_MS = 3 * 3600_000;
+// Primeira busca da partida falhou: tenta de novo nestes intervalos, mostrando o esqueleto, antes de
+// mostrar o erro (cada busca já repete duas vezes as falhas passageiras, ver api/retry.ts).
+const FIRST_LOAD_RETRIES_MS = [2000, 4000];
 // Jogo ainda longe: confere de novo de tempos em tempos (no máximo 30 min), até entrar na janela de 1 h.
 const IDLE_CHECK_MS = 30 * 60_000;
 
@@ -215,7 +218,7 @@ export class Partida {
     });
   }
 
-  private load(id: number) {
+  private load(id: number, attempt = 0) {
     // Jogo acompanhado pelos jogos ao vivo do site (a cada 15 s, com eventos, escalação e notas): a página
     // já mostra esses dados, então não busca a partida de novo (seria outra chamada à API, com outra chave).
     if (this.loaded() && this.liveFixtures.byId().has(id)) {
@@ -230,6 +233,7 @@ export class Partida {
           return;
         }
         const first = !this.loaded();
+        this.error.set(null);
         this.loaded.set(f);
         this.loadCoaches(f);
         if (first && !OVER.has(f.fixture.status.short)) this.loadBroadcasts(f);
@@ -238,8 +242,13 @@ export class Partida {
         if (next !== null) this.timer = setTimeout(() => this.load(id), next);
       },
       error: () => {
+        // Primeira busca: segue no esqueleto e tenta de novo logo; só depois de algumas falhas mostra o erro.
+        if (!this.loaded() && attempt < FIRST_LOAD_RETRIES_MS.length) {
+          this.timer = setTimeout(() => this.load(id, attempt + 1), FIRST_LOAD_RETRIES_MS[attempt]);
+          return;
+        }
         this.loading.set(false);
-        // Sem dados ainda: mostra o erro. Já com a partida na tela (atualização ao vivo): tenta de novo.
+        // Sem dados ainda: mostra o erro (e segue tentando). Já com a partida na tela (ao vivo): tenta de novo.
         if (!this.loaded()) this.error.set('Não foi possível carregar a partida.');
         this.timer = setTimeout(() => this.load(id), REFRESH_LIVE_MS);
       },

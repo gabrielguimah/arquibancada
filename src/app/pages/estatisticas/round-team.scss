@@ -187,6 +187,11 @@ $muted: var(--muted);
   border-color: var(--highlight);
 }
 
+// Nome do melhor da rodada na cor da estrela (azul elétrico, a da nota 10), como na escalação da partida.
+.best .name {
+  color: var(--rating-100);
+}
+
 .name {
   max-width: 100%;
   overflow: hidden;

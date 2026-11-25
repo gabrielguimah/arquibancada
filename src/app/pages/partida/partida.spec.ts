@@ -1,7 +1,7 @@
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { Subject, of } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { ApiFootball, Broadcast, Fixture, FixtureEvent } from '../../api/api-football';
 import { highlights } from './match-header';
 import { Partida, refreshDelay } from './partida';
@@ -81,13 +81,17 @@ describe('Página da partida', () => {
     pending = null;
   });
 
+  // Busca da partida (cada teste pode trocar; padrão: responde com `f`).
+  let fixtureCall: ((f: Fixture | null) => Observable<Fixture | null>) | null = null;
+  afterEach(() => (fixtureCall = null));
+
   function render(f: Fixture | null, id = '1492463') {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [Partida],
       providers: [
         provideRouter([]),
-        { provide: ApiFootball, useValue: { fixture: () => of(f), injuries: () => of([]), coach: () => of(null), broadcasts: () => pending ?? of(broadcasts) } },
+        { provide: ApiFootball, useValue: { fixture: () => (fixtureCall ? fixtureCall(f) : of(f)), injuries: () => of([]), coach: () => of(null), broadcasts: () => pending ?? of(broadcasts) } },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id })) } },
       ],
     });
@@ -173,6 +177,21 @@ describe('Página da partida', () => {
     pending.next([]);
     TestBed.inject(ApplicationRef).tick();
     expect(el.querySelector('.watch-row')).toBeNull();
+  });
+
+  it('primeira busca falhou: segue no esqueleto, tenta de novo e mostra a partida, sem a tela de erro', () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    fixtureCall = (f) => (++calls === 1 ? throwError(() => new Error('429')) : of(f));
+    const el = render(match([1, 0], []));
+    expect(el.querySelector('section.message')).toBeNull();
+    expect(el.querySelector('[aria-busy="true"]')).not.toBeNull();
+    vi.advanceTimersByTime(2000);
+    TestBed.inject(ApplicationRef).tick();
+    expect(calls).toBe(2);
+    expect(el.querySelector('.team .name')?.textContent?.trim()).toBe('Botafogo');
+    expect(el.querySelector('section.message')).toBeNull();
+    vi.useRealTimers();
   });
 
   it('partida que não existe mostra o aviso', () => {

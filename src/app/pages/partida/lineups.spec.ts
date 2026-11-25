@@ -260,4 +260,26 @@ describe('Escalações', () => {
     const unused = bench.find((li) => li.textContent?.includes('N. Entrou'))!;
     expect(unused.querySelector('.rating-badge')).toBeNull();
   });
+
+  it('escalação antes do jogo: ninguém no campo tem selo de nota (nem "Indef."); depois do jogo, sem nota é "Indef."', () => {
+    TestBed.configureTestingModule({ imports: [MatchLineups] });
+    TestBed.inject(MatIconRegistry).addSvgIconLiteral('chuteira', TestBed.inject(DomSanitizer).bypassSecurityTrustHtml('<svg></svg>'));
+    const f = match();
+    f.fixture.status.short = 'NS';
+    f.players = [];
+    f.events = [];
+    const fixture = TestBed.createComponent(MatchLineups);
+    fixture.componentRef.setInput('fixture', f);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.spot').length).toBeGreaterThan(0);
+    expect(el.querySelector('.spot .rating-badge')).toBeNull();
+    expect(el.querySelector('.team-rating')).toBeNull();
+
+    fixture.componentRef.setInput('fixture', { ...f, fixture: { ...f.fixture, status: { ...f.fixture.status, short: 'FT' } } });
+    fixture.detectChanges();
+    const badges = [...el.querySelectorAll('.spot .rating-badge')];
+    expect(badges.length).toBe(el.querySelectorAll('.spot').length);
+    expect(badges.every((b) => b.textContent?.trim() === 'Indef.')).toBe(true);
+  });
 });
