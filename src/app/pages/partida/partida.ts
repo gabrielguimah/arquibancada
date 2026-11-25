@@ -103,6 +103,12 @@ export class Partida {
   protected error = signal<string | null>(null);
   /** Canais de transmissão (do "Onde assistir" da CBF); vazio: o botão não aparece. */
   protected channels = signal<string[]>([]);
+  /** Buscando os canais: no lugar do botão, um esqueleto. */
+  private channelsLoading = signal(false);
+  protected watchLoading = computed(() => {
+    const f = this.fixture();
+    return this.channelsLoading() && !!f && !OVER.has(f.fixture.status.short);
+  });
   /** "Onde assistir" só antes e durante o jogo: encerrado (ou adiado, cancelado), some. */
   protected showChannels = computed(() => {
     const f = this.fixture();
@@ -192,6 +198,7 @@ export class Partida {
       this.coaches.set({});
       this.extrasPending.set(0);
       this.channels.set([]);
+      this.channelsLoading.set(false);
       this.error.set(null);
       this.loading.set(true);
       if (!Number.isInteger(id) || id <= 0) {
@@ -262,8 +269,11 @@ export class Partida {
   /** Onde assistir, uma vez por partida aberta (a lista é do dia do jogo, no horário de Brasília). */
   private loadBroadcasts(f: Fixture) {
     const date = dayInBrasilia(new Date(f.fixture.date));
+    this.channelsLoading.set(true);
     this.api.broadcasts(date).subscribe((games) => {
-      if (this.loaded()?.fixture.id === f.fixture.id) this.channels.set(channelsFor(f, games));
+      if (this.loaded()?.fixture.id !== f.fixture.id) return;
+      this.channels.set(channelsFor(f, games));
+      this.channelsLoading.set(false);
     });
   }
 

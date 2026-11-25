@@ -353,6 +353,13 @@ $muted: var(--muted);
   }
 }
 
+// Esqueleto do "Onde assistir" (mesmo tamanho do botão).
+.watch-sk {
+  width: 128px;
+  height: 24px;
+  border-radius: 999px;
+}
+
 .sep {
   color: var(--subtle);
 }

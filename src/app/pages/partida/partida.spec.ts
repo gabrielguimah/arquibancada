@@ -1,7 +1,7 @@
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { ApiFootball, Broadcast, Fixture, FixtureEvent } from '../../api/api-football';
 import { highlights } from './match-header';
 import { Partida, refreshDelay } from './partida';
@@ -73,9 +73,13 @@ describe('Lances do cabeçalho', () => {
 });
 
 describe('Página da partida', () => {
-  // "Onde assistir" da CBF no dia (cada teste define).
+  // "Onde assistir" da CBF no dia (cada teste define; `pending`: a resposta ainda não chegou).
   let broadcasts: Broadcast[] = [];
-  beforeEach(() => (broadcasts = []));
+  let pending: Subject<Broadcast[]> | null = null;
+  beforeEach(() => {
+    broadcasts = [];
+    pending = null;
+  });
 
   function render(f: Fixture | null, id = '1492463') {
     TestBed.resetTestingModule();
@@ -83,7 +87,7 @@ describe('Página da partida', () => {
       imports: [Partida],
       providers: [
         provideRouter([]),
-        { provide: ApiFootball, useValue: { fixture: () => of(f), injuries: () => of([]), coach: () => of(null), broadcasts: () => of(broadcasts) } },
+        { provide: ApiFootball, useValue: { fixture: () => of(f), injuries: () => of([]), coach: () => of(null), broadcasts: () => pending ?? of(broadcasts) } },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id })) } },
       ],
     });
@@ -160,6 +164,15 @@ describe('Página da partida', () => {
     expect(render(match([0, 0], [], '1H')).querySelector('.typing')).not.toBeNull();
     expect(render(match([1, 0], [goal(botafogo, 'Tiquinho Soares', 20)], 'HT')).querySelector('.typing')).toBeNull();
     expect(render(match([1, 0], [goal(botafogo, 'Tiquinho Soares', 20)], 'FT')).querySelector('.typing')).toBeNull();
+  });
+
+  it('"Onde assistir": esqueleto enquanto busca os canais; sem canais, a linha some', () => {
+    pending = new Subject<Broadcast[]>();
+    const el = render(match([0, 0], [], 'NS'));
+    expect(el.querySelector('.watch-sk')).not.toBeNull();
+    pending.next([]);
+    TestBed.inject(ApplicationRef).tick();
+    expect(el.querySelector('.watch-row')).toBeNull();
   });
 
   it('partida que não existe mostra o aviso', () => {

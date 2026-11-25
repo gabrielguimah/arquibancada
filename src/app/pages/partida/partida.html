@@ -3,14 +3,18 @@
 
   @if (fixture(); as f) {
     <section class="header" [class.live]="live()" aria-label="Partida">
+      <!-- Acima do placar: antes e durante o jogo, o "Onde assistir" da CBF (canais num popup; esqueleto
+           enquanto busca). Sem canais, a linha nem existe. -->
       @if (showChannels()) {
-        <!-- Canais do "Onde assistir" da CBF, logo acima do placar; abrem num popup ao clicar. Sem canais, a
-             linha nem existe (o card não ganha espaço vazio). -->
         <div class="watch-row">
           <button type="button" class="watch" [matMenuTriggerFor]="watchMenu">
             <mat-icon aria-hidden="true">live_tv</mat-icon>
             Onde assistir
           </button>
+        </div>
+      } @else if (watchLoading()) {
+        <div class="watch-row" aria-busy="true" aria-label="Carregando onde assistir">
+          <span class="sk watch-sk"></span>
         </div>
       }
       <div class="scoreboard">
