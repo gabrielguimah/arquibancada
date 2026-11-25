@@ -45,6 +45,8 @@ export class GoalNotifier {
         const d = e.data as { source?: string; tag?: string; sound?: string } | null;
         if (d?.source === 'arquibancada-push' && d.tag && (d.sound === 'goal' || d.sound === 'cancelled')) this.pushArrived(d.tag, d.sound);
       });
+      // Com `addEventListener`, as mensagens ficam na fila até isto (o Safari não libera sozinho).
+      navigator.serviceWorker.startMessages();
     }
   }
 

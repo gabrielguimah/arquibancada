@@ -20,12 +20,13 @@ export class GoalSounds {
 
   constructor() {
     if (!this.supported) return;
-    // Primeiro toque/clique/tecla na página destrava o áudio (exigência dos navegadores).
+    // Toque/clique/tecla na página destrava o áudio (exigência dos navegadores). No iPhone só `touchend` e
+    // `click` valem (`pointerdown` não), e o áudio volta a travar quando o app sai da tela: os ouvintes
+    // ficam sempre ligados e, a cada toque, retomam o áudio se ele não estiver rodando.
     const unlock = () => {
-      this.context();
-      ['pointerdown', 'touchend', 'keydown'].forEach((e) => document.removeEventListener(e, unlock, true));
+      if (this.ctx?.state !== 'running') this.context();
     };
-    ['pointerdown', 'touchend', 'keydown'].forEach((e) => document.addEventListener(e, unlock, true));
+    ['touchend', 'click', 'keydown'].forEach((e) => document.addEventListener(e, unlock, true));
   }
 
   toggle() {
@@ -64,7 +65,8 @@ export class GoalSounds {
       silent.connect(ctx.destination);
       silent.start();
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    // `suspended` (sem toque ainda) ou `interrupted` (iPhone, depois de sair do app): tenta retomar.
+    if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => undefined);
     return this.ctx;
   }
 }
