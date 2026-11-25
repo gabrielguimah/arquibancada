@@ -58,26 +58,26 @@ function match(): Fixture {
 }
 
 describe('Lance a lance', () => {
-  it('do mais recente para o mais antigo, com "Fim de jogo" e "Intervalo" e o placar de cada um', () => {
+  it('em ordem cronológica, com "Intervalo" e "Fim de jogo" e o placar de cada um', () => {
     const items = timeline(match());
     const summary = items.map((i) => (i.type === 'divider' ? `— ${i.label} ${i.score}` : `${i.minute} ${i.side} ${i.kind}`));
     expect(summary).toEqual([
-      '— Fim de jogo 1 - 1',
-      "90+6' away var",
-      "90+2' home red",
-      "81' home goal",
-      "45' home sub",
-      '— Intervalo 0 - 1',
-      "28' away goal",
       "23' away yellow",
+      "28' away goal",
+      '— Intervalo 0 - 1',
+      "45' home sub",
+      "81' home goal",
+      "90+2' home red",
+      "90+6' away var",
+      '— Fim de jogo 1 - 1',
     ]);
   });
 
   it('gol mostra o placar depois dele e a assistência', () => {
     const goals = timeline(match()).filter((i): i is TimelineEvent => i.type === 'event' && i.kind === 'goal');
     expect(goals.map((g) => [g.main, g.secondary, g.score, g.assist])).toEqual([
-      ['T. Soares', null, '1 - 1', false],
       ['P. Lima', 'Luciano', '0 - 1', true],
+      ['T. Soares', null, '1 - 1', false],
     ]);
   });
 

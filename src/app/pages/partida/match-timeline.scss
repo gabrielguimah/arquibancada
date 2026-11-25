@@ -4,15 +4,23 @@ $muted: var(--muted);
   display: block;
 }
 
+// Mesmo espaçamento do card de escalações: lado a lado e sem dados, ficam da mesma altura.
 .card {
-  padding: 14px 16px 12px;
+  padding: 14px 16px 16px;
   background: var(--surface);
   border-radius: 12px;
   box-shadow: 0 1px 2px var(--shadow);
 
   h2 {
-    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
     font-size: 1rem;
+
+    &.live {
+      color: var(--live-text);
+    }
   }
 }
 
@@ -22,25 +30,41 @@ $muted: var(--muted);
   list-style: none;
 }
 
-// "Fim de jogo 1 - 1" / "Intervalo 0 - 1": texto no meio de uma linha horizontal.
+// "Fim de jogo 1 - 1" / "Intervalo 0 - 1": faixa de fundo destacado, com o texto centralizado, que
+// separa bem as etapas.
 .divider {
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 10px;
-  margin: 10px 0 6px;
+  gap: 6px;
+  margin: 8px -16px;
+  padding: 6px 16px;
+  background: var(--line);
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   color: $muted;
 
-  &::before,
-  &::after {
-    content: '';
-    flex: 1;
-    border-top: 1px solid var(--line-strong);
+  &:first-child {
+    margin-top: 0;
+  }
+
+  // "Fim de jogo" fecha o card: a faixa desce até a borda de baixo (cobre o padding do card), sem a
+  // linha inferior e com os cantos arredondados do card.
+  &:last-child {
+    margin-bottom: -16px;
+    border-bottom: 0;
+    border-radius: 0 0 12px 12px;
   }
 
   strong {
+    margin-left: 4px;
     color: var(--text);
+    font-size: 0.82rem;
+    letter-spacing: 0;
     font-variant-numeric: tabular-nums;
   }
 }
@@ -99,8 +123,9 @@ $muted: var(--muted);
     color: var(--text);
   }
 
-  // Substituição: o ícone é mais largo (duas setas).
-  .sub & {
+  // Substituição e VAR: o ícone é mais largo (duas setas, selo "VAR").
+  .sub &,
+  .var & {
     width: 24px;
   }
 }
@@ -201,13 +226,19 @@ $muted: var(--muted);
   color: #dc2626;
 }
 
-.var {
-  padding: 1px 3px;
+// Selo "VAR" do tamanho dos outros ícones (24 x 16), com o texto centralizado. Não pode se chamar
+// `.var`: essa é a classe da linha inteira do lance de VAR (o tipo do lance vira classe do <li>).
+.var-badge {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 16px;
   border-radius: 3px;
   background: var(--text);
   color: var(--surface);
   font-size: 0.55rem;
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.02em;
 }
 

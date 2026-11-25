@@ -1,4 +1,5 @@
 import { PlayerRow } from '../../api/api-football';
+import { formatRating } from '../../shared/rating';
 
 /** Como o número é mostrado e se muda com "Por jogo" / "Por 90 minutos". */
 export type ColumnKind =
@@ -161,10 +162,10 @@ export function columnValue(c: PlayerColumn, p: PlayerRow, mode: Accumulation): 
   return p.minutes ? (v / p.minutes) * 90 : null;
 }
 
-/** Texto da célula: inteiro no total, duas casas nas médias, "%" nas porcentagens, "–" sem valor. */
+/** Texto da célula: nota com uma casa, inteiro no total, duas casas nas médias, "%" nas porcentagens, "–" sem valor. */
 export function formatValue(c: PlayerColumn, v: number | null, mode: Accumulation): string {
   if (v === null) return '–';
-  if (c.kind === 'rating') return v.toFixed(2);
+  if (c.kind === 'rating') return formatRating(v);
   if (c.kind === 'percent') return `${v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
   if (c.kind === 'count' && mode !== 'total') return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return v.toLocaleString('pt-BR');

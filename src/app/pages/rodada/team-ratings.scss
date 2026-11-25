@@ -6,12 +6,12 @@ $line: var(--line);
   margin-top: 24px;
 }
 
-// Título e select de critério, acima das duas tabelas.
+// Título e, logo ao lado, o select de critério, acima das duas tabelas.
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px 16px;
   margin-bottom: 12px;
 
@@ -69,17 +69,14 @@ $line: var(--line);
     justify-content: space-between;
     gap: 8px;
     padding: 0 14px 8px;
-
-    span {
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: $muted;
-    }
   }
 
+  // Período da tabela ("Temporada inteira", "Últimas 5 partidas").
   h3 {
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: $muted;
   }
 }
 

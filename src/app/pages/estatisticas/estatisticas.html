@@ -87,7 +87,7 @@
                 <small>{{ r.team.name }} · {{ r.detail }}</small>
               </span>
               @if (b.rating) {
-                <span [class]="ratingClass(r.value)">{{ r.value.toFixed(2) }}</span>
+                <span [class]="ratingClass(r.value)">{{ formatRating(r.value) }}</span>
               } @else {
                 <span class="value">{{ r.value }}</span>
               }

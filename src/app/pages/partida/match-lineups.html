@@ -21,7 +21,7 @@
             <div class="side" [class]="side" [attr.aria-label]="'Titulares: ' + d[side].team.name">
               @for (line of placed()![side]; track $index) {
                 <ol class="line">
-                  @for (pos of line; track pos.spot.id) {
+                  @for (pos of line; track pos.spot.key) {
                     @let p = pos.spot;
                     <li class="spot" [class.mvp]="p.best" [title]="tip(p)" [style.--x]="pos.x" [style.--y]="pos.y" [style.--n]="line.length">
                       <ng-container [ngTemplateOutlet]="photo" [ngTemplateOutletContext]="{ $implicit: p }" />
@@ -40,10 +40,42 @@
         <ng-container [ngTemplateOutlet]="teamBar" [ngTemplateOutletContext]="{ $implicit: d.away, side: 'away' }" />
       </div>
 
-      <app-match-bench [teams]="[d.home, d.away]" />
+      <app-match-bench [teams]="[d.home, d.away]" [injuries]="injuries()" [coaches]="coaches()" />
     </div>
   } @else {
     <p class="message">Escalações ainda não divulgadas. Elas costumam sair cerca de 1 hora antes do jogo.</p>
+    <!-- Antes da escalação: técnico atual e desfalques de cada time (o que houver). -->
+    @if (extrasLoading()) {
+      <div class="before" aria-busy="true" aria-label="Carregando técnicos e desfalques">
+        @for (t of [0, 1]; track t) {
+          <section class="before-team" aria-hidden="true">
+            <div class="coach">
+              <div class="sk-heading"><span class="sk sk-crest-sm"></span><span class="sk sk-line short"></span></div>
+              <div class="sk-person"><span class="sk sk-photo"></span><span class="sk sk-line"></span></div>
+            </div>
+            <div class="sk-absences">
+              <div class="sk-heading"><span class="sk sk-crest-sm"></span><span class="sk sk-line short"></span></div>
+              @for (i of [0, 1]; track i) {
+                <div class="sk-person"><span class="sk sk-photo"></span><span class="sk sk-line"></span></div>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    } @else if (before().length) {
+      <div class="before">
+        @for (b of before(); track b.team.id) {
+          <section class="before-team" [attr.aria-label]="b.team.name">
+            @if (b.coach) {
+              <app-match-coach class="coach" [team]="b.team" [coach]="b.coach" />
+            }
+            @if (b.absences.length) {
+              <app-match-absences [team]="b.team" [absences]="b.absences" />
+            }
+          </section>
+        }
+      </div>
+    }
   }
 </section>
 
@@ -53,7 +85,7 @@
     <img crest [src]="t.team.logo" alt="" width="22" height="22" />
     <strong>{{ t.team.name }}</strong>
     @if (t.rating !== null) {
-      <span [class]="ratingClass(t.rating) + ' team-rating'" title="Nota média do time">{{ t.rating.toFixed(2) }}</span>
+      <span [class]="ratingClass(t.rating) + ' team-rating'" title="Nota média do time">{{ formatRating(t.rating) }}</span>
     }
     @if (t.formation) {
       <span class="formation">{{ t.formation }}</span>
@@ -67,7 +99,7 @@
      cartão no meio à esquerda, substituição embaixo à esquerda e a nota embaixo à direita. -->
 <ng-template #photo let-p>
   <span class="photo">
-    <img class="player" [src]="p.photo" alt="" width="40" height="40" loading="lazy" />
+    <img class="player" playerPhoto [src]="p.photo" alt="" width="40" height="40" loading="lazy" />
     @if (p.goals || p.ownGoals) {
       <span class="pos top-right">
         <ng-container [ngTemplateOutlet]="goalIcons" [ngTemplateOutletContext]="{ $implicit: p }" />
@@ -93,7 +125,7 @@
       </span>
     }
     @if (p.rating !== null) {
-      <span [class]="ratingClass(p.rating) + ' rating pos bottom-right'">{{ p.rating.toFixed(1) }}</span>
+      <span [class]="ratingClass(p.rating) + ' rating pos bottom-right'">{{ formatRating(p.rating) }}</span>
     } @else {
       <span [class]="noRating.class + ' rating pos bottom-right'" [title]="noRating.title">{{ noRating.label }}</span>
     }

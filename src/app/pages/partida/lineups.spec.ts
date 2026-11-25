@@ -4,6 +4,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { Fixture, FixtureEvent, LineupPlayer } from '../../api/api-football';
 import { LineupSpot, lineups, pitchPositions, shortName } from './lineups';
 import { MatchLineups } from './match-lineups';
+import { PLAYER_PLACEHOLDER } from '../../shared/player-photo';
 
 const home = { id: 120, name: 'Botafogo', logo: '' };
 const away = { id: 126, name: 'São Paulo', logo: '' };
@@ -113,6 +114,50 @@ describe('Escalações', () => {
     const spot = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.spot')].find((li) => li.querySelector('.name')?.textContent?.includes('Marçal'))!;
     expect((spot.querySelector('.pos:has(.ev.assist)') as HTMLElement).classList).toContain('right');
     expect((spot.querySelector('.pos:has(.ev.goal)') as HTMLElement).classList).toContain('top-right');
+  });
+
+  it('jogador sem cadastro na API (sem id) é achado pelo nome: nota, substituição e foto cinza', () => {
+    const f = match();
+    // Titular 5 e reserva 7 sem id: `null` na escalação e nos eventos, 0 nas estatísticas.
+    f.lineups![0].startXI.find((s) => s.player.id === 5)!.player.id = null;
+    f.lineups![0].substitutes.find((s) => s.player.id === 7)!.player.id = null;
+    const stats = f.players![0].players;
+    Object.assign(stats.find((p) => p.player.id === 5)!.player, { id: 0, name: 'T. Soares', photo: null });
+    Object.assign(stats.find((p) => p.player.id === 7)!.player, { id: 0, name: 'D. Santos', photo: null });
+    f.events = [
+      { ...event(home, 'Goal', 'Normal Goal', 70, 0, 2), player: { id: null, name: 'T. Soares' } },
+      { ...event(home, 'subst', 'Substitution 1', 80, 0), player: { id: null, name: 'T. Soares' }, assist: { id: null, name: 'D. Santos' } },
+    ];
+    const d = lineups(f)!;
+    const soares = d.home.lines.flat().find((p) => p.name === 'T. Soares')!;
+    const santos = d.home.substitutes.find((p) => p.name === 'D. Santos')!;
+    expect(soares).toEqual(expect.objectContaining({ rating: 7.5, goals: 1, subOut: "80'" }));
+    expect(soares.photo).toBe(PLAYER_PLACEHOLDER);
+    expect(santos).toEqual(expect.objectContaining({ rating: 6.5, subIn: "80'" }));
+    expect(soares.key).not.toBe(santos.key);
+  });
+
+  it('com o jogo rolando, quem está em campo sem nota da API começa com 6,0 (e não concorre a melhor)', () => {
+    const f = match();
+    f.fixture.status.short = '1H';
+    // Começo do jogo: a API ainda não deu nota a ninguém.
+    for (const t of f.players!) for (const p of t.players) p.statistics[0].games.rating = null;
+    const d = lineups(f)!;
+    const all = [...d.home.lines.flat(), ...d.home.substitutes];
+    expect(d.home.lines.flat().every((p) => p.rating === 6 && p.provisional)).toBe(true);
+    // Reserva que entrou (7) também; o que não entrou (8) fica sem nota.
+    expect(all.find((p) => p.id === 7)).toEqual(expect.objectContaining({ rating: 6, provisional: true }));
+    expect(all.find((p) => p.id === 8)?.rating).toBeNull();
+    expect(all.some((p) => p.best)).toBe(false);
+    // Encerrado, sem nota continua sem nota ("Indef.").
+    f.fixture.status.short = 'FT';
+    expect(lineups(f)!.home.lines.flat().every((p) => p.rating === null)).toBe(true);
+  });
+
+  it('reserva que não entrou fica sem nota, mesmo se a API mandar uma', () => {
+    const f = match();
+    f.players![0].players.find((p) => p.player.id === 8)!.statistics[0].games.rating = '7.0';
+    expect(lineups(f)!.home.substitutes.find((p) => p.id === 8)!.rating).toBeNull();
   });
 
   it('reserva que entrou e depois saiu tem os dois minutos', () => {

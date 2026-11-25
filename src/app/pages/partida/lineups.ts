@@ -1,13 +1,21 @@
 import { Fixture, FixtureEvent, Lineup, LineupPlayer, Team } from '../../api/api-football';
+import { isLive } from '../../shared/fixture-card';
+import { PLAYER_PLACEHOLDER } from '../../shared/player-photo';
+import { formatRating } from '../../shared/rating';
 
 /** Jogador como aparece no campo ou na lista de reservas. */
 export interface LineupSpot {
-  id: number;
+  /** `null` para jogador que a API não tem cadastrado. */
+  id: number | null;
+  /** Identifica o jogador na partida (ver `playerKey`); serve de `track` nas listas. */
+  key: string;
   /** Nome com o primeiro nome abreviado ("Carlos Miguel" → "C. Miguel"). */
   name: string;
   number: number | null;
   photo: string;
   rating: number | null;
+  /** Nota inicial (6,0) de quem está jogando e ainda não recebeu nota da API; não concorre a melhor. */
+  provisional: boolean;
   /** Minutos jogados (desempate do melhor da partida). */
   minutes: number;
   captain: boolean;
@@ -35,7 +43,20 @@ export interface TeamLineup {
   coach: { name: string; photo: string | null } | null;
 }
 
+// Nota de partida de quem acabou de entrar em campo, antes da primeira nota da API.
+const INITIAL_RATING = 6;
+
 const PHOTO = (id: number) => `https://media.api-sports.io/football/players/${id}.png`;
+
+/**
+ * Chave do jogador na partida: o id ou, quando a API não tem o jogador cadastrado (id `null` na escalação
+ * e nos eventos, `0` nas estatísticas), o nome, que nesses casos vem igual nos três lugares.
+ */
+export function playerKey(p: { id: number | null; name: string | null }): string | null {
+  if (p.id) return `id:${p.id}`;
+  const name = p.name?.trim().toLowerCase();
+  return name ? `name:${name}` : null;
+}
 
 /** As duas escalações (mandante e visitante), ou `null` se ainda não saíram. */
 export function lineups(f: Fixture): { home: TeamLineup; away: TeamLineup } | null {
@@ -50,7 +71,7 @@ export function lineups(f: Fixture): { home: TeamLineup; away: TeamLineup } | nu
   const outcome = teamResults(f);
   const candidates = (['home', 'away'] as const)
     .flatMap((side) => [...result[side].lines.flat(), ...result[side].substitutes].map((spot) => ({ spot, result: outcome[side] })))
-    .filter((c) => c.spot.rating !== null && !c.spot.red)
+    .filter((c) => c.spot.rating !== null && !c.spot.provisional && !c.spot.red)
     .sort(compareBest);
   const first = candidates[0];
   if (first) candidates.filter((c) => compareBest(c, first) === 0).forEach((c) => (c.spot.best = true));
@@ -86,32 +107,41 @@ function compareBest(a: { spot: LineupSpot; result: Outcome }, b: { spot: Lineup
 
 function teamLineup(f: Fixture, l: Lineup): TeamLineup {
   const stats = new Map(
-    (f.players?.find((p) => p.team.id === l.team.id)?.players ?? []).map((p) => [p.player.id, p]),
+    (f.players?.find((p) => p.team.id === l.team.id)?.players ?? []).map((p) => [playerKey(p.player), p]),
   );
-  const starters = new Set(l.startXI.map((s) => s.player.id));
+  const starters = new Set(l.startXI.map((s) => playerKey(s.player)));
   const events = (f.events ?? []).filter((e) => e.team.id === l.team.id);
   const subs = substitutions(events, starters);
 
-  const spot = (p: LineupPlayer): LineupSpot => {
-    const s = stats.get(p.id);
+  const live = isLive(f);
+  const spot = (p: LineupPlayer, starter: boolean): LineupSpot => {
+    const key = playerKey(p);
+    const s = stats.get(key);
     const games = s?.statistics[0]?.games;
-    const rating = games?.rating && Number(games.rating) > 0 ? Number(games.rating) : null;
-    const mine = (e: FixtureEvent) => e.player.id === p.id;
+    // Nota só para quem jogou: a API às vezes manda nota para reserva que não entrou.
+    const official = games?.rating && Number(games.rating) > 0 && (games.minutes ?? 0) > 0 ? Number(games.rating) : null;
+    const subIn = (key && subs.in.get(key)) ?? null;
+    // Com o jogo rolando, quem está ou esteve em campo começa com 6,0 até a API mandar a nota.
+    const provisional = official === null && live && (starter || subIn !== null);
+    const rating = provisional ? INITIAL_RATING : official;
+    const mine = (e: FixtureEvent) => key !== null && playerKey(e.player) === key;
     return {
-      id: p.id,
+      id: p.id || null,
+      key: key ?? `${l.team.id}:${p.number}`,
       name: shortName(p.name),
       number: p.number,
-      photo: s?.player.photo || PHOTO(p.id),
+      photo: s?.player.photo || (p.id ? PHOTO(p.id) : PLAYER_PLACEHOLDER),
       rating,
+      provisional,
       minutes: games?.minutes ?? 0,
       captain: !!games?.captain,
       goals: events.filter((e) => mine(e) && e.type === 'Goal' && (e.detail === 'Normal Goal' || e.detail === 'Penalty')).length,
       ownGoals: events.filter((e) => mine(e) && e.type === 'Goal' && e.detail === 'Own Goal').length,
-      assists: events.filter((e) => e.type === 'Goal' && e.detail !== 'Missed Penalty' && e.assist.id === p.id).length,
+      assists: events.filter((e) => e.type === 'Goal' && e.detail !== 'Missed Penalty' && key !== null && playerKey(e.assist) === key).length,
       yellow: events.some((e) => mine(e) && e.type === 'Card' && e.detail === 'Yellow Card'),
       red: events.some((e) => mine(e) && e.type === 'Card' && (e.detail === 'Red Card' || e.detail === 'Second Yellow card')),
-      subOut: subs.out.get(p.id) ?? null,
-      subIn: subs.in.get(p.id) ?? null,
+      subOut: (key && subs.out.get(key)) ?? null,
+      subIn,
       best: false,
     };
   };
@@ -121,7 +151,7 @@ function teamLineup(f: Fixture, l: Lineup): TeamLineup {
   for (const { player } of l.startXI) {
     const [row, col] = (player.grid ?? '').split(':').map(Number);
     const r = Number.isFinite(row) && row > 0 ? row : player.pos === 'G' ? 1 : 2;
-    rows.set(r, [...(rows.get(r) ?? []), { col: Number.isFinite(col) ? col : 99, spot: spot(player) }]);
+    rows.set(r, [...(rows.get(r) ?? []), { col: Number.isFinite(col) ? col : 99, spot: spot(player, true) }]);
   }
   const lines = [...rows.entries()]
     .sort(([a], [b]) => a - b)
@@ -139,7 +169,7 @@ function teamLineup(f: Fixture, l: Lineup): TeamLineup {
     lines,
     // Reservas: quem entrou primeiro (na ordem da entrada), depois os que não jogaram.
     substitutes: l.substitutes
-      .map(({ player }) => spot(player))
+      .map(({ player }) => spot(player, false))
       .sort((a, b) => order(a.subIn) - order(b.subIn)),
     coach: l.coach?.name ? { name: l.coach.name, photo: l.coach.photo } : null,
   };
@@ -150,16 +180,16 @@ function teamLineup(f: Fixture, l: Lineup): TeamLineup {
  * `assist` quem entra, mas às vezes vem invertido: quem já estava em campo (titular ou quem entrou antes)
  * é o que sai.
  */
-function substitutions(events: FixtureEvent[], starters: Set<number>) {
+function substitutions(events: FixtureEvent[], starters: Set<string | null>) {
   const onPitch = new Set(starters);
-  const out = new Map<number, string>();
-  const into = new Map<number, string>();
+  const out = new Map<string, string>();
+  const into = new Map<string, string>();
   const sorted = events
     .filter((e) => e.type === 'subst')
     .sort((a, b) => (a.time.elapsed ?? 0) + (a.time.extra ?? 0) / 100 - ((b.time.elapsed ?? 0) + (b.time.extra ?? 0) / 100));
   for (const e of sorted) {
-    let leaving = e.player.id;
-    let entering = e.assist.id;
+    let leaving = playerKey(e.player);
+    let entering = playerKey(e.assist);
     if (leaving === null || entering === null) continue;
     if (!onPitch.has(leaving) && onPitch.has(entering)) [leaving, entering] = [entering, leaving];
     const minute = `${e.time.elapsed ?? ''}${e.time.extra ? `+${e.time.extra}` : ''}'`;
@@ -222,7 +252,7 @@ export function playerTip(p: LineupSpot): string {
   return [
     `${p.number ?? ''} ${p.name}`.trim() + (p.captain ? ' (capitão)' : ''),
     p.best ? 'Melhor da partida' : '',
-    p.rating !== null ? `Nota ${p.rating.toFixed(1)}` : '',
+    p.rating !== null ? `Nota ${formatRating(p.rating)}${p.provisional ? ' (inicial, até a primeira nota da API)' : ''}` : '',
     p.goals ? `${p.goals} ${p.goals > 1 ? 'gols' : 'gol'}` : '',
     p.ownGoals ? `${p.ownGoals} gol contra` : '',
     p.assists ? `${p.assists} ${p.assists > 1 ? 'assistências' : 'assistência'}` : '',

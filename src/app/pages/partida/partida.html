@@ -82,20 +82,13 @@
       </ul>
     </section>
 
-    <!-- Celular: um seletor escolhe o que aparece (lance a lance ou escalações). -->
-    <div class="tabs" role="tablist" aria-label="Seções da partida">
-      <button type="button" role="tab" [attr.aria-selected]="tab() === 'timeline'" (click)="tab.set('timeline')">
-        Lance a lance
-      </button>
-      <button type="button" role="tab" [attr.aria-selected]="tab() === 'lineups'" (click)="tab.set('lineups')">
-        Escalações
-      </button>
-    </div>
+    <ng-container [ngTemplateOutlet]="tabsBar" />
 
-    <!-- Computador: lance a lance em 1/3, escalações em 2/3, lado a lado. -->
+    <!-- Computador: lance a lance e, embaixo, estatísticas em 1/3; escalações em 2/3, lado a lado. -->
     <div class="sections" [attr.data-tab]="tab()">
       <app-match-timeline class="timeline" [fixture]="f" />
-      <app-match-lineups class="lineups" [fixture]="f" />
+      <app-match-stats class="stats" [class.empty]="!hasStats()" [fixture]="f" />
+      <app-match-lineups class="lineups" [fixture]="f" [injuries]="injuries()" [coaches]="coaches()" [extrasLoading]="extrasLoading()" />
     </div>
   } @else if (error()) {
     <section class="header message">
@@ -112,5 +105,29 @@
       </div>
       <div class="meta" aria-hidden="true"><span class="sk sk-meta"></span></div>
     </section>
+
+    <!-- Esqueletos das seções, no mesmo lugar dos cards (no celular, o seletor já funciona). -->
+    <ng-container [ngTemplateOutlet]="tabsBar" />
+    <div class="sections" [attr.data-tab]="tab()">
+      <app-timeline-skeleton class="timeline" />
+      <!-- Sem saber se o jogo começou, o das estatísticas só aparece na aba do celular (como o card vazio). -->
+      <app-stats-skeleton class="stats empty" />
+      <app-lineups-skeleton class="lineups" />
+    </div>
   }
 </div>
+
+<ng-template #tabsBar>
+  <!-- Celular: um seletor escolhe o que aparece (lance a lance, estatísticas ou escalações). -->
+  <div class="tabs" role="tablist" aria-label="Seções da partida">
+    <button type="button" role="tab" [attr.aria-selected]="tab() === 'timeline'" (click)="tab.set('timeline')">
+      Lance a lance
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab() === 'stats'" (click)="tab.set('stats')">
+      Estatísticas
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab() === 'lineups'" (click)="tab.set('lineups')">
+      Escalações
+    </button>
+  </div>
+</ng-template>

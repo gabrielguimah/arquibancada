@@ -54,8 +54,8 @@ describe('Melhor da rodada', () => {
     expect(stars().length).toBe(2);
   });
 
-  it('mostra duas casas quando a nota com uma casa se repete', () => {
-    const { ratings } = render([player(8.24), player(8.2), player(7.5)]);
-    expect(ratings()).toEqual(['8.24', '8.20', '7.5']);
+  it('notas sempre com uma casa, mesmo repetidas; a nota máxima é só "10"', () => {
+    const { ratings } = render([player(10), player(8.24), player(8.2), player(7.5)]);
+    expect(ratings()).toEqual(['10', '8.2', '8.2', '7.5']);
   });
 });

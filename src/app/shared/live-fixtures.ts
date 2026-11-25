@@ -26,7 +26,14 @@ export class LiveFixtures {
   readonly byId = signal(new Map<number, Fixture>());
 
   start() {
-    if (!this.timer) void this.tick();
+    if (this.timer) return;
+    void this.tick();
+    // Aba em segundo plano: o navegador atrasa (ou congela) os timers. Ao voltar, atualiza na hora.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      clearTimeout(this.timer);
+      void this.tick();
+    });
   }
 
   /** Chamado a cada atualização com os jogos acompanhados (os avisos de gol usam isto). */
@@ -51,7 +58,10 @@ export class LiveFixtures {
       (f) => isLive(f) || (f.fixture.status.short === 'NS' && f.fixture.timestamp * 1000 - now < KICKOFF_MARGIN_MS),
     );
     if (watch.length) {
-      const fixtures = await firstValueFrom(this.api.fixturesByIds(watch.map((f) => f.fixture.id)));
+      const listed = new Map(today.map((f) => [f.fixture.id, f]));
+      const fixtures = (await firstValueFrom(this.api.fixturesByIds(watch.map((f) => f.fixture.id)))).map((f) =>
+        fresher(f, listed.get(f.fixture.id)),
+      );
       this.byId.set(new Map(fixtures.map((f) => [f.fixture.id, f])));
       this.listeners.forEach((l) => l(fixtures));
       return POLL_LIVE_MS;
@@ -63,4 +73,21 @@ export class LiveFixtures {
       .filter((ms) => ms > 0);
     return Math.min(POLL_IDLE_MAX_MS, ...upcoming);
   }
+}
+
+// Ordem das situações de um jogo, para saber qual de duas respostas está mais adiantada.
+const PROGRESS: Record<string, number> = { TBD: 0, NS: 0, '1H': 1, HT: 2, '2H': 3, BT: 4, ET: 5, P: 6, AET: 7, PEN: 7, FT: 7 };
+
+/**
+ * A busca por id (com eventos) e a lista do dia têm caches separados no Worker e na API, e às vezes a
+ * lista já mostra o jogo começado (ou o gol) enquanto a busca por id ainda não. Fica com a situação e o
+ * placar da mais adiantada; eventos, escalações e notas vêm sempre da busca por id.
+ */
+export function fresher(byId: Fixture, listed: Fixture | undefined): Fixture {
+  if (!listed) return byId;
+  const progress = (f: Fixture) => [PROGRESS[f.fixture.status.short] ?? 0, f.fixture.status.elapsed ?? 0, f.fixture.status.extra ?? 0];
+  const [a, b] = [progress(byId), progress(listed)];
+  const ahead = b[0] - a[0] || b[1] - a[1] || b[2] - a[2];
+  if (ahead <= 0) return byId;
+  return { ...byId, fixture: { ...byId.fixture, status: listed.fixture.status }, goals: listed.goals, score: listed.score ?? byId.score };
 }

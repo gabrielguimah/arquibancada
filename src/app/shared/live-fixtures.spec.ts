@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ApiFootball, Fixture } from '../api/api-football';
-import { LiveFixtures } from './live-fixtures';
+import { LiveFixtures, fresher } from './live-fixtures';
 
 const NOW = Date.UTC(2026, 10, 23, 22, 0);
 
@@ -51,5 +51,18 @@ describe('LiveFixtures', () => {
     const live = TestBed.inject(LiveFixtures);
     expect(await live.poll(NOW)).toBe(15 * 60_000);
     expect(live.byId().size).toBe(0);
+  });
+
+  it('fica com a situação e o placar da resposta mais adiantada, mas com os eventos da busca por id', () => {
+    const byId = { ...game(1, 'NS', -2), events: [] };
+    const listed = { ...game(1, '1H', -2), goals: { home: 0, away: 0 } };
+    listed.fixture.status.elapsed = 2;
+    const merged = fresher(byId, listed);
+    expect(merged.fixture.status.short).toBe('1H');
+    expect(merged.goals).toEqual({ home: 0, away: 0 });
+    expect(merged.events).toBe(byId.events);
+    // Busca por id já mais adiantada (ou igual): fica como está.
+    expect(fresher(listed, byId)).toBe(listed);
+    expect(fresher(byId, undefined)).toBe(byId);
   });
 });

@@ -32,9 +32,9 @@
   <div class="tables">
     @for (t of tables(); track t.id) {
       <section class="table-card" [attr.aria-labelledby]="'team-rating-' + t.id">
+        <!-- Só o período: o critério já aparece no seletor "Classificar por". -->
         <header>
-          <h3 [id]="'team-rating-' + t.id">{{ metric().label }}</h3>
-          <span>{{ t.subtitle }}</span>
+          <h3 [id]="'team-rating-' + t.id">{{ t.subtitle }}</h3>
         </header>
 
         <ol class="rows" [attr.aria-busy]="t.rows === null">

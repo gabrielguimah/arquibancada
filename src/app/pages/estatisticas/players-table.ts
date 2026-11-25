@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, PlayerRow, PlayerStats } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { PlayerPhoto } from '../../shared/player-photo';
 import { Pager } from '../../shared/pager';
 import { NO_RATING_CLASS, NO_RATING_LABEL, NO_RATING_TITLE, ratingClass } from '../../shared/rating';
 import {
@@ -37,7 +38,7 @@ interface Line {
  */
 @Component({
   selector: 'app-players-table',
-  imports: [Crest, Pager, MatTooltip],
+  imports: [Crest, Pager, MatTooltip, PlayerPhoto],
   templateUrl: './players-table.html',
   styleUrl: './players-table.scss',
 })

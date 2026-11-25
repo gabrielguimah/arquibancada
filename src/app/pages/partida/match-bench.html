@@ -1,15 +1,19 @@
 <div class="bench">
   @for (t of teams(); track t.team.id) {
-    <section class="bench-team" [attr.aria-label]="'Reservas: ' + t.team.name">
+    <section class="bench-team" [attr.aria-label]="'Técnico e reservas: ' + t.team.name">
+      <!-- Técnico logo abaixo do campo: da escalação ou, se ela não trouxer, o atual do time. -->
+      @if (coachOf(t); as c) {
+        <app-match-coach class="coach" [team]="t.team" [coach]="c" />
+      }
       <h3>
         <img crest [src]="t.team.logo" alt="" width="18" height="18" />
         Reservas
       </h3>
       <ul>
-        @for (p of t.substitutes; track p.id) {
+        @for (p of t.substitutes; track p.key) {
           <li [class.unused]="!p.subIn" [class.mvp]="p.best" [title]="tip(p)">
             <span class="number">{{ p.number }}</span>
-            <img class="mini" [src]="p.photo" alt="" width="28" height="28" loading="lazy" />
+            <img class="mini" playerPhoto [src]="p.photo" alt="" width="28" height="28" loading="lazy" />
             <!-- Gols, assistências, cartão e melhor da partida logo depois do nome; as setas da troca à direita. -->
             <span class="bench-name">
               {{ p.name }}
@@ -59,7 +63,7 @@
               }
             </span>
             @if (p.rating !== null) {
-              <span [class]="ratingClass(p.rating) + ' rating'">{{ p.rating.toFixed(1) }}</span>
+              <span [class]="ratingClass(p.rating) + ' rating'">{{ formatRating(p.rating) }}</span>
             } @else if (p.subIn) {
               <!-- "Indef." só para quem entrou; reserva que não jogou fica sem selo. -->
               <span [class]="noRating.class + ' rating'" [title]="noRating.title">{{ noRating.label }}</span>
@@ -67,13 +71,11 @@
           </li>
         }
       </ul>
-      @if (t.coach; as c) {
-        <p class="coach">
-          @if (c.photo) {
-            <img class="mini" [src]="c.photo" alt="" width="28" height="28" loading="lazy" />
-          }
-          <span><small>Técnico</small>{{ c.name }}</span>
-        </p>
+      <!-- Desfalques do time (lesionados, suspensos, dúvidas), só se houver. -->
+      @if (absencesOf(t.team.id); as list) {
+        @if (list.length) {
+          <app-match-absences [team]="t.team" [absences]="list" />
+        }
       }
     </section>
   }

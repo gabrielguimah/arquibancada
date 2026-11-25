@@ -1,0 +1,30 @@
+<section class="card" aria-labelledby="stats-title">
+  <h2 id="stats-title" [class.live]="live()">
+    Estatísticas
+    @if (live()) {
+      <span class="live-dot" title="Ao vivo" aria-label="Ao vivo"></span>
+    }
+  </h2>
+
+  @for (g of groups(); track g.title) {
+    <h3>{{ g.title }}</h3>
+    <ul class="rows">
+      @for (r of g.rows; track r.label) {
+        <li [attr.aria-label]="r.label + ': ' + r.home + ' a ' + r.away">
+          <div class="values" aria-hidden="true">
+            <span class="value" [class.leader]="r.leader === 'home'">{{ r.home }}</span>
+            <span class="label">{{ r.label }}</span>
+            <span class="value" [class.leader]="r.leader === 'away'">{{ r.away }}</span>
+          </div>
+          <!-- Barras saindo do meio: cada lado com a sua parte do total. -->
+          <div class="bars" aria-hidden="true">
+            <span class="track home"><span class="fill" [class.leader]="r.leader === 'home'" [style.width.%]="r.homeShare * 100"></span></span>
+            <span class="track away"><span class="fill" [class.leader]="r.leader === 'away'" [style.width.%]="r.awayShare * 100"></span></span>
+          </div>
+        </li>
+      }
+    </ul>
+  } @empty {
+    <p class="message">As estatísticas aparecem quando a bola rolar.</p>
+  }
+</section>

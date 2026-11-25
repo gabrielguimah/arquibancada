@@ -1,4 +1,4 @@
-import { ratingClass } from './rating';
+import { formatRating, ratingClass } from './rating';
 
 describe('ratingClass', () => {
   it('uma classe por décimo, de 5,0 a 10', () => {
@@ -14,5 +14,11 @@ describe('ratingClass', () => {
       [4.2, 'r-50'],
     ];
     for (const [value, tenth] of cases) expect(ratingClass(value)).toBe(`rating-badge ${tenth}`);
+  });
+});
+
+describe('formatRating', () => {
+  it('uma casa decimal; 10 sem casa', () => {
+    expect([8.2, 8.24, 8.25, 6, 9.96, 10].map(formatRating)).toEqual(['8.2', '8.2', '8.3', '6.0', '10', '10']);
   });
 });

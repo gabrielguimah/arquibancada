@@ -1,5 +1,10 @@
 <section class="card" aria-labelledby="timeline-title">
-  <h2 id="timeline-title">Lance a lance</h2>
+  <h2 id="timeline-title" [class.live]="live()">
+    Lance a lance
+    @if (live()) {
+      <span class="live-dot" title="Ao vivo" aria-label="Ao vivo"></span>
+    }
+  </h2>
 
   @if (items().length) {
     <ol class="items">
@@ -26,7 +31,7 @@
                   </span>
                 }
                 @case ('var') {
-                  <span class="var" aria-hidden="true">VAR</span>
+                  <span class="var-badge" aria-hidden="true">VAR</span>
                 }
                 @case ('second-yellow') {
                   <span class="card-icon second" aria-hidden="true"></span>

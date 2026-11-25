@@ -1,4 +1,5 @@
 import { TeamRating, TeamStats } from '../../api/api-football';
+import { formatRating } from '../../shared/rating';
 
 /** Critério de ordenação das tabelas de times (o select acima delas). */
 export interface TeamMetric {
@@ -14,7 +15,7 @@ const stat = (key: keyof TeamStats) => (r: TeamRating) => r.stats?.[key] ?? null
 
 // Só o que a API-Football traz; nomes e ordem como no SofaScore.
 export const TEAM_METRICS: TeamMetric[] = [
-  { id: 'rating', label: 'Nota média', value: (r) => r.rating, format: (v) => v.toFixed(2) },
+  { id: 'rating', label: 'Nota média', value: (r) => r.rating, format: formatRating },
   { id: 'goalsFor', label: 'Gols marcados', value: stat('goalsFor'), format: count },
   { id: 'goalsAgainst', label: 'Gols sofridos', value: stat('goalsAgainst'), format: count },
   { id: 'yellowCards', label: 'Cartões amarelos', value: stat('yellowCards'), format: count },

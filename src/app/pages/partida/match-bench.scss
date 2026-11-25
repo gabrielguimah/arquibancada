@@ -9,10 +9,46 @@ $muted: var(--muted);
 .bench {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  column-gap: 16px;
 
   @container (max-width: 480px) {
     grid-template-columns: minmax(0, 1fr);
+
+    .bench-team + .bench-team {
+      margin-top: 16px;
+    }
+  }
+}
+
+// Cada time ocupa as mesmas 4 linhas do grid de fora (subgrid): técnico, título, reservas e desfalques.
+// Assim os desfalques dos dois times começam na mesma altura, mesmo com um banco maior que o outro;
+// linha sem conteúdo nos dois times fica com altura zero.
+.bench-team {
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  align-content: start;
+
+  > * {
+    align-self: start;
+  }
+
+  > .coach {
+    grid-row: 1;
+    margin-bottom: 14px;
+  }
+
+  > h3 {
+    grid-row: 2;
+  }
+
+  > ul {
+    grid-row: 3;
+  }
+
+  > app-match-absences {
+    grid-row: 4;
   }
 }
 
@@ -184,18 +220,3 @@ li {
   color: #dc2626;
 }
 
-.coach {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 10px 0 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-
-  small {
-    display: block;
-    font-size: 0.68rem;
-    font-weight: 500;
-    color: $muted;
-  }
-}

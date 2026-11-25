@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, forkJoin, map, of } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import { teamName } from './team-names';
 
 /** Worker da Cloudflare que guarda a chave e faz cache das respostas da API-Football. */
@@ -44,11 +44,20 @@ export interface Fixture {
   lineups?: Lineup[];
   /** Só nas buscas por id: números de cada jogador na partida (nota, minutos, capitão…). */
   players?: FixtureTeamPlayers[];
+  /** Só nas buscas por id, depois do início: estatísticas de cada time (posse, chutes, xG…). */
+  statistics?: FixtureTeamStats[];
+}
+
+/** Estatísticas de um time na partida: `type` em inglês ("Ball Possession"), valor número, "56%" ou "1.74". */
+export interface FixtureTeamStats {
+  team: Team;
+  statistics: Array<{ type: string; value: number | string | null }>;
 }
 
 /** Jogador na escalação. `grid` é "linha:coluna" (1:1 é o goleiro; coluna 1 é a esquerda do time). */
 export interface LineupPlayer {
-  id: number;
+  /** `null` para jogador que a API não tem cadastrado. */
+  id: number | null;
   name: string;
   number: number | null;
   pos: string | null;
@@ -70,8 +79,35 @@ export interface FixtureTeamPlayers {
     player: { id: number; name: string; photo: string };
     statistics: Array<{
       games: { minutes: number | null; rating: string | null; captain: boolean; substitute: boolean };
+      // Números do jogador na partida (somados por time nas estatísticas da partida).
+      passes?: { total: number | null; key: number | null };
+      tackles?: { total: number | null; interceptions: number | null };
+      duels?: { total: number | null; won: number | null };
+      dribbles?: { attempts: number | null; success: number | null };
+      fouls?: { drawn: number | null; committed: number | null };
+      penalty?: { won: number | null; commited: number | null };
     }>;
   }>;
+}
+
+/**
+ * Desfalque de uma partida (`injuries`): lesionado, suspenso ou fora por outro motivo. `type` é
+ * "Missing Fixture" (fora) ou "Questionable" (dúvida); `reason` vem em inglês ("Knee Injury", "Red Card"…).
+ */
+export interface Injury {
+  player: { id: number | null; name: string; photo: string | null; type: string; reason: string | null };
+  team: Team;
+}
+
+/** Técnico (nome e foto). */
+export interface Coach {
+  name: string;
+  photo: string | null;
+}
+
+/** Técnico como vem de `coachs`: com a carreira, para achar o atual de cada time (`end` nulo). */
+interface CoachCareer extends Coach {
+  career: Array<{ team: { id: number }; start: string | null; end: string | null }>;
 }
 
 /** Evento de uma partida. Gol: type "Goal", detail "Normal Goal", "Own Goal", "Penalty" ou "Missed Penalty". */
@@ -341,6 +377,47 @@ export class ApiFootball {
     return this.get<Fixture[]>('fixtures', { status: 'FT-AET-PEN' });
   }
 
+  /** Desfalques (lesionados, suspensos, dúvidas) dos dois times de uma partida. */
+  injuries(fixtureId: number): Observable<Injury[]> {
+    return this.http
+      .get<ApiResponse<Injury[]>>(`${API_URL}/injuries`, { params: { fixture: fixtureId } })
+      .pipe(map((r) => r.response.map((i) => ({ ...i, team: rename(i.team) }))));
+  }
+
+  /**
+   * Técnico atual de um time (independe da partida: aparece antes de sair a escalação): o da escalação do
+   * último jogo do time, em qualquer competição. O cadastro de técnicos (`coachs`) fica desatualizado (o
+   * Corinthians aparecia com Diniz, sem data de saída, já com Seedorf no cargo), então só entra se o
+   * último jogo não tiver escalação.
+   */
+  coach(teamId: number): Observable<Coach | null> {
+    return this.http.get<ApiResponse<Fixture[]>>(`${API_URL}/fixtures`, { params: { team: teamId, last: 1 } }).pipe(
+      switchMap((r) => {
+        const last = r.response[0];
+        return last ? this.fixturesByIds([last.fixture.id]) : of([]);
+      }),
+      map((fixtures) => fixtures[0]?.lineups?.find((l) => l.team.id === teamId)?.coach),
+      catchError(() => of(null)),
+      switchMap((c) => (c?.name ? of({ name: c.name, photo: c.photo }) : this.registeredCoach(teamId))),
+    );
+  }
+
+  /**
+   * Técnico atual pelo cadastro de técnicos: a API devolve todos que já passaram pelo time; o atual é o
+   * do trabalho sem data de saída, o que começou por último.
+   */
+  private registeredCoach(teamId: number): Observable<Coach | null> {
+    return this.http.get<ApiResponse<CoachCareer[]>>(`${API_URL}/coachs`, { params: { team: teamId } }).pipe(
+      map((r) => {
+        const current = r.response
+          .map((c) => ({ c, job: c.career.find((j) => j.team.id === teamId && !j.end) }))
+          .filter((x) => x.job)
+          .sort((a, b) => (b.job!.start ?? '').localeCompare(a.job!.start ?? ''))[0]?.c;
+        return current ? { name: current.name, photo: current.photo } : null;
+      }),
+    );
+  }
+
   /** Uma partida pelo id, com os eventos; `null` se não existir. */
   fixture(id: number): Observable<Fixture | null> {
     return this.fixturesByIds([id]).pipe(map((r) => r[0] ?? null));
@@ -368,5 +445,6 @@ function renameFixtures(fixtures: Fixture[]): Fixture[] {
     events: f.events?.map((e) => ({ ...e, team: rename(e.team) })),
     lineups: f.lineups?.map((l) => ({ ...l, team: rename(l.team) })),
     players: f.players?.map((p) => ({ ...p, team: rename(p.team) })),
+    statistics: f.statistics?.map((s) => ({ ...s, team: rename(s.team) })),
   }));
 }

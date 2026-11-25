@@ -6,7 +6,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, TeamRating, TeamRatings } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { Pager } from '../../shared/pager';
-import { ratingClass } from '../../shared/rating';
+import { formatRating, ratingClass } from '../../shared/rating';
 import { TEAM_METRICS, TeamMetric } from './team-metrics';
 
 // Linhas por página (a altura da tabela).
@@ -108,7 +108,7 @@ export class TeamRatingsTables {
 
   protected tip(r: TeamRating): string {
     if (this.metric().id === 'rating') {
-      return r.matches?.length ? `Do jogo mais recente ao mais antigo: ${r.matches.map((m) => m.toFixed(2)).join(' · ')}` : '';
+      return r.matches?.length ? `Do jogo mais recente ao mais antigo: ${r.matches.map(formatRating).join(' · ')}` : '';
     }
     return r.games ? `Em ${r.games} jogos` : '';
   }

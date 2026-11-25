@@ -3,8 +3,9 @@ import { MatIcon } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
 import { ApiFootball, RoundPlayer, RoundTeam } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { PlayerPhoto } from '../../shared/player-photo';
 import { RoundNav } from '../../shared/round-nav';
-import { ratingClass } from '../../shared/rating';
+import { formatRating, ratingClass } from '../../shared/rating';
 
 // Linhas do campo, do ataque (em cima) ao goleiro (embaixo), na formação 4-3-3.
 const LINES: Array<{ position: RoundPlayer['position']; count: number }> = [
@@ -17,7 +18,7 @@ const LINES: Array<{ position: RoundPlayer['position']; count: number }> = [
 /** Time da rodada em 4-3-3 (melhores notas por posição), com seletor de rodada. */
 @Component({
   selector: 'app-round-team',
-  imports: [Crest, MatIcon, RoundNav],
+  imports: [Crest, MatIcon, PlayerPhoto, RoundNav],
   templateUrl: './round-team.html',
   styleUrl: './round-team.scss',
 })
@@ -42,15 +43,6 @@ export class RoundTeamCard {
     return new Set(first ? players.filter((p) => compareRoundPlayers(p, first) === 0).map((p) => p.player.id) : []);
   });
 
-  // Notas que aparecem iguais com uma casa (ex.: quatro "8.2") passam a mostrar duas.
-  private repeatedRatings = computed(() => {
-    const seen = new Map<string, number>();
-    for (const p of this.team()?.players ?? []) {
-      const label = p.rating.toFixed(1);
-      seen.set(label, (seen.get(label) ?? 0) + 1);
-    }
-    return new Set([...seen].filter(([, n]) => n > 1).map(([label]) => label));
-  });
   protected skeletonLines = LINES.map((l) => ({ ...l, slots: Array.from({ length: l.count }, (_, i) => i) }));
 
   protected ratingClass = ratingClass;
@@ -92,7 +84,7 @@ export class RoundTeamCard {
   }
 
   protected ratingLabel(p: RoundPlayer): string {
-    return this.repeatedRatings().has(p.rating.toFixed(1)) ? p.rating.toFixed(2) : p.rating.toFixed(1);
+    return formatRating(p.rating);
   }
 
   /** Dica ao passar o mouse: nome, time, minutos, resultado e participação em gols. */

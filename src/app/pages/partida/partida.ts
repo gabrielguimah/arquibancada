@@ -1,15 +1,20 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Title } from '@angular/platform-browser';
+import { finalize } from 'rxjs';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIcon } from '@angular/material/icon';
-import { ApiFootball, Fixture, LEAGUE } from '../../api/api-football';
+import { ApiFootball, Coach, Fixture, Injury, LEAGUE } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { MatchLineups } from './match-lineups';
+import { MatchStats } from './match-stats';
+import { LineupsSkeleton, StatsSkeleton, TimelineSkeleton } from './match-skeletons';
+import { NgTemplateOutlet } from '@angular/common';
 import { MatchTimeline } from './match-timeline';
 import { TZ, isLive } from '../../shared/fixture-card';
 import { liveClock } from '../../shared/live-clock';
 import { LiveFixtures } from '../../shared/live-fixtures';
 import { Highlight, HighlightKind, highlights, statusLabel } from './match-header';
+import { matchStats } from './stats';
 
 interface HighlightRow {
   kind: HighlightKind;
@@ -62,7 +67,7 @@ export function refreshDelay(f: Fixture, now: number): number | null {
 /** Página de uma partida (`/partida/:id`): por enquanto, o cabeçalho com placar, gols e informações. */
 @Component({
   selector: 'app-partida',
-  imports: [Crest, MatIcon, MatchLineups, MatchTimeline, RouterLink],
+  imports: [Crest, LineupsSkeleton, MatIcon, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
   templateUrl: './partida.html',
   styleUrl: './partida.scss',
 })
@@ -71,10 +76,11 @@ export class Partida {
   private liveFixtures = inject(LiveFixtures);
   private title = inject(Title);
   private timer?: ReturnType<typeof setTimeout>;
+  private route = inject(ActivatedRoute);
 
   protected sides = ['home', 'away'] as const;
   /** Seção visível no celular (no computador, as duas aparecem lado a lado). */
-  protected tab = signal<'timeline' | 'lineups'>('timeline');
+  protected tab = signal<'timeline' | 'stats' | 'lineups'>('timeline');
   // Partida como veio da busca desta página; `fixture` prefere a dos jogos ao vivo do site (a mesma
   // que a Classificação usa, atualizada a cada 15 s), quando ela está sendo acompanhada.
   private loaded = signal<Fixture | null>(null);
@@ -83,8 +89,21 @@ export class Partida {
     return (f && this.liveFixtures.byId().get(f.fixture.id)) ?? f;
   });
   protected loading = signal(true);
+  /** Lesionados, suspensos e dúvidas dos dois times; vazio se a API não tiver (ou falhar). */
+  protected injuries = signal<Injury[]>([]);
+  /** Técnico atual de cada time, pelo id (não depende da partida: aparece mesmo sem escalação). */
+  protected coaches = signal<Record<number, Coach | null>>({});
+  // Buscas de desfalques e técnicos em andamento: enquanto houver, o card de escalações mostra o esqueleto
+  // dessa parte (antes da escalação sair).
+  private extrasPending = signal(0);
+  protected extrasLoading = computed(() => this.extrasPending() > 0);
   protected error = signal<string | null>(null);
 
+  /** A API só manda estatísticas depois do início: sem elas, o card some no computador. */
+  protected hasStats = computed(() => {
+    const f = this.fixture();
+    return !!f && matchStats(f).length > 0;
+  });
   protected live = computed(() => {
     const f = this.fixture();
     return !!f && isLive(f);
@@ -142,12 +161,26 @@ export class Partida {
 
   constructor() {
     this.liveFixtures.start();
-    inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
+    // Aba em segundo plano atrasa os timers: ao voltar para ela, busca a partida na hora.
+    const onVisible = () => {
+      const f = this.loaded();
+      if (document.visibilityState !== 'visible' || !f || refreshDelay(f, Date.now()) === null) return;
+      clearTimeout(this.timer);
+      this.load(f.fixture.id);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    inject(DestroyRef).onDestroy(() => {
+      clearTimeout(this.timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    });
     // Trocar de partida (outro link /partida/:id) reaproveita a página: recarrega pelo id novo.
-    inject(ActivatedRoute).paramMap.subscribe((params) => {
+    this.route.paramMap.subscribe((params) => {
       const id = Number(params.get('id'));
       clearTimeout(this.timer);
       this.loaded.set(null);
+      this.injuries.set([]);
+      this.coaches.set({});
+      this.extrasPending.set(0);
       this.error.set(null);
       this.loading.set(true);
       if (!Number.isInteger(id) || id <= 0) {
@@ -155,10 +188,22 @@ export class Partida {
         return;
       }
       this.load(id);
+      // Uma vez por partida aberta: a lista muda pouco (o Worker guarda por 30 min).
+      this.extrasPending.update((n) => n + 1);
+      this.api
+        .injuries(id)
+        .pipe(finalize(() => this.extrasPending.update((n) => n - 1)))
+        .subscribe({ next: (list) => this.injuries.set(list), error: () => this.injuries.set([]) });
     });
   }
 
   private load(id: number) {
+    // Jogo acompanhado pelos jogos ao vivo do site (a cada 15 s, com eventos, escalação e notas): a página
+    // já mostra esses dados, então não busca a partida de novo (seria outra chamada à API, com outra chave).
+    if (this.loaded() && this.liveFixtures.byId().has(id)) {
+      this.timer = setTimeout(() => this.load(id), REFRESH_LIVE_MS);
+      return;
+    }
     this.api.fixture(id).subscribe({
       next: (f) => {
         this.loading.set(false);
@@ -167,6 +212,7 @@ export class Partida {
           return;
         }
         this.loaded.set(f);
+        this.loadCoaches(f);
         this.title.setTitle(`${f.teams.home.name} x ${f.teams.away.name} · Arquibancada`);
         const next = refreshDelay(f, Date.now());
         if (next !== null) this.timer = setTimeout(() => this.load(id), next);
@@ -178,6 +224,26 @@ export class Partida {
         this.timer = setTimeout(() => this.load(id), REFRESH_LIVE_MS);
       },
     });
+  }
+
+  /**
+   * Técnicos dos dois times, uma vez por partida aberta. Se a escalação desta partida já traz o técnico,
+   * não busca (economiza as chamadas do último jogo do time).
+   */
+  private loadCoaches(f: Fixture) {
+    for (const team of [f.teams.home, f.teams.away]) {
+      if (team.id in this.coaches()) continue;
+      if (f.lineups?.some((l) => l.team.id === team.id && l.coach?.name)) continue;
+      this.coaches.update((c) => ({ ...c, [team.id]: null }));
+      this.extrasPending.update((n) => n + 1);
+      this.api
+        .coach(team.id)
+        .pipe(finalize(() => this.extrasPending.update((n) => n - 1)))
+        .subscribe({
+        next: (coach) => this.coaches.update((c) => ({ ...c, [team.id]: coach })),
+        error: () => undefined,
+      });
+    }
   }
 
   private notFound() {

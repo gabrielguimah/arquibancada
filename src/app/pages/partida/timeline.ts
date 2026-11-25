@@ -71,9 +71,9 @@ const VAR_DECISIONS: Record<string, string> = {
 };
 
 /**
- * Lance a lance da partida, do mais recente para o mais antigo: gols (com o placar depois de cada um),
+ * Lance a lance da partida, em ordem cronológica (o primeiro lance em cima): gols (com o placar depois de cada um),
  * pênaltis perdidos, cartões (com o motivo), substituições e decisões do VAR, separados por
- * "Fim de jogo", "Fim do tempo normal" e "Intervalo". Nomes saem da escalação quando dá ("D. Santos"),
+ * "Intervalo", "Fim do tempo normal" e "Fim de jogo". Nomes saem da escalação quando dá ("D. Santos"),
  * que são mais curtos que os dos eventos ("Danilo dos Santos de Oliveira"), com o primeiro nome abreviado.
  */
 export function timeline(f: Fixture): TimelineItem[] {
@@ -124,28 +124,29 @@ export function timeline(f: Fixture): TimelineItem[] {
       if (entering.id !== null) onPitch.add(entering.id);
       items.push({ ...base, kind: 'sub', main: name(entering), secondary: name(leaving) || null });
     } else if (e.type === 'Var') {
-      items.push({ ...base, kind: 'var', main: name(e.player), secondary: VAR_DECISIONS[e.detail.toLowerCase()] ?? e.detail });
+      // Como nos outros lances: jogador em destaque e a decisão em cinza. Sem jogador, só a decisão.
+      const decision = VAR_DECISIONS[e.detail.toLowerCase()] ?? e.detail;
+      const player = name(e.player);
+      items.push({ ...base, kind: 'var', main: player || decision, secondary: player ? decision : null });
     }
   }
 
-  // Do mais recente para o mais antigo, com os separadores entre as etapas.
+  // Do primeiro lance ao último, com os separadores ao fim de cada etapa.
   const result: TimelineItem[] = [];
   const short = f.fixture.status.short;
   const score = (s?: { home: number | null; away: number | null }) =>
     s && s.home !== null && s.away !== null ? `${s.home} - ${s.away}` : null;
-  if (FINISHED.has(short)) {
-    result.push({ type: 'divider', label: 'Fim de jogo', score: `${f.goals.home ?? 0} - ${f.goals.away ?? 0}` });
-  }
-  const periods = [3, 2, 1];
-  for (const p of periods) {
-    const inPeriod = items.filter((i) => i.period === p).reverse();
+  for (const p of [1, 2, 3]) {
+    result.push(...items.filter((i) => i.period === p).map(({ period: _, ...item }) => item));
     if (p === 1 && AFTER_FIRST_HALF.has(short)) {
       result.push({ type: 'divider', label: 'Intervalo', score: score(f.score?.halftime) ?? scoreUntil(items, 1) });
     }
     if (p === 2 && items.some((i) => i.period === 3)) {
       result.push({ type: 'divider', label: 'Fim do tempo normal', score: score(f.score?.fulltime) ?? scoreUntil(items, 2) });
     }
-    result.push(...inPeriod.map(({ period: _, ...item }) => item));
+  }
+  if (FINISHED.has(short)) {
+    result.push({ type: 'divider', label: 'Fim de jogo', score: `${f.goals.home ?? 0} - ${f.goals.away ?? 0}` });
   }
   return result;
 }
@@ -180,7 +181,7 @@ function cardReason(e: FixtureEvent): string | null {
 function lineupNames(f: Fixture): Map<number, string> {
   const names = new Map<number, string>();
   for (const l of f.lineups ?? []) {
-    for (const { player } of [...l.startXI, ...l.substitutes]) names.set(player.id, player.name);
+    for (const { player } of [...l.startXI, ...l.substitutes]) if (player.id) names.set(player.id, player.name);
   }
   return names;
 }

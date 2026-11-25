@@ -541,3 +541,75 @@ $muted: var(--muted);
   font-size: 0.85rem;
   color: $muted;
 }
+
+// Antes de sair a escalação: técnico e desfalques, um time por coluna (uma só se o card ficar estreito).
+// Subgrid: o técnico e os desfalques dos dois times começam na mesma altura.
+.before {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  column-gap: 16px;
+  row-gap: 16px;
+  margin-top: 16px;
+}
+
+.before-team {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  align-content: start;
+
+  > * {
+    align-self: start;
+  }
+
+  > .coach {
+    grid-row: 1;
+  }
+
+  > app-match-absences,
+  > .sk-absences {
+    grid-row: 2;
+  }
+}
+
+// Esqueleto do técnico e dos desfalques (antes da escalação), enquanto carregam.
+.sk-crest-sm {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.sk-line {
+  width: 110px;
+  height: 12px;
+}
+
+.sk-photo {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.sk-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.sk-absences {
+  margin-top: 14px;
+}
+
+.sk-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.sk-line.short {
+  width: 70px;
+}

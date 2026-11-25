@@ -115,16 +115,19 @@ describe('Página da partida', () => {
     expect(rows[1].querySelector('.home')?.textContent).toContain("Nicolas Acevedo 82'");
   });
 
-  it('o seletor (celular) troca entre lance a lance e escalações', () => {
+  it('o seletor (celular) troca entre lance a lance, estatísticas e escalações', () => {
     const el = render(match([1, 1], []));
     const sections = el.querySelector('.sections') as HTMLElement;
     expect(sections.dataset['tab']).toBe('timeline');
     const tabs = [...el.querySelectorAll('.tabs [role="tab"]')] as HTMLButtonElement[];
-    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Lance a lance', 'Escalações']);
+    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Lance a lance', 'Estatísticas', 'Escalações']);
     tabs[1].click();
     TestBed.inject(ApplicationRef).tick();
+    expect(sections.dataset['tab']).toBe('stats');
+    tabs[2].click();
+    TestBed.inject(ApplicationRef).tick();
     expect(sections.dataset['tab']).toBe('lineups');
-    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[2].getAttribute('aria-selected')).toBe('true');
   });
 
   it('ao vivo, a bolinha fica acima do placar (e não na linha do relógio)', () => {

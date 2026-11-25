@@ -4,8 +4,12 @@ const UPSTREAM = 'https://v3.football.api-sports.io';
 const BRASILEIRAO = '71';
 
 // Status de jogo em andamento na API-Football.
-// Intervalo mínimo entre chamadas à API: ela recusa rajadas, mesmo abaixo do limite por minuto.
-const MIN_GAP_MS = 1000;
+// Intervalo mínimo entre chamadas à API: ela recusa rajadas, mesmo abaixo do limite por minuto. Com 500 ms
+// (no máximo 120 por minuto, abaixo dos 300 do plano), a página inicial com cache frio não espera 1 s por
+// chamada.
+const MIN_GAP_MS = 500;
+// Respostas com cache a partir disto podem ser servidas vencidas enquanto atualizam (ver `get`).
+const STALE_MIN_TTL = 60;
 
 // A API-Football limita alguns endereços de saída da Cloudflare (compartilhados com outros clientes).
 // As chamadas saem por Durable Objects nestas regiões; se uma for bloqueada, passa para a próxima.
@@ -79,6 +83,9 @@ const ROUTES: Record<string, number | ((body: ApiBody, key: string) => number)> 
   'players/topassists': 3600,
   'players/topyellowcards': 3600,
   'players/topredcards': 3600,
+  injuries: injuriesTtl,
+  // Técnicos de um time (com a carreira): muda raramente.
+  coachs: 24 * 3600,
 };
 
 interface ApiBody {
@@ -342,6 +349,8 @@ function fixturesTtl(body: ApiBody, key: string): number {
     (f) => FINISHED_STATUSES.has(f.fixture?.status?.short ?? '') && Date.now() / 1000 - (f.fixture?.timestamp ?? 0) > 3 * 3600,
   );
   if (byId && fixtures.length && settled) return 7 * 24 * 3600;
+  // Último jogo de um time (técnico atual): só muda quando o time joga de novo.
+  if (/[?&]last=/.test(key) && fixtures.length && settled) return 6 * 3600;
   const now = Date.now() / 1000;
   const live = fixtures.some((f) => LIVE_STATUSES.has(f.fixture?.status?.short ?? ''));
   const startsWithin = (seconds: number) =>
@@ -355,6 +364,16 @@ function fixturesTtl(body: ApiBody, key: string): number {
   // Listas (rodada, dia): só dizem quais jogos existem e o horário; o ao vivo vem da busca por id.
   if (live || startsWithin(2 * 3600)) return 60;
   return 600;
+}
+
+/**
+ * Desfalques (lesionados e suspensos) de uma partida: a lista muda até perto do jogo, então 30 min;
+ * de jogo já passado (mais de 3 h do início), não muda mais.
+ */
+function injuriesTtl(body: ApiBody): number {
+  const items = body.response ?? [];
+  const past = items.length > 0 && items.every((i) => Date.now() / 1000 - (i.fixture?.timestamp ?? 0) > 3 * 3600);
+  return past ? 7 * 24 * 3600 : 1800;
 }
 
 function hasErrors(body: ApiBody): boolean {
@@ -537,6 +556,13 @@ export class ApiCache extends DurableObject<Env> {
     if (!pending) {
       pending = this.refresh(key, entry).finally(() => this.inflight.delete(key));
       this.inflight.set(key, pending);
+    }
+    // Vencida há pouco (até mais um TTL): responde na hora com a cópia e atualiza em segundo plano, para
+    // ninguém esperar a fila da API. A próxima busca (o site atualiza sozinho) já pega a nova. Não vale
+    // para o ao vivo (TTL curto): placar e gols atrasariam mais um ciclo.
+    if (entry && entry.ttl >= STALE_MIN_TTL && age < entry.ttl * 2) {
+      pending.catch(() => undefined);
+      return { body: entry.body, status: 'STALE', age, ttl: entry.ttl };
     }
     return pending;
   }

@@ -1,9 +1,10 @@
 import { Component, computed, input } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { Fixture } from '../../api/api-football';
+import { isLive } from '../../shared/fixture-card';
 import { timeline } from './timeline';
 
-/** Lance a lance: mandante à esquerda, visitante à direita, do mais recente para o mais antigo. */
+/** Lance a lance: mandante à esquerda, visitante à direita, do primeiro lance (em cima) ao último. */
 @Component({
   selector: 'app-match-timeline',
   imports: [MatIcon],
@@ -14,6 +15,8 @@ export class MatchTimeline {
   fixture = input.required<Fixture>();
 
   protected items = computed(() => timeline(this.fixture()));
+  /** Com o jogo rolando, o título fica no azul do ao vivo, com a bolinha piscando. */
+  protected live = computed(() => isLive(this.fixture()));
 
   protected readonly labels: Record<string, string> = {
     goal: 'Gol',

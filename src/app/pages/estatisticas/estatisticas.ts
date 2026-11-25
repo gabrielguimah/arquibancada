@@ -7,7 +7,7 @@ import { Crest } from '../../shared/crest';
 import { Pager } from '../../shared/pager';
 import { RoundTeamCard } from './round-team';
 import { PlayersTable } from './players-table';
-import { ratingClass } from '../../shared/rating';
+import { formatRating, ratingClass } from '../../shared/rating';
 
 // Linhas por página de cada quadro (a altura dos quadros).
 const PAGE_SIZE = 10;
@@ -140,6 +140,7 @@ export class Estatisticas {
   }
 
   protected ratingClass = ratingClass;
+  protected formatRating = formatRating;
 }
 
 function board(

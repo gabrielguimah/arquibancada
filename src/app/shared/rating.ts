@@ -12,3 +12,9 @@ export function ratingClass(value: number): string {
   const tenth = Math.min(100, Math.max(50, Math.floor(value * 10 + 1e-9)));
   return `rating-badge r-${tenth}`;
 }
+
+/** Nota com uma casa decimal ("8.2", nunca "8.20"); a nota máxima é só "10". */
+export function formatRating(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return rounded >= 10 ? '10' : rounded.toFixed(1);
+}
