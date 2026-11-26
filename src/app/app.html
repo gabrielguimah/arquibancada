@@ -5,6 +5,21 @@
     <a routerLink="/estatisticas" routerLinkActive="active">Estatísticas</a>
   </nav>
   <span class="tag">Brasileirão {{ season }}</span>
+  <!-- Time do coração: escudo do time escolhido (ou coração vazio); abre a modal para escolher. -->
+  @let fav = favorite.team();
+  <button
+    type="button"
+    class="menu-button favorite-button"
+    (click)="openFavorite()"
+    [attr.aria-label]="fav ? 'Time do coração: ' + fav.name : 'Escolher time do coração'"
+    [matTooltip]="fav ? 'Time do coração: ' + fav.name : 'Escolher time do coração'"
+  >
+    @if (fav) {
+      <img crest [src]="fav.logo" alt="" width="30" height="30" />
+    } @else {
+      <mat-icon>favorite</mat-icon>
+    }
+  </button>
   <!-- Configurações (notificações, som, tema): só abrem pelo botão de menu. -->
   <button type="button" class="menu-button" [matMenuTriggerFor]="settings" aria-label="Configurações" matTooltip="Configurações">
     <mat-icon>menu</mat-icon>

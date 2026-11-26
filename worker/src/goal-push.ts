@@ -169,9 +169,10 @@ export class GoalPush extends DurableObject<Env> {
     return this.ctx.storage.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM subs').one().n;
   }
 
-  // `get` (e não `serve`): o push não usa o relógio estimado que `serve` acrescenta à resposta.
+  // `getNamed` (e não `serve`): o push não usa o relógio estimado que `serve` acrescenta à resposta, mas
+  // usa os nomes dos jogadores padronizados, como o site.
   private async fixtures(key: string): Promise<PushFixture[]> {
-    const result = await this.env.API_CACHE.getByName('global').get(key);
+    const result = await this.env.API_CACHE.getByName('global').getNamed(key);
     if ('error' in result) throw new Error(result.error);
     return (JSON.parse(result.body) as { response?: PushFixture[] }).response ?? [];
   }

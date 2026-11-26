@@ -2,6 +2,7 @@ import { Fixture, FixtureEvent, Lineup, LineupPlayer, Team } from '../../api/api
 import { isLive } from '../../shared/fixture-card';
 import { PLAYER_PLACEHOLDER } from '../../shared/player-photo';
 import { formatRating } from '../../shared/rating';
+import { FINISHED } from '../../shared/fixture-status';
 
 /** Jogador como aparece no campo ou na lista de reservas. */
 export interface LineupSpot {
@@ -66,8 +67,10 @@ export function lineups(f: Fixture): { home: TeamLineup; away: TeamLineup } | nu
   if (!home?.startXI.length || !away?.startXI.length) return null;
   const result = { home: teamLineup(f, home), away: teamLineup(f, away) };
 
-  // Melhor da partida, com os critérios do melhor da rodada; expulso não concorre e, se empatar em
-  // tudo, todos os empatados ganham a estrela.
+  // Melhor da partida, só depois do apito final (com a bola rolando as notas ainda mudam), com os
+  // critérios do melhor da rodada; expulso não concorre e, se empatar em tudo, todos os empatados ganham
+  // a estrela.
+  if (!FINISHED.has(f.fixture.status.short)) return result;
   const outcome = teamResults(f);
   const candidates = (['home', 'away'] as const)
     .flatMap((side) => [...result[side].lines.flat(), ...result[side].substitutes].map((spot) => ({ spot, result: outcome[side] })))

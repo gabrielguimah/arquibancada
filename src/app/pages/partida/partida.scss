@@ -7,14 +7,15 @@ $muted: var(--muted);
 }
 
 // Seções abaixo do cabeçalho: lance a lance e estatísticas empilhados (1/3), escalações (2/3) ao lado.
-// A 2ª linha é `1fr`: a sobra de altura das escalações fica embaixo das estatísticas, não entre os cards.
+// Escalações e últimos 5 jogos empilhados na coluna da direita. A 2ª linha é `1fr`: a sobra de altura da
+// direita fica embaixo das estatísticas, não entre os cards da esquerda.
 .sections {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   grid-template-rows: auto 1fr;
   grid-template-areas:
-    'timeline lineups'
-    'stats lineups';
+    'timeline right'
+    'stats right';
   gap: 16px;
   align-items: start;
   margin-top: 16px;
@@ -27,8 +28,16 @@ $muted: var(--muted);
     grid-area: stats;
   }
 
-  .lineups {
-    grid-area: lineups;
+  // Esqueleto das escalações (carregando): direto na coluna da direita.
+  > .lineups {
+    grid-area: right;
+  }
+
+  // Escalações e, logo embaixo, os últimos 5 jogos.
+  .right {
+    display: grid;
+    grid-area: right;
+    gap: 16px;
   }
 }
 
@@ -88,12 +97,18 @@ $muted: var(--muted);
 
     .timeline,
     .stats,
-    .lineups {
+    > .lineups {
       grid-area: auto;
     }
 
-    &[data-tab='timeline'] :is(.stats, .lineups),
-    &[data-tab='stats'] :is(.timeline, .lineups),
+    // Uma coluna só: escalações e últimos 5 jogos viram itens da lista, como os outros cards.
+    .right {
+      display: contents;
+    }
+
+    // Últimos 5 jogos na aba Escalações, abaixo dos reservas.
+    &[data-tab='timeline'] :is(.stats, .form, .lineups),
+    &[data-tab='stats'] :is(.timeline, .form, .lineups),
     &[data-tab='lineups'] :is(.timeline, .stats) {
       display: none;
     }

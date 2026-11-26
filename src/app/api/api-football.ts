@@ -139,6 +139,18 @@ export interface Standing {
   change?: number;
   /** Só na classificação ao vivo: o primeiro resultado de `form` é o parcial de um jogo em andamento. */
   liveForm?: boolean;
+  /** Jogos de `form`, na mesma ordem (o mais recente primeiro), anexados pelo Worker. */
+  formMatches?: FormMatch[];
+}
+
+/** Jogo das "Últimas 5": id, horário (s), id do mandante e do visitante e placar. */
+export interface FormMatch {
+  id: number;
+  t: number;
+  h: number;
+  a: number;
+  hg: number;
+  ag: number;
 }
 
 /** Item de `players/topscorers` e `players/topassists`. */
@@ -226,6 +238,22 @@ export interface RoundPlayer {
   redCards?: number;
   /** Resultado do time do jogador no jogo: vitória, empate ou derrota. */
   result?: 'W' | 'D' | 'L';
+}
+
+/** Resposta de `teams/form`: últimos jogos de um time antes de uma partida. */
+export interface TeamForm {
+  team: number;
+  /** Nota média do time nesses jogos; `null` se nenhum tem nota (ou ainda está sendo calculada). */
+  rating?: number | null;
+  matches: Array<{
+    id: number;
+    timestamp: number;
+    home: Team;
+    away: Team;
+    goals: { home: number; away: number };
+    /** Nota do time no jogo. */
+    rating?: number | null;
+  }>;
 }
 
 /** Resposta de `players/team-of-round`: 4-3-3 com as melhores notas dos jogos encerrados da rodada. */
@@ -353,6 +381,16 @@ export class ApiFootball {
     return this.http
       .get<PlayerStats>(`${API_URL}/players/stats`)
       .pipe(map((r) => ({ ...r, players: r.players.map((p) => ({ ...p, team: rename(p.team) })) })));
+  }
+
+  /**
+   * Últimos jogos (até 5, o mais recente primeiro) dos dois times antes de `before` (início da partida,
+   * em segundos), montados no Worker da lista de jogos encerrados da temporada.
+   */
+  teamForm(teams: [number, number], before: number): Observable<TeamForm[]> {
+    return this.http
+      .get<TeamForm[]>(`${API_URL}/teams/form`, { params: { teams: teams.join(','), before } })
+      .pipe(map((list) => list.map((t) => ({ ...t, matches: t.matches.map((m) => ({ ...m, home: rename(m.home), away: rename(m.away) })) }))));
   }
 
   /** Time da rodada (4-3-3), montado no Worker a partir das notas dos jogos encerrados. */

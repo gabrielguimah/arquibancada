@@ -168,6 +168,16 @@ describe('Escalações', () => {
     expect(subs.find((p) => p.id === 8)).toEqual(expect.objectContaining({ subIn: "80'", subOut: null }));
   });
 
+  it('melhor da partida só depois do apito final, mesmo com as notas da API já chegando', () => {
+    const f = match();
+    for (const status of ['1H', 'HT', '2H']) {
+      f.fixture.status.short = status;
+      expect([...lineups(f)!.home.lines.flat(), ...lineups(f)!.away.lines.flat()].some((p) => p.best)).toBe(false);
+    }
+    f.fixture.status.short = 'FT';
+    expect([...lineups(f)!.home.lines.flat(), ...lineups(f)!.away.lines.flat()].some((p) => p.best)).toBe(true);
+  });
+
   it('melhor da partida: a maior nota entre os dois times', () => {
     const d = lineups(match())!;
     const all = [d.home, d.away].flatMap((t) => [...t.lines.flat(), ...t.substitutes]);

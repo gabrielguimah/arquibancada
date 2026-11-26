@@ -1,0 +1,34 @@
+<header class="head">
+  <h2 id="favorite-title"><mat-icon class="heart" aria-hidden="true">favorite</mat-icon>Time do coração</h2>
+  <button type="button" class="close" mat-dialog-close aria-label="Fechar"><mat-icon>close</mat-icon></button>
+</header>
+
+@if (teams(); as list) {
+  <ul class="teams" aria-labelledby="favorite-title">
+    @for (t of list; track t.id) {
+      @let selected = favorite.team()?.id === t.id;
+      <li>
+        <button type="button" class="team" [class.selected]="selected" [attr.aria-pressed]="selected" (click)="choose(t)">
+          <img crest [src]="t.logo" alt="" width="36" height="36" />
+          <span class="name">{{ t.name }}</span>
+        </button>
+      </li>
+    }
+  </ul>
+  @if (favorite.team()) {
+    <footer class="foot">
+      <button type="button" class="clear" (click)="choose(null)"><mat-icon aria-hidden="true">heart_broken</mat-icon> Remover time do coração</button>
+    </footer>
+  }
+} @else if (failed()) {
+  <p class="message">
+    Não foi possível carregar os times.
+    <button type="button" class="retry" (click)="load()">Tentar de novo</button>
+  </p>
+} @else {
+  <ul class="teams" aria-busy="true" aria-label="Carregando times">
+    @for (i of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; track i) {
+      <li class="team sk-team" aria-hidden="true"><span class="sk sk-crest"></span><span class="sk sk-line"></span></li>
+    }
+  </ul>
+}

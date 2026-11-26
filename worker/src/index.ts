@@ -20,8 +20,22 @@ const STALE_MIN_TTL = 60;
 // A API-Football limita alguns endereços de saída da Cloudflare (compartilhados com outros clientes).
 // As chamadas saem por Durable Objects nestas regiões; se uma for bloqueada, passa para a próxima.
 const REGIONS: DurableObjectLocationHint[] = ['eeur', 'apac', 'weur', 'enam', 'wnam', 'sam', 'oc'];
-const REGION_COOLDOWN_MS = 10 * 60_000;
-const MAX_REGION_ATTEMPTS = 3;
+// Região limitada fica de fora só por 15 s: o bloqueio vem e vai em segundos (não é a nossa cota, que segue
+// com folga). Com 10 min, numa noite de muitos jogos as 7 regiões eram bloqueadas em sequência e o ao vivo
+// congelava até a primeira voltar.
+const REGION_COOLDOWN_MS = 15_000;
+const MAX_REGION_ATTEMPTS = 4;
+// Prazo de cada chamada à API (e à instância da região que a faz). Sem ele, uma chamada que nunca volta
+// deixa a atualização daquela chave pendurada para sempre: o placar ao vivo congela.
+const UPSTREAM_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`sem resposta em ${ms} ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 // Ranking de notas: a API não tem um pronto, então o Worker percorre as páginas de `players`
 // em segundo plano (alarme do Durable Object) e monta o ranking a partir das médias da temporada.
@@ -51,7 +65,17 @@ const ROUNDS_PER_CALL = 2;
 
 // Time da rodada (4-3-3): melhores notas da rodada por posição, como o "time da semana" do SofaScore.
 const ROUND_TEAM_PATH = 'players/team-of-round';
+// Últimos jogos de dois times antes de uma partida (tela da partida).
+const TEAM_FORM_PATH = 'teams/form';
+// Quantos jogos anteriores de cada time.
+const TEAM_FORM_GAMES = 5;
 const ROUND_TEAM_VERSION = 2;
+// Nome de cada jogador (por id), das páginas de `players` da temporada: com acento e igual em todo o site.
+const PLAYER_NAMES_PATH = 'players/names';
+const PLAYER_NAMES_VERSION = 1;
+// Respostas da API com nomes de jogadores (escalações, eventos, estatísticas, desfalques, artilharia).
+const RENAMED_MEMO_SIZE = 100;
+const NAMED_KEY_RE = /^(fixtures|injuries|players\/top)/;
 // Só entra quem jogou ao menos isto na partida (evita quem entrou no fim com nota alta).
 const ROUND_TEAM_MIN_MINUTES = 45;
 const ROUND_TEAM_FORMATION: Record<string, number> = { G: 1, D: 4, M: 3, F: 3 };
@@ -71,6 +95,10 @@ const CLOCK_MAX_AGE_MS = 6 * 3600_000;
 const CLOCK_MAX_GAP_MS = 40_000;
 // Quantas viradas recentes entram na mediana.
 const CLOCK_SAMPLES = 20;
+// A API publica cada virada de minuto com atraso, e o relógio estimado por elas herda esse atraso: no
+// Atlético-MG x Corinthians (25/11/2026), ficou uns 30 s atrás do Sofascore (que registra o segundo exato
+// do início de cada tempo). O site recebe o relógio adiantado nesse tanto.
+const CLOCK_LEAD_MS = 30_000;
 
 // Endpoints liberados e por quanto tempo (segundos) cada resposta fica em cache.
 // `fixtures` tem TTL dinâmico, calculado a partir dos jogos da resposta.
@@ -145,6 +173,22 @@ function median(values: number[]): number {
 function clockPeriod(short: string, elapsed: number): string {
   if (short !== 'ET') return short;
   return elapsed > 105 ? 'ET2' : 'ET1';
+}
+
+/** Jogo das "Últimas 5" na classificação: id, horário (s), mandante, visitante e placar. */
+interface FormMatch {
+  id: number;
+  t: number;
+  h: number;
+  a: number;
+  hg: number;
+  ag: number;
+}
+
+interface StandingRow {
+  team: { id: number };
+  all?: { played?: number };
+  formMatches?: FormMatch[];
 }
 
 interface FixtureDetail {
@@ -279,7 +323,7 @@ function playerStatsRow(item: PlayerSeason, stats: PlayerSeason['statistics']): 
 
   return {
     id: item.player.id,
-    name: item.player.name,
+    name: playerName(item.player),
     photo: item.player.photo,
     team: { id: main.team.id, name: main.team.name, logo: main.team.logo },
     position: POSITIONS[main.games.position ?? ''] ?? null,
@@ -394,6 +438,11 @@ function teamSeasonKey(season: string): string {
   return `${TEAM_RATINGS_PATH}/season?league=${BRASILEIRAO}&season=${season}&v=${TEAM_RATINGS_VERSION}`;
 }
 
+/** Lista de jogos encerrados da temporada: a mesma chave que o site usa (classificação ao vivo). */
+function seasonFinishedKey(season: string): string {
+  return `fixtures?league=${BRASILEIRAO}&season=${season}&status=FT-AET-PEN`;
+}
+
 function teamStatsKey(season: string): string {
   return `${TEAM_RATINGS_PATH}/stats?league=${BRASILEIRAO}&season=${season}&v=${TEAM_RATINGS_VERSION}`;
 }
@@ -492,6 +541,16 @@ function compareRoundPlayers(a: RoundCandidate, b: RoundCandidate): number {
 }
 
 /** Rodada pedida em `players/team-of-round?round=...`, no formato da API ("Regular Season - 36"). */
+/** `teams=ID,ID` (dois times) e `before` (horário da partida, em segundos). */
+function teamFormParams(url: URL): { teams: number[]; before: number } {
+  const teams = (url.searchParams.get('teams') ?? '').split(',').map(Number);
+  const before = Number(url.searchParams.get('before'));
+  if (teams.length !== 2 || !teams.every((t) => Number.isInteger(t) && t > 0) || !Number.isInteger(before) || before <= 0) {
+    throw new HttpError(400, 'Parâmetros inválidos');
+  }
+  return { teams, before };
+}
+
 function roundParam(url: URL): string {
   const round = url.searchParams.get('round') ?? '';
   if (!/^Regular Season - \d{1,2}$/.test(round)) throw new HttpError(400, 'Rodada inválida');
@@ -508,6 +567,41 @@ function playerStatsKey(season: string): string {
 
 function topRatedKey(season: string): string {
   return `${TOP_RATED_PATH}?league=${BRASILEIRAO}&season=${season}&v=${TOP_RATED_VERSION}`;
+}
+
+function playerNamesKey(season: string): string {
+  return `${PLAYER_NAMES_PATH}?league=${BRASILEIRAO}&season=${season}&v=${PLAYER_NAMES_VERSION}`;
+}
+
+/**
+ * Nomes com grafia errada no próprio cadastro da API (ex.: "Jája Silva"). Vale em todo o site: tabelas,
+ * escalações, eventos, desfalques e avisos de gol.
+ */
+const PLAYER_NAME_FIXES = new Map<number, string>([[54894, 'Jajá']]);
+
+function playerName(player: { id: number; name: string }): string {
+  return PLAYER_NAME_FIXES.get(player.id) ?? player.name;
+}
+
+/**
+ * Troca o nome de cada jogador da resposta pelo do cadastro: cada endpoint da API escreve de um jeito
+ * (desfalques sem acento, eventos com o nome completo, escalações abreviadas). Vale para todo objeto
+ * `player` ou `assist` (quem deu o passe, ou quem entrou na substituição) com id conhecido.
+ */
+function renamePlayers(value: unknown, names: Map<number, string>) {
+  if (Array.isArray(value)) {
+    for (const item of value) renamePlayers(item, names);
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  for (const [key, child] of Object.entries(value)) {
+    if ((key === 'player' || key === 'assist') && child && typeof child === 'object' && !Array.isArray(child)) {
+      const ref = child as { id?: unknown; name?: unknown };
+      const name = typeof ref.id === 'number' ? names.get(ref.id) : undefined;
+      if (name && typeof ref.name === 'string') ref.name = name;
+    }
+    if (child && typeof child === 'object') renamePlayers(child, names);
+  }
 }
 
 function playersPageKey(season: string, page: number): string {
@@ -529,10 +623,17 @@ export class ApiCache extends DurableObject<Env> {
   // Regiões bloqueadas pela API, com o instante em que podem ser tentadas de novo.
   private regionCooldown = new Map<DurableObjectLocationHint, number>();
   private lastRegion: DurableObjectLocationHint | null = null;
+  // Jogos encerrados da temporada por time, montados da lista em cache (refeitos quando ela muda).
+  private formSource: { fetchedAt: number; byTeam: Map<number, FormMatch[]>; teams: Map<number, TeamRef> } | null = null;
+  // Última falha ao buscar na API (região e resposta), para diagnóstico em /status.
+  private lastFailure: { at: string; region: string; text: string } | null = null;
   // Alarme da varredura do ranking de notas em execução.
   private crawling = false;
   // Montagem das estatísticas dos times em andamento (uma por vez).
   private teamStatsBuild: Promise<void> | null = null;
+  private renamed = new Map<string, { source: string; names: Map<number, string>; body: string }>();
+  private namesSource: { fetchedAt: number; names: Map<number, string> } | null = null;
+  private ratingsSource: { fetchedAt: number; ratings: Record<string, number> | null } | null = null;
   // Fila que espaça as chamadas à API em MIN_GAP_MS.
   private queue: Promise<void> = Promise.resolve();
   private lastCallAt = 0;
@@ -574,23 +675,88 @@ export class ApiCache extends DurableObject<Env> {
   /** O que o site recebe: a resposta em cache e, nos jogos com bola rolando, o início estimado do relógio. */
   async serve(key: string): Promise<CacheResult | CacheError> {
     const result = await this.get(key);
-    if ('error' in result || !key.startsWith('fixtures?') || !CLOCK_RUNNING_RE.test(result.body)) return result;
+    if ('error' in result) return result;
+    if (key.startsWith('standings?')) return this.withFormMatches(result);
+    const clock = key.startsWith('fixtures?') && CLOCK_RUNNING_RE.test(result.body);
+    const names = this.namesFor(key, result.body);
+    if (!clock && !names) return result;
+    // Sem relógio, a troca de nomes só muda quando a resposta (ou o cadastro) muda: guarda a última.
+    const memo = this.renamed.get(key);
+    if (!clock && memo && memo.source === result.body && memo.names === names) return { ...result, body: memo.body };
     const body: ApiBody = JSON.parse(result.body);
-    for (const { fixture: f } of body.response ?? []) {
-      const short = f?.status?.short ?? '';
-      if (!f?.id || !f.status || !CLOCK_RUNNING.has(short) || f.status.elapsed == null) continue;
-      const anchor = this.clockAnchor(f.id);
-      // A resposta em cache pode ser de antes de o período mudar: só vale a estimativa do mesmo período.
-      if (anchor?.period === clockPeriod(short, f.status.elapsed)) f.status.clockStart = anchor.start;
+    if (clock) {
+      for (const { fixture: f } of body.response ?? []) {
+        const short = f?.status?.short ?? '';
+        if (!f?.id || !f.status || !CLOCK_RUNNING.has(short) || f.status.elapsed == null) continue;
+        const anchor = this.clockAnchor(f.id);
+        // A resposta em cache pode ser de antes de o período mudar: só vale a estimativa do mesmo período.
+        if (anchor?.period === clockPeriod(short, f.status.elapsed)) f.status.clockStart = anchor.start - CLOCK_LEAD_MS;
+      }
     }
+    if (names) renamePlayers(body, names);
+    const renamed = JSON.stringify(body);
+    if (!clock && names) {
+      if (this.renamed.size >= RENAMED_MEMO_SIZE) this.renamed.delete(this.renamed.keys().next().value!);
+      this.renamed.set(key, { source: result.body, names, body: renamed });
+    }
+    return { ...result, body: renamed };
+  }
+
+  /** Como `get`, com os nomes dos jogadores padronizados (avisos de gol: sem o relógio estimado). */
+  async getNamed(key: string): Promise<CacheResult | CacheError> {
+    const result = await this.get(key);
+    if ('error' in result) return result;
+    const names = this.namesFor(key, result.body);
+    if (!names) return result;
+    const body = JSON.parse(result.body) as unknown;
+    renamePlayers(body, names);
     return { ...result, body: JSON.stringify(body) };
+  }
+
+  /** Nomes do cadastro, se a resposta tem jogadores (e se os nomes já foram montados). */
+  private namesFor(key: string, body: string): Map<number, string> | null {
+    return NAMED_KEY_RE.test(key) && body.includes('"player"') ? this.playerNames() : null;
+  }
+
+  /**
+   * Nome de cada jogador da temporada, por id. Montado junto com o ranking de notas (ao fim da varredura
+   * das páginas de `players`); na primeira vez, das páginas já em cache. `null` enquanto não há páginas.
+   */
+  private playerNames(): Map<number, string> | null {
+    let entry = this.read(playerNamesKey(this.env.SEASON));
+    if (!entry) {
+      const pages = this.cachedPlayerPages();
+      if (!pages) return null;
+      this.buildPlayerNames(pages);
+      entry = this.read(playerNamesKey(this.env.SEASON));
+      if (!entry) return null;
+    }
+    if (this.namesSource?.fetchedAt !== entry.fetchedAt) {
+      const names = new Map(Object.entries(JSON.parse(entry.body) as Record<string, string>).map(([id, name]) => [Number(id), name]));
+      this.namesSource = { fetchedAt: entry.fetchedAt, names };
+    }
+    return this.namesSource.names;
+  }
+
+  private buildPlayerNames(pages: number) {
+    const names: Record<number, string> = {};
+    for (let page = 1; page <= pages; page++) {
+      const entry = this.read(playersPageKey(this.env.SEASON, page));
+      if (!entry) continue;
+      for (const item of (JSON.parse(entry.body) as { response: PlayerSeason[] }).response) {
+        if (item.player.id && item.player.name) names[item.player.id] = playerName(item.player);
+      }
+    }
+    if (Object.keys(names).length) this.store(playerNamesKey(this.env.SEASON), JSON.stringify(names), TOP_RATED_TTL);
   }
 
   status() {
     const row = this.ctx.storage.sql
       .exec<{ used: number; remaining: number | null }>('SELECT used, remaining FROM quota WHERE day = ?', utcDay())
       .toArray()[0];
-    return { day: utcDay(), used: row?.used ?? 0, limit: Number(this.env.DAILY_LIMIT), apiRemaining: row?.remaining ?? null, minuteRate: this.minuteRate, region: this.lastRegion };
+    return { day: utcDay(), used: row?.used ?? 0, limit: Number(this.env.DAILY_LIMIT), apiRemaining: row?.remaining ?? null, minuteRate: this.minuteRate, region: this.lastRegion,
+      cooldowns: Object.fromEntries([...this.regionCooldown].filter(([, until]) => until > Date.now()).map(([r, until]) => [r, Math.round((until - Date.now()) / 1000)])),
+      lastFailure: this.lastFailure };
   }
 
   private async refresh(key: string, stale: CacheEntry | undefined): Promise<CacheResult | CacheError> {
@@ -610,10 +776,15 @@ export class ApiCache extends DurableObject<Env> {
       await this.waitTurn();
       this.countRequest(null);
       try {
-        res = await this.env.API_CACHE.get(this.env.API_CACHE.idFromName(`fetch-${region}`), { locationHint: region }).upstream(key);
+        // Com prazo: uma chamada que nunca volta prenderia esta atualização (e todos que esperam por ela).
+        res = await withTimeout(
+          this.env.API_CACHE.get(this.env.API_CACHE.idFromName(`fetch-${region}`), { locationHint: region }).upstream(key),
+          UPSTREAM_TIMEOUT_MS + 2000,
+        );
       } catch (err) {
         // Falha na instância da região (ou na rede dela): tenta a próxima.
         console.error(`upstream ${region} falhou`, err);
+        this.lastFailure = { at: new Date().toISOString(), region, text: String(err).slice(0, 300) };
         this.regionCooldown.set(region, Date.now() + 60_000);
         res = null;
         continue;
@@ -622,10 +793,13 @@ export class ApiCache extends DurableObject<Env> {
       this.minuteRate = { limit: res.minuteLimit, remaining: res.minuteRemaining };
       this.lastRegion = region;
       if (!res.rateLimited) break;
+      console.warn(`upstream ${region} limitado: ${key}`, res.text.slice(0, 300));
+      this.lastFailure = { at: new Date().toISOString(), region, text: res.text.slice(0, 300) };
       this.regionCooldown.set(region, Date.now() + REGION_COOLDOWN_MS);
     }
 
     if (!res || !res.ok) {
+      console.warn(`upstream sem sucesso: ${key}`, res ? res.text.slice(0, 300) : 'todas as regiões falharam');
       return staleResult() ?? { httpStatus: res?.rateLimited ? 429 : 502, error: res?.text ?? 'Falha ao acessar a API' };
     }
     const text = res.text;
@@ -636,6 +810,82 @@ export class ApiCache extends DurableObject<Env> {
     this.store(key, text, ttl);
     if (key.startsWith('fixtures?')) this.observeClocks(body, Date.now());
     return { body: text, status: 'MISS', age: 0, ttl };
+  }
+
+  /**
+   * Classificação com os jogos das "Últimas 5" de cada time (`formMatches`, o mais recente primeiro, como
+   * `form`): data, mandante, visitante e placar, para o site mostrar ao passar o mouse. Vêm da lista de
+   * jogos encerrados da temporada, a mesma do site, e só do que já está em cache: a classificação não
+   * espera por ela. Vencida ou ausente, é buscada em segundo plano e entra numa próxima resposta.
+   */
+  private withFormMatches(result: CacheResult): CacheResult {
+    const entry = this.read(seasonFinishedKey(this.env.SEASON));
+    if (!entry || Date.now() - entry.fetchedAt >= entry.ttl * 1000) void this.get(seasonFinishedKey(this.env.SEASON)).catch(() => undefined);
+    if (!entry) return result;
+    const { byTeam } = this.formFrom(entry);
+    const body = JSON.parse(result.body) as { response?: Array<{ league: { standings: Array<Array<StandingRow>> } }> };
+    for (const row of (body.response?.[0]?.league.standings ?? []).flat()) {
+      // Os jogos que a classificação já contou: os `played` primeiros do time. Lista com menos jogos que
+      // isso (ainda sem o último) não confere com `form`: fica sem.
+      const matches = byTeam.get(row.team.id) ?? [];
+      const played = row.all?.played ?? 0;
+      if (matches.length < played) continue;
+      row.formMatches = matches.slice(Math.max(0, played - 5), played).reverse();
+    }
+    return { ...result, body: JSON.stringify(body) };
+  }
+
+  /** Jogos encerrados da temporada por time (do mais antigo ao mais recente) e os times, da lista em cache. */
+  private formFrom(entry: CacheEntry): { byTeam: Map<number, FormMatch[]>; teams: Map<number, TeamRef> } {
+    if (this.formSource?.fetchedAt !== entry.fetchedAt) {
+      const byTeam = new Map<number, FormMatch[]>();
+      const teams = new Map<number, TeamRef>();
+      const fixtures = (JSON.parse(entry.body) as { response: FixtureDetail[] }).response;
+      for (const f of [...fixtures].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)) {
+        if (f.goals.home == null || f.goals.away == null) continue;
+        const m: FormMatch = { id: f.fixture.id, t: f.fixture.timestamp, h: f.teams.home.id, a: f.teams.away.id, hg: f.goals.home, ag: f.goals.away };
+        for (const id of [m.h, m.a]) byTeam.set(id, [...(byTeam.get(id) ?? []), m]);
+        for (const t of [f.teams.home, f.teams.away]) teams.set(t.id, { id: t.id, name: t.name, logo: t.logo });
+      }
+      this.formSource = { fetchedAt: entry.fetchedAt, byTeam, teams };
+    }
+    return this.formSource;
+  }
+
+  /**
+   * Últimos jogos encerrados de dois times antes de `before` (o início da partida), o mais recente
+   * primeiro, com nome e escudo dos dois lados. Sai da lista de jogos encerrados da temporada em cache.
+   */
+  async teamForm({ teams, before }: { teams: number[]; before: number }): Promise<CacheResult | CacheError> {
+    const list = await this.get(seasonFinishedKey(this.env.SEASON));
+    if ('error' in list) return list;
+    const entry = this.read(seasonFinishedKey(this.env.SEASON));
+    if (!entry) return { httpStatus: 502, error: 'Falha ao montar os últimos jogos' };
+    const source = this.formFrom(entry);
+    const ratings = this.matchRatings();
+    const ref = (id: number) => source.teams.get(id) ?? { id, name: '', logo: '' };
+    const body = JSON.stringify(
+      teams.map((id) => {
+        const matches = (source.byTeam.get(id) ?? [])
+          .filter((m) => m.t < before)
+          .slice(-TEAM_FORM_GAMES)
+          .reverse()
+          .map((m) => ({
+            id: m.id,
+            timestamp: m.t,
+            home: ref(m.h),
+            away: ref(m.a),
+            goals: { home: m.hg, away: m.ag },
+            rating: ratings?.[`${m.id}-${id}`] ?? null,
+          }));
+        // Média das notas do time nesses jogos (os que já têm nota).
+        const rated = matches.map((m) => m.rating).filter((r): r is number => r !== null);
+        const rating = rated.length ? round2(rated.reduce((a, b) => a + b, 0) / rated.length) : null;
+        return { team: id, rating, matches };
+      }),
+    );
+    // Segue a lista: mesma idade e validade. Notas ainda sendo calculadas: o navegador não guarda.
+    return { body, status: list.status, age: list.age, ttl: ratings ? list.ttl : 0 };
   }
 
   /** Anota o minuto de cada jogo com bola rolando, recém-chegado da API, na estimativa do relógio. */
@@ -829,7 +1079,7 @@ export class ApiCache extends DurableObject<Env> {
           .sort((a, b) => (b.games.minutes ?? 0) - (a.games.minutes ?? 0))[0];
         if (!stat) continue;
         rows.push({
-          player: { id: item.player.id, name: item.player.name, photo: item.player.photo },
+          player: { id: item.player.id, name: playerName(item.player), photo: item.player.photo },
           team: stat.team,
           rating: Number(stat.games.rating),
           appearances: stat.games.appearences ?? 0,
@@ -849,6 +1099,7 @@ export class ApiCache extends DurableObject<Env> {
     this.store(topRatedKey(this.env.SEASON), JSON.stringify(body), TOP_RATED_TTL);
     this.buildTeamSeasonRatings(pages, teams);
     this.buildPlayerStats(pages, teams);
+    this.buildPlayerNames(pages);
   }
 
   /** Nota média de cada time na temporada: notas dos jogadores, com peso pelos minutos jogados pelo clube. */
@@ -878,6 +1129,32 @@ export class ApiCache extends DurableObject<Env> {
   }
 
   /**
+   * Estatísticas dos times guardadas (o que houver); velhas, ausentes ou sem as notas por jogo (versão
+   * antiga), recalcula em segundo plano.
+   */
+  private teamStatsEntry(): CacheEntry | undefined {
+    const entry = this.read(teamStatsKey(this.env.SEASON));
+    const stale = !entry || Date.now() - entry.fetchedAt >= entry.ttl * 1000 || !entry.body.includes('"ratings"');
+    if (stale && !this.teamStatsBuild) {
+      this.teamStatsBuild = this.buildTeamStats()
+        .catch((err) => console.error('estatísticas dos times falharam', err))
+        .finally(() => (this.teamStatsBuild = null));
+    }
+    return entry;
+  }
+
+  /** Nota de cada time em cada jogo encerrado (`<jogo>-<time>`), das estatísticas guardadas. */
+  private matchRatings(): Record<string, number> | null {
+    const entry = this.teamStatsEntry();
+    if (!entry) return null;
+    if (this.ratingsSource?.fetchedAt !== entry.fetchedAt) {
+      const ratings = (JSON.parse(entry.body) as { ratings?: Record<string, number> }).ratings ?? null;
+      this.ratingsSource = { fetchedAt: entry.fetchedAt, ratings };
+    }
+    return this.ratingsSource.ratings;
+  }
+
+  /**
    * Estatísticas dos times: temporada e últimos 5 jogos. Devolve o que já está calculado e, se estiver
    * velho, recalcula em segundo plano (a primeira montagem busca os ~350 jogos da temporada).
    */
@@ -885,12 +1162,7 @@ export class ApiCache extends DurableObject<Env> {
     const ratingEntry = this.read(teamSeasonKey(this.env.SEASON));
     if (!ratingEntry || Date.now() - ratingEntry.fetchedAt >= ratingEntry.ttl * 1000) await this.startCrawl();
 
-    const statsEntry = this.read(teamStatsKey(this.env.SEASON));
-    if ((!statsEntry || Date.now() - statsEntry.fetchedAt >= statsEntry.ttl * 1000) && !this.teamStatsBuild) {
-      this.teamStatsBuild = this.buildTeamStats()
-        .catch((err) => console.error('estatísticas dos times falharam', err))
-        .finally(() => (this.teamStatsBuild = null));
-    }
+    const statsEntry = this.teamStatsEntry();
 
     if (!ratingEntry && !statsEntry) return { httpStatus: 503, error: 'Estatísticas dos times sendo calculadas, tente em alguns minutos' };
 
@@ -916,18 +1188,33 @@ export class ApiCache extends DurableObject<Env> {
    * Time da rodada em 4-3-3: goleiro, 4 defensores, 3 meias e 3 atacantes com as melhores notas
    * nos jogos encerrados da rodada (posição e nota de cada jogo, mínimo de 45 minutos).
    */
+  /** Time da rodada com os nomes dos jogadores padronizados. */
   async roundTeam(round: string): Promise<CacheResult | CacheError> {
+    const result = await this.buildRoundTeam(round);
+    const names = 'error' in result ? null : this.playerNames();
+    if ('error' in result || !names) return result;
+    const body = JSON.parse(result.body) as unknown;
+    renamePlayers(body, names);
+    return { ...result, body: JSON.stringify(body) };
+  }
+
+  private async buildRoundTeam(round: string): Promise<CacheResult | CacheError> {
     const key = `${ROUND_TEAM_PATH}?round=${encodeURIComponent(round)}&season=${this.env.SEASON}&v=${ROUND_TEAM_VERSION}`;
     const cached = this.read(key);
-    if (cached && Date.now() - cached.fetchedAt < cached.ttl * 1000) {
-      return { body: cached.body, status: 'HIT', age: Math.floor((Date.now() - cached.fetchedAt) / 1000), ttl: cached.ttl };
-    }
+    const fresh = (c: CacheEntry) => Date.now() - c.fetchedAt < c.ttl * 1000;
+    const hit = (c: CacheEntry): CacheResult => ({ body: c.body, status: 'HIT', age: Math.floor((Date.now() - c.fetchedAt) / 1000), ttl: c.ttl });
+    // Rodada encerrada há horas: nem consulta os jogos.
+    if (cached && fresh(cached) && cached.ttl > 600) return hit(cached);
 
-    // Mesma chave que o site usa ao abrir a rodada (parâmetros em ordem, como em cacheKey).
+    // Mesma chave que o site usa ao abrir a rodada (parâmetros em ordem, como em cacheKey). Com jogo
+    // rolando, ela fica em cache por 1 min: é o que avisa que mais um jogo acabou.
     const list = await this.get(`fixtures?${new URLSearchParams({ league: BRASILEIRAO, round, season: this.env.SEASON })}`);
     if ('error' in list) return list;
     const fixtures = (JSON.parse(list.body) as { response: FixtureDetail[] }).response;
     const finished = fixtures.filter((f) => FINISHED_STATUSES.has(f.fixture.status.short));
+    // Mesmo número de jogos encerrados que o time guardado: ainda vale (as notas são refeitas a cada 10 min).
+    // Um jogo acabou: refaz na hora, com as notas dele.
+    if (cached && fresh(cached) && (JSON.parse(cached.body) as { games?: number }).games === finished.length) return hit(cached);
 
     const candidates = new Map<string, RoundCandidate[]>();
     if (finished.length) {
@@ -991,6 +1278,8 @@ export class ApiCache extends DurableObject<Env> {
     }
 
     const byTeam = new Map<number, { team: TeamRef; matches: TeamMatch[] }>();
+    // Nota de cada time em cada jogo (`<jogo>-<time>`): média dos últimos jogos na página da partida.
+    const ratings: Record<string, number> = {};
     for (const ids of groups.values()) {
       const result = await this.get(`fixtures?ids=${ids.sort((a, b) => a - b).join('-')}`);
       if ('error' in result) return;
@@ -998,8 +1287,10 @@ export class ApiCache extends DurableObject<Env> {
         if (!FINISHED_STATUSES.has(f.fixture.status.short)) continue;
         for (const team of [f.teams.home, f.teams.away]) {
           const t = byTeam.get(team.id) ?? { team: { id: team.id, name: team.name, logo: team.logo }, matches: [] };
-          t.matches.push(matchStats(f, team.id));
+          const match = matchStats(f, team.id);
+          t.matches.push(match);
           byTeam.set(team.id, t);
+          if (match.rating !== null) ratings[`${f.fixture.id}-${team.id}`] = round2(match.rating);
         }
       }
     }
@@ -1019,12 +1310,15 @@ export class ApiCache extends DurableObject<Env> {
         stats: aggregate(recent),
       });
     }
-    this.store(teamStatsKey(this.env.SEASON), JSON.stringify({ season, last5 }), TEAM_STATS_TTL);
+    this.store(teamStatsKey(this.env.SEASON), JSON.stringify({ season, last5, ratings }), TEAM_STATS_TTL);
   }
 
   /** Executa a chamada à API a partir desta instância (usado pelas instâncias "fetch-<região>"). */
   async upstream(key: string): Promise<UpstreamResponse> {
-    const res = await fetch(`${UPSTREAM}/${key}`, { headers: { 'x-apisports-key': this.env.API_FOOTBALL_KEY } });
+    const res = await fetch(`${UPSTREAM}/${key}`, {
+      headers: { 'x-apisports-key': this.env.API_FOOTBALL_KEY },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
     const text = await res.text();
     let body: ApiBody;
     try {
@@ -1166,6 +1460,8 @@ export default {
             ? await stub.playerStats()
             : url.pathname === `/${TEAM_RATINGS_PATH}`
               ? await stub.teamRatings()
+              : url.pathname === `/${TEAM_FORM_PATH}`
+                ? await stub.teamForm(teamFormParams(url))
               : url.pathname === `/${ROUND_TEAM_PATH}`
                 ? await stub.roundTeam(roundParam(url))
                 : url.pathname === `/${BROADCASTS_PATH}`

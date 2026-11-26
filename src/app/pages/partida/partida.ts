@@ -3,9 +3,10 @@ import { Title } from '@angular/platform-browser';
 import { finalize } from 'rxjs';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIcon } from '@angular/material/icon';
-import { ApiFootball, Coach, Fixture, Injury, LEAGUE } from '../../api/api-football';
+import { ApiFootball, Coach, Fixture, Injury, LEAGUE, TeamForm } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { MatchLineups } from './match-lineups';
+import { MatchForm } from './match-form';
 import { MatchStats } from './match-stats';
 import { LineupsSkeleton, StatsSkeleton, TimelineSkeleton } from './match-skeletons';
 import { NgTemplateOutlet } from '@angular/common';
@@ -73,7 +74,7 @@ export function refreshDelay(f: Fixture, now: number): number | null {
 /** Página de uma partida (`/partida/:id`): por enquanto, o cabeçalho com placar, gols e informações. */
 @Component({
   selector: 'app-partida',
-  imports: [Crest, LineupsSkeleton, MatIcon, MatMenu, MatMenuTrigger, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
+  imports: [Crest, LineupsSkeleton, MatIcon, MatMenu, MatMenuTrigger, MatchForm, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
   templateUrl: './partida.html',
   styleUrl: './partida.scss',
 })
@@ -96,6 +97,9 @@ export class Partida {
   });
   protected loading = signal(true);
   /** Lesionados, suspensos e dúvidas dos dois times; vazio se a API não tiver (ou falhar). */
+  /** Últimos 5 jogos de cada time antes desta partida (`null` enquanto carrega). */
+  protected teamForms = signal<TeamForm[] | null>(null);
+  protected teamFormsFailed = signal(false);
   protected injuries = signal<Injury[]>([]);
   /** Técnico atual de cada time, pelo id (não depende da partida: aparece mesmo sem escalação). */
   protected coaches = signal<Record<number, Coach | null>>({});
@@ -198,6 +202,8 @@ export class Partida {
       clearTimeout(this.timer);
       this.loaded.set(null);
       this.injuries.set([]);
+      this.teamForms.set(null);
+      this.teamFormsFailed.set(false);
       this.coaches.set({});
       this.extrasPending.set(0);
       this.channels.set([]);
@@ -237,6 +243,7 @@ export class Partida {
         this.loaded.set(f);
         this.loadCoaches(f);
         if (first && !OVER.has(f.fixture.status.short)) this.loadBroadcasts(f);
+        if (first) this.loadTeamForms(f);
         this.title.setTitle(`${f.teams.home.name} x ${f.teams.away.name} · Arquibancada`);
         const next = refreshDelay(f, Date.now());
         if (next !== null) this.timer = setTimeout(() => this.load(id), next);
@@ -273,6 +280,14 @@ export class Partida {
         error: () => undefined,
       });
     }
+  }
+
+  /** Últimos 5 jogos de cada time antes desta partida, uma vez por partida aberta (não muda durante o jogo). */
+  private loadTeamForms(f: Fixture) {
+    this.api.teamForm([f.teams.home.id, f.teams.away.id], f.fixture.timestamp).subscribe({
+      next: (forms) => this.loaded()?.fixture.id === f.fixture.id && this.teamForms.set(forms),
+      error: () => this.loaded()?.fixture.id === f.fixture.id && this.teamFormsFailed.set(true),
+    });
   }
 
   /** Onde assistir, uma vez por partida aberta (a lista é do dia do jogo, no horário de Brasília). */

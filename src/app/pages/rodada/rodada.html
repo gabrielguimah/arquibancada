@@ -64,7 +64,7 @@
       <span class="sk sk-title sk-title-tabela" aria-hidden="true"></span>
     }
     @if (standings().length) {
-      <div class="table-wrap">
+      <div class="table-wrap" (scroll)="hideFormTip()">
         <table>
           <thead>
             <tr>
@@ -130,7 +130,18 @@
                           class="chip"
                           [class]="'r-' + r.result"
                           [class.live]="r.live"
-                          [attr.title]="r.live ? 'Jogo em andamento: resultado parcial' : null"
+                          [class.has-match]="!!r.match"
+                          [attr.tabindex]="r.match ? 0 : null"
+                          [attr.aria-label]="
+                            r.match
+                              ? r.match.date + ': ' + r.match.home.name + ' ' + r.match.homeGoals + ' a ' + r.match.awayGoals + ' ' + r.match.away.name
+                              : null
+                          "
+                          [attr.title]="!r.match && r.live ? 'Jogo em andamento: resultado parcial' : null"
+                          (mouseenter)="showFormTip($event, r)"
+                          (mouseleave)="hideFormTip()"
+                          (focus)="showFormTip($event, r)"
+                          (blur)="hideFormTip()"
                           >{{ r.result }}</span
                         >
                       }
@@ -215,3 +226,18 @@
     <app-team-ratings [ready]="pageLoaded()" />
   </section>
 </div>
+
+<!-- Cartão do jogo das "Últimas 5" (data, times e placar), acima do resultado em foco. Fica fora da
+     tabela (posição fixa na tela) para não ser cortado pela rolagem horizontal dela. -->
+@if (formTip(); as t) {
+  <div class="form-tip" role="tooltip" [style.left.px]="t.x" [style.top.px]="t.y">
+    <span class="form-tip-date">{{ t.live ? 'Em andamento' : t.game.date }}</span>
+    <span class="form-tip-game">
+      <span class="form-tip-team home">{{ t.game.home.name }}</span>
+      <img crest [src]="t.game.home.logo" alt="" width="16" height="16" />
+      <strong>{{ t.game.homeGoals }} - {{ t.game.awayGoals }}</strong>
+      <img crest [src]="t.game.away.logo" alt="" width="16" height="16" />
+      <span class="form-tip-team">{{ t.game.away.name }}</span>
+    </span>
+  </div>
+}

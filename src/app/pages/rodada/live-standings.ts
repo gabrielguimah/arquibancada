@@ -1,4 +1,4 @@
-import { Fixture, Standing } from '../../api/api-football';
+import { Fixture, FormMatch, Standing } from '../../api/api-football';
 import { isLive } from '../../shared/fixture-card';
 
 /** Status de jogo encerrado que conta na classificação. */
@@ -39,8 +39,9 @@ function withGames(table: Standing[], games: Fixture[]): Standing[] {
   const next = new Map(table.map((s) => [s.team.id, clone(s)]));
   for (const f of games) {
     const final = FINISHED.has(f.fixture.status.short);
-    apply(next.get(f.teams.home.id)!, f.goals.home!, f.goals.away!, final);
-    apply(next.get(f.teams.away.id)!, f.goals.away!, f.goals.home!, final);
+    const match = { id: f.fixture.id, t: f.fixture.timestamp, h: f.teams.home.id, a: f.teams.away.id, hg: f.goals.home!, ag: f.goals.away! };
+    apply(next.get(f.teams.home.id)!, f.goals.home!, f.goals.away!, final, match);
+    apply(next.get(f.teams.away.id)!, f.goals.away!, f.goals.home!, final, match);
   }
   return [...next.values()]
     .sort(
@@ -83,7 +84,7 @@ function uncounted(base: Standing[], known: Fixture[], seasonFinished: Fixture[]
   return result;
 }
 
-function apply(s: Standing, scored: number, conceded: number, final: boolean) {
+function apply(s: Standing, scored: number, conceded: number, final: boolean, match: FormMatch) {
   const result = scored > conceded ? 'W' : scored < conceded ? 'L' : 'D';
   s.all.played++;
   s.all.goals.for += scored;
@@ -100,6 +101,7 @@ function apply(s: Standing, scored: number, conceded: number, final: boolean) {
   }
   // "Últimas 5": a API manda o mais recente primeiro. Resultado parcial de jogo em andamento fica marcado.
   s.form = (result + (s.form ?? '')).slice(0, 5);
+  if (s.formMatches) s.formMatches = [match, ...s.formMatches].slice(0, 5);
   if (!final) s.liveForm = true;
 }
 

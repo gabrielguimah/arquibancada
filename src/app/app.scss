@@ -87,6 +87,19 @@ nav {
   }
 }
 
+// Time do coração, colado no botão de configurações: escudo do time ou coração vazio.
+.favorite-button {
+  img {
+    display: block;
+    width: 30px;
+    height: 30px;
+  }
+
+  + .menu-button {
+    margin-left: -18px;
+  }
+}
+
 // No celular: só o símbolo do logo, as abas na mesma linha e o menu na ponta direita.
 @media (max-width: 560px) {
   .topbar {
@@ -116,6 +129,10 @@ nav {
   .menu-button {
     flex-shrink: 0;
     margin-left: auto;
+  }
+
+  .favorite-button + .menu-button {
+    margin-left: -8px;
   }
 }
 

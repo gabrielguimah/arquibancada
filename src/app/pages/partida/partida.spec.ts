@@ -2,7 +2,7 @@ import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { ApiFootball, Broadcast, Fixture, FixtureEvent } from '../../api/api-football';
+import { ApiFootball, Broadcast, Fixture, FixtureEvent, TeamForm } from '../../api/api-football';
 import { highlights } from './match-header';
 import { Partida, refreshDelay } from './partida';
 
@@ -75,9 +75,11 @@ describe('Lances do cabeçalho', () => {
 describe('Página da partida', () => {
   // "Onde assistir" da CBF no dia (cada teste define; `pending`: a resposta ainda não chegou).
   let broadcasts: Broadcast[] = [];
+  let teamForms: TeamForm[] = [];
   let pending: Subject<Broadcast[]> | null = null;
   beforeEach(() => {
     broadcasts = [];
+    teamForms = [];
     pending = null;
   });
 
@@ -91,7 +93,7 @@ describe('Página da partida', () => {
       imports: [Partida],
       providers: [
         provideRouter([]),
-        { provide: ApiFootball, useValue: { fixture: () => (fixtureCall ? fixtureCall(f) : of(f)), injuries: () => of([]), coach: () => of(null), broadcasts: () => pending ?? of(broadcasts) } },
+        { provide: ApiFootball, useValue: { fixture: () => (fixtureCall ? fixtureCall(f) : of(f)), injuries: () => of([]), coach: () => of(null), broadcasts: () => pending ?? of(broadcasts), teamForm: () => of(teamForms) } },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id })) } },
       ],
     });
@@ -99,6 +101,26 @@ describe('Página da partida', () => {
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
+
+  it('últimos 5 jogos: resultado do ponto de vista de cada time, data, adversário e placar', () => {
+    const flamengo = { id: 127, name: 'Flamengo', logo: '' };
+    teamForms = [
+      { team: botafogo.id, rating: 6.84, matches: [{ id: 1, timestamp: 1795048200, home: flamengo, away: botafogo, goals: { home: 1, away: 2 }, rating: 6.84 }] },
+      { team: saoPaulo.id, matches: [{ id: 2, timestamp: 1793838600, home: saoPaulo, away: flamengo, goals: { home: 0, away: 0 } }] },
+    ];
+    const el = render(match([1, 1], []));
+    const blocks = [...el.querySelectorAll('app-match-form .block')];
+    expect(blocks.map((b) => b.querySelector('.team strong')?.textContent?.trim())).toEqual(['Botafogo', 'São Paulo']);
+    const row = (b: Element) => b.querySelector('.rows li')!;
+    expect(row(blocks[0]).querySelector('.chip')?.textContent?.trim()).toBe('V');
+    const parts = (li: Element) => [...li.querySelectorAll('.date, .name, .score')].map((n) => n.textContent?.trim());
+    expect(parts(row(blocks[0]))).toEqual(['18/11', 'Flamengo', '1 - 2', 'Botafogo']);
+    expect(row(blocks[0]).querySelector('.own')?.textContent?.trim()).toBe('Botafogo');
+    expect(row(blocks[1]).querySelector('.chip')?.textContent?.trim()).toBe('E');
+    // Média ao lado do nome; sem nota, sem selo.
+    expect(blocks[0].querySelector('.team .team-rating')?.textContent?.trim()).toBe('6.8');
+    expect(blocks[1].querySelector('.team .team-rating')).toBeNull();
+  });
 
   it('mostra times, placar, situação, gols e informações da partida', () => {
     const el = render(match([1, 1], [goal(saoPaulo, 'Pedro Lima', 28), goal(botafogo, 'Tiquinho Soares', 81)]));

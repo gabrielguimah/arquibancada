@@ -305,6 +305,17 @@ tbody tr.playing {
 
 .chip {
   display: inline-grid;
+
+  // Com o jogo: dá para focar (teclado, toque) e mostra o cartão.
+  &.has-match {
+    cursor: default;
+
+    &:focus-visible {
+      outline: 2px solid var(--text);
+      outline-offset: 1px;
+    }
+  }
+
   place-items: center;
   width: 18px;
   height: 18px;
@@ -456,4 +467,54 @@ tbody tr.playing {
   border-radius: 8px;
   background: var(--error-bg);
   color: var(--error-text);
+}
+
+// Cartão do jogo das "Últimas 5": data em cima; mandante, placar e visitante embaixo.
+.form-tip {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 32px));
+  padding: 8px 12px;
+  transform: translate(-50%, -100%);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.18), 0 0 0 1px var(--line);
+  color: var(--text);
+  font-size: 0.78rem;
+  pointer-events: none;
+}
+
+.form-tip-date {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.form-tip-game {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  white-space: nowrap;
+
+  strong {
+    font-variant-numeric: tabular-nums;
+  }
+
+  img {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+}
+
+.form-tip-team {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
 }

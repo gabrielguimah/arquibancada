@@ -1,0 +1,182 @@
+$muted: var(--muted);
+
+:host {
+  display: block;
+  // As colunas seguem a largura do card (uma por time; uma só se ficar estreito), como os reservas.
+  container-type: inline-size;
+}
+
+.teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+
+  @container (max-width: 560px) {
+    grid-template-columns: minmax(0, 1fr);
+
+    .block + .block {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+  }
+
+  .message {
+    grid-column: 1 / -1;
+  }
+}
+
+// Mesmo visual dos outros cards da partida.
+.card {
+  padding: 14px 16px 16px;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px var(--shadow);
+
+  h2 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+  }
+}
+
+.team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+
+  strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Nota média nos últimos jogos, ao lado do nome (mesmo selo da faixa do time nas escalações).
+  .team-rating {
+    flex: none;
+    min-width: 0;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+  }
+
+  .chips {
+    display: inline-flex;
+    gap: 3px;
+    margin-left: auto;
+  }
+}
+
+// Mesmas cores das "Últimas 5" da classificação.
+.chip {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  &.r-V {
+    background: var(--win);
+  }
+
+  &.r-E {
+    background: #9aa8a2;
+  }
+
+  &.r-D {
+    background: #dc2626;
+  }
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// Resultado, data e o jogo: mandante (alinhado à direita), escudo, placar, escudo e visitante.
+.rows li {
+  display: grid;
+  grid-template-columns: 18px 38px minmax(0, 1fr) 16px auto 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.78rem;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.date {
+  color: $muted;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: $muted;
+
+  &.home {
+    text-align: right;
+  }
+
+  // O time do bloco: em destaque.
+  &.own {
+    color: var(--text);
+    font-weight: 600;
+  }
+}
+
+.score {
+  min-width: 32px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.message {
+  margin: 4px 0 0;
+  color: $muted;
+  font-size: 0.8rem;
+}
+
+// Esqueleto enquanto carrega.
+.sk {
+  display: block;
+  border-radius: 4px;
+  background: var(--line);
+}
+
+.team .sk-crest {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.team .sk-name {
+  width: 110px;
+  height: 12px;
+}
+
+.sk-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  .sk {
+    height: 14px;
+  }
+}

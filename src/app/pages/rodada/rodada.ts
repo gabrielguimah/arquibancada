@@ -1,13 +1,14 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
-import { ApiFootball, Fixture, Standing } from '../../api/api-football';
+import { ApiFootball, Fixture, FormMatch, Standing, Team } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { FixtureCard, TZ, isLive, todayInBrasilia } from '../../shared/fixture-card';
 import { FixtureCardSkeleton } from '../../shared/fixture-card-skeleton';
 import { LiveFixtures } from '../../shared/live-fixtures';
 import { RoundNav } from '../../shared/round-nav';
 import { FINISHED, liveStandings } from './live-standings';
+import { OVER } from '../../shared/fixture-status';
 import { TeamRatingsTables } from './team-ratings';
 
 // Jogos encerrados: os eventos deles (cartões) vêm de uma busca própria, com cache longo no Worker.
@@ -40,6 +41,24 @@ interface FormResult {
   result: 'V' | 'E' | 'D';
   /** Parcial de jogo em andamento. */
   live: boolean;
+  /** O jogo (para o cartão ao passar o mouse), se o Worker mandou e ele confere com o resultado. */
+  match: FormGame | null;
+}
+
+interface FormGame {
+  date: string;
+  home: Team;
+  away: Team;
+  homeGoals: number;
+  awayGoals: number;
+}
+
+/** Cartão do jogo das "Últimas 5": acima do resultado (`x`, `y` na tela). */
+interface FormTip {
+  game: FormGame;
+  live: boolean;
+  x: number;
+  y: number;
 }
 
 @Component({
@@ -54,6 +73,8 @@ interface FormResult {
   ],
   templateUrl: './rodada.html',
   styleUrl: './rodada.scss',
+  // Rolou a página: o cartão do jogo ficaria solto no lugar antigo.
+  host: { '(window:scroll)': 'hideFormTip()' },
 })
 export class Rodada {
   private api = inject(ApiFootball);
@@ -126,8 +147,14 @@ export class Rodada {
 
   protected standingGroups = computed<StandingGroup[]>(() => {
     const groups: StandingGroup[] = [];
+    let continental = true;
     for (const s of this.liveTable()) {
-      const zone = zoneOf(s);
+      let zone = zoneOf(s);
+      // Vagas continentais só no bloco do topo. A API marca também quem se classificou por fora (ex.:
+      // campeão de copa no meio da tabela), mas a zona vai com a posição, não com o time: na tabela ao
+      // vivo, ela passaria para quem ocupasse aquela posição.
+      if (!zone || !CONTINENTAL.has(zone.id)) continental = false;
+      else if (!continental) zone = null;
       const last = groups.at(-1);
       if (last && last.zone?.id === zone?.id) last.rows.push(s);
       else groups.push({ zone, rows: [s] });
@@ -143,19 +170,26 @@ export class Rodada {
     forkJoin([this.api.rounds(), this.api.currentRound()]).subscribe({
       next: ([rounds, current]) => {
         this.rounds.set(rounds);
-        this.selectRound(current);
+        this.selectRound(current, true);
       },
       error: () => this.fail(),
     });
   }
 
-  protected selectRound(round: string) {
+  /**
+   * `auto`: rodada escolhida pelo site (a atual da API), não pelo usuário. Aí, quando todos os jogos dela
+   * acabam, passa sozinha para a seguinte (a API demora a virar a rodada atual).
+   */
+  protected selectRound(round: string, auto = false) {
+    this.autoRound = auto;
     this.round.set(round);
     this.fixtures.set([]);
     this.nextRoundStart.set(null);
     this.loading.set(true);
     this.load();
   }
+
+  private autoRound = false;
 
   private load() {
     clearTimeout(this.timer);
@@ -176,6 +210,10 @@ export class Rodada {
       .subscribe({
         next: ([fixtures, next, today]) => {
           if (round !== this.round()) return;
+          // Rodada escolhida pelo site e com todos os jogos encerrados (ou adiados/cancelados): vai para a seguinte.
+          if (this.autoRound && nextRound && fixtures.length && fixtures.every((f) => OVER.has(f.fixture.status.short))) {
+            return this.selectRound(nextRound, true);
+          }
           this.fixtures.set(fixtures);
           this.today.set(today);
           // Mediana, e não o primeiro jogo: um jogo antecipado da rodada seguinte não deve marcar os desta como atrasados.
@@ -307,8 +345,42 @@ export class Rodada {
    */
   protected form(s: Standing): FormResult[] {
     const map: Record<string, FormResult['result']> = { W: 'V', D: 'E', L: 'D' };
-    const results = [...(s.form ?? '')].map((c, i) => ({ result: map[c], live: i === 0 && !!s.liveForm }));
+    const results = [...(s.form ?? '')].map((c, i) => ({
+      result: map[c],
+      live: i === 0 && !!s.liveForm,
+      match: this.formGame(s.team.id, c, s.formMatches?.[i]),
+    }));
     return results.filter((r) => r.result).reverse();
+  }
+
+  // Times da classificação pelo id (nome e escudo do adversário no cartão do jogo).
+  private teamsById = computed(() => new Map(this.standings().map((s) => [s.team.id, s.team])));
+
+  /** Jogo de um resultado das "Últimas 5"; `null` se não veio ou não confere com a letra (W/D/L). */
+  private formGame(teamId: number, letter: string, m: FormMatch | undefined): FormGame | null {
+    const teams = this.teamsById();
+    const [home, away] = m ? [teams.get(m.h), teams.get(m.a)] : [];
+    if (!m || !home || !away) return null;
+    const [own, other] = m.h === teamId ? [m.hg, m.ag] : [m.ag, m.hg];
+    if ((own > other ? 'W' : own < other ? 'L' : 'D') !== letter) return null;
+    const date = new Date(m.t * 1000).toLocaleDateString('pt-BR', { timeZone: TZ, day: 'numeric', month: 'long' });
+    return { date, home, away, homeGoals: m.hg, awayGoals: m.ag };
+  }
+
+  protected formTip = signal<FormTip | null>(null);
+
+  /** Mostra o cartão do jogo acima do resultado (mouse em cima, foco pelo teclado ou toque no celular). */
+  protected showFormTip(event: Event, r: FormResult) {
+    if (!r.match) return;
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    // Centralizado no resultado, sem passar da borda da tela (o cartão tem até 300 px).
+    const half = Math.min(150, (window.innerWidth - 32) / 2);
+    const x = Math.min(Math.max(rect.left + rect.width / 2, 16 + half), window.innerWidth - 16 - half);
+    this.formTip.set({ game: r.match, live: r.live, x, y: rect.top - 8 });
+  }
+
+  protected hideFormTip() {
+    this.formTip.set(null);
   }
 
   protected moveLabel(change: number): string {
@@ -322,6 +394,8 @@ export class Rodada {
     return [...seen.values()];
   });
 }
+
+const CONTINENTAL = new Set(['libertadores', 'pre-libertadores', 'sulamericana']);
 
 function zoneOf(s: Standing): Zone | null {
   const d = s.description ?? '';

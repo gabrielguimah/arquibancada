@@ -1,0 +1,53 @@
+<section class="card" aria-labelledby="form-title">
+  <h2 id="form-title">Últimos 5 jogos</h2>
+  <div class="teams">
+    @if (forms() === null && !failed()) {
+      @for (side of [0, 1]; track side) {
+        <div class="block" aria-busy="true">
+          <div class="team"><span class="sk sk-crest"></span><span class="sk sk-name"></span></div>
+          <ul class="rows">
+            @for (i of skeletonRows; track i) {
+              <li class="sk-row"><span class="sk"></span></li>
+            }
+          </ul>
+        </div>
+      }
+    } @else if (failed()) {
+      <p class="message">Não foi possível carregar os últimos jogos.</p>
+    } @else {
+      @for (b of blocks(); track b.team.id) {
+        <div class="block">
+          <div class="team">
+            <img crest [src]="b.team.logo" alt="" width="20" height="20" />
+            <strong>{{ b.team.name }}</strong>
+            @if (b.rating !== null) {
+              <span [class]="ratingClass(b.rating) + ' team-rating'" title="Nota média nos últimos 5 jogos">{{ formatRating(b.rating) }}</span>
+            }
+            <span class="chips" aria-hidden="true">
+              @for (c of b.chips; track $index) {
+                <span class="chip" [class]="'r-' + c">{{ c }}</span>
+              }
+            </span>
+          </div>
+          @if (b.rows.length) {
+            <ul class="rows">
+              @for (r of b.rows; track r.id) {
+                <li [attr.aria-label]="resultLabel[r.result] + ', ' + r.date + ': ' + r.home.name + ' ' + r.homeGoals + ' a ' + r.awayGoals + ' ' + r.away.name">
+                  <span class="chip" [class]="'r-' + r.result" aria-hidden="true">{{ r.result }}</span>
+                  <span class="date" aria-hidden="true">{{ r.date }}</span>
+                  <span class="name home" [class.own]="r.atHome" aria-hidden="true">{{ r.home.name }}</span>
+                  <img crest [src]="r.home.logo" alt="" width="16" height="16" loading="lazy" />
+                  <span class="score" aria-hidden="true">{{ r.homeGoals }} - {{ r.awayGoals }}</span>
+                  <img crest [src]="r.away.logo" alt="" width="16" height="16" loading="lazy" />
+                  <span class="name" [class.own]="!r.atHome" aria-hidden="true">{{ r.away.name }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="message">Nenhum jogo antes deste na temporada.</p>
+          }
+        </div>
+      }
+    }
+  </div>
+</section>

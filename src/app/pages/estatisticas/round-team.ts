@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
 import { ApiFootball, RoundPlayer, RoundTeam } from '../../api/api-football';
@@ -14,6 +14,9 @@ const LINES: Array<{ position: RoundPlayer['position']; count: number }> = [
   { position: 'D', count: 4 },
   { position: 'G', count: 1 },
 ];
+
+// Rodada com jogos por terminar: confere de novo a cada minuto (o Worker refaz o time quando um acaba).
+const REFRESH_MS = 60_000;
 
 /** Time da rodada em 4-3-3 (melhores notas por posição), com seletor de rodada. */
 @Component({
@@ -46,8 +49,10 @@ export class RoundTeamCard {
   protected skeletonLines = LINES.map((l) => ({ ...l, slots: Array.from({ length: l.count }, (_, i) => i) }));
 
   protected ratingClass = ratingClass;
+  private timer?: ReturnType<typeof setTimeout>;
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
     forkJoin([this.api.rounds(), this.api.currentRound()]).subscribe({
       next: ([rounds, current]) => {
         this.rounds.set(rounds);
@@ -57,20 +62,61 @@ export class RoundTeamCard {
     });
   }
 
-  /** `fallback`: na abertura, se a rodada atual ainda não tem jogo encerrado, mostra a anterior. */
-  protected select(round: string, fallback = false) {
+  /**
+   * `opening`: na abertura, parte da rodada atual da API e ajusta para a que tem jogo mais recente:
+   * - atual ainda sem jogo encerrado: mostra a anterior;
+   * - atual completa e a seguinte já com jogo encerrado (jogo antecipado, ou a API ainda não virou a
+   *   rodada): mostra a seguinte.
+   */
+  protected select(round: string, opening = false) {
+    clearTimeout(this.timer);
     this.round.set(round);
     this.loading.set(true);
     this.error.set(false);
     this.api.teamOfRound(round).subscribe({
       next: (team) => {
         if (round !== this.round()) return;
-        const previous = this.rounds()[this.rounds().indexOf(round) - 1];
-        if (fallback && team.games === 0 && previous) return this.select(previous);
-        this.team.set(team);
-        this.loading.set(false);
+        const index = this.rounds().indexOf(round);
+        const [previous, next] = [this.rounds()[index - 1], this.rounds()[index + 1]];
+        if (opening && team.games === 0 && previous) return this.select(previous);
+        if (opening && team.games === team.totalGames && next) return this.tryNext(round, team, next);
+        this.show(round, team);
       },
       error: () => this.fail(),
+    });
+  }
+
+  /** Rodada `round` completa: mostra a `next` se ela já tem jogo encerrado; senão, fica na completa. */
+  private tryNext(round: string, team: RoundTeam, next: string) {
+    this.api.teamOfRound(next).subscribe({
+      next: (upcoming) => {
+        if (round !== this.round()) return;
+        if (upcoming.games > 0) {
+          this.round.set(next);
+          this.show(next, upcoming);
+        } else {
+          this.show(round, team);
+        }
+      },
+      error: () => round === this.round() && this.show(round, team),
+    });
+  }
+
+  /** Mostra o time e, se a rodada ainda tem jogo por terminar, agenda a próxima conferência. */
+  private show(round: string, team: RoundTeam) {
+    this.team.set(team);
+    this.loading.set(false);
+    if (team.games < team.totalGames) this.timer = setTimeout(() => this.refresh(round), REFRESH_MS);
+  }
+
+  /** Atualiza em silêncio (sem esqueleto); falha mantém o que está na tela e tenta no próximo minuto. */
+  private refresh(round: string) {
+    if (round !== this.round()) return;
+    this.api.teamOfRound(round).subscribe({
+      next: (team) => round === this.round() && this.show(round, team),
+      error: () => {
+        if (round === this.round()) this.timer = setTimeout(() => this.refresh(round), REFRESH_MS);
+      },
     });
   }
 

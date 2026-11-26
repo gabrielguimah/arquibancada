@@ -344,6 +344,21 @@ html {
   }
 }
 
+// Modal do time do coração (botão do cabeçalho): fundo da superfície, cantos e sombra dos painéis.
+.favorite-dialog {
+  @include mat.dialog-overrides(
+    (
+      container-color: var(--surface),
+      container-shape: 16px,
+    )
+  );
+
+  .mat-mdc-dialog-surface {
+    @include floating-panel;
+    border-radius: 16px;
+  }
+}
+
 // Popup "Onde assistir" da página da partida: lista de canais (não clicáveis).
 .watch-menu {
   @include mat.menu-overrides(
@@ -516,4 +531,12 @@ html, body {
   .live-dot {
     animation: none;
   }
+}
+
+// Escudos (`<img crest>`): sempre no formato original dentro do quadro (escudo mais largo ou mais alto
+// que o quadro não estica nem achata) e sem encolher em linhas flex apertadas. A diretiva Crest conta
+// com isso para igualar o tamanho aparente.
+img[crest] {
+  flex: none;
+  object-fit: contain;
 }

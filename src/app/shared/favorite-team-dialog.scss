@@ -1,0 +1,195 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+  color: var(--text);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 12px 8px 20px;
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 1.15rem;
+  }
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+}
+
+// Coração preenchido à esquerda do título, na cor da paleta (a mesma dos botões, legível no claro e no escuro).
+.heart {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--button-text);
+  font-size: 22px;
+  font-variation-settings: 'FILL' 1;
+}
+
+// Grade de clubes: rola por dentro da modal, o cabeçalho fica fixo.
+.teams {
+  display: grid;
+  // 20 clubes: 4 × 5 no computador, 3 colunas em telas médias e 2 no celular.
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 8px 20px 20px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.team {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+button.team {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--button-text);
+    outline-offset: 2px;
+  }
+
+  &.selected {
+    border-color: var(--button-text);
+    background: var(--button-bg);
+    color: var(--button-text);
+    font-weight: 700;
+  }
+}
+
+.name {
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.foot {
+  padding: 0 20px 16px;
+}
+
+.clear,
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--button-bg-hover);
+  }
+
+  .mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 8px 20px 20px;
+  color: var(--muted);
+}
+
+.sk-crest {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.sk-line {
+  width: 60%;
+  height: 12px;
+  border-radius: 6px;
+}
+
+@media (max-width: 840px) {
+  .teams {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+// Celular: duas colunas.
+@media (max-width: 420px) {
+  .teams {
+    grid-template-columns: 1fr 1fr;
+    padding-inline: 16px;
+  }
+
+  .teams {
+    gap: 6px;
+  }
+
+  // Um pouco mais baixos: as 10 linhas cabem sem rolar num celular comum (~844 px de altura).
+  .team {
+    gap: 8px;
+    min-height: 48px;
+    padding: 6px 10px;
+
+    img,
+    .sk-crest {
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  .name {
+    font-size: 0.85rem;
+  }
+}
