@@ -135,24 +135,26 @@ export class StatsSkeleton {
   template: `
     <div class="card" aria-busy="true" aria-label="Carregando escalações">
       <span class="sk sk-title"></span>
-      <div class="bars" aria-hidden="true">
-        <span class="sk team-bar"></span>
-        <span class="sk team-bar"></span>
+      <!-- Como o campo de verdade: no estreito, faixa do mandante, campo e faixa do visitante; no largo,
+           as duas faixas lado a lado em cima do campo deitado. -->
+      <div class="field" aria-hidden="true">
+        <span class="sk team-bar home"></span>
+        <span class="sk pitch"></span>
+        <span class="sk team-bar away"></span>
       </div>
-      <span class="sk pitch" aria-hidden="true"></span>
+      <!-- Embaixo do campo, como no card pronto: técnico e os títulos (fechados) de reservas e desfalques. -->
       <div class="bench" aria-hidden="true">
         @for (t of [0, 1]; track t) {
-          <div>
-            <div class="person">
-              <span class="sk photo"></span>
-              <span class="sk name"></span>
-            </div>
-            <span class="sk subtitle"></span>
-            @for (i of [0, 1, 2, 3]; track i) {
+          <div class="bench-team">
+            <div class="coach">
+              <div class="heading"><span class="sk crest"></span><span class="sk subtitle"></span></div>
               <div class="person">
                 <span class="sk photo"></span>
-                <span class="sk name" [style.width.px]="80 + (i % 2) * 30"></span>
+                <span class="sk name"></span>
               </div>
+            </div>
+            @for (i of [0, 1]; track i) {
+              <div class="heading toggle"><span class="sk crest"></span><span class="sk subtitle"></span><span class="sk chevron"></span></div>
             }
           </div>
         }
@@ -166,23 +168,38 @@ export class StatsSkeleton {
       container-type: inline-size;
     }
 
-    .bars {
+    .field {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 8px;
+      grid-template-areas: 'home' 'pitch' 'away';
+      gap: 8px;
     }
 
     .team-bar {
       height: 22px;
     }
 
+    .team-bar.home {
+      grid-area: home;
+    }
+
+    .team-bar.away {
+      grid-area: away;
+    }
+
+    // Mesma altura do campo de verdade: em pé, no mínimo 760 px mais o respiro; deitado, 105 x 68.
     .pitch {
-      height: 520px;
+      grid-area: pitch;
+      box-sizing: border-box;
+      height: 780px;
       border-radius: 8px;
     }
 
     @container (min-width: 560px) {
+      .field {
+        grid-template-areas: 'home away' 'pitch pitch';
+        grid-template-columns: 1fr 1fr;
+      }
+
       .pitch {
         height: auto;
         aspect-ratio: 105 / 68;
@@ -192,12 +209,73 @@ export class StatsSkeleton {
     .bench {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
+      column-gap: 16px;
       margin-top: 20px;
+    }
 
-      @container (max-width: 480px) {
+    // Divisória entre os times, como no card pronto. (Sem aninhar regras: o estilo do componente não as
+    // aceita.)
+    .bench-team {
+      display: flow-root;
+    }
+
+    .bench-team + .bench-team {
+      padding-left: 16px;
+      border-left: 1px solid var(--line);
+    }
+
+    @container (max-width: 480px) {
+      .bench {
         grid-template-columns: minmax(0, 1fr);
       }
+
+      .bench-team + .bench-team {
+        margin-top: 14px;
+        padding-top: 12px;
+        padding-left: 0;
+        border-top: 1px solid var(--line);
+        border-left: 0;
+      }
+    }
+
+    // Alturas do card pronto: técnico (63 px e 14 px de respiro), título das reservas (24 px) e o dos
+    // desfalques (30 px, com o respiro de baixo por dentro).
+    .coach {
+      height: 63px;
+      margin-bottom: 14px;
+    }
+
+    // Título de seção (escudo e nome; os de reservas e desfalques com a seta à direita).
+    .heading {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 6px;
+    }
+
+    .toggle {
+      height: 24px;
+    }
+
+    // 20 px acima: no card pronto, os 6 px de baixo das reservas e os 14 px de cima dos desfalques somam
+    // (aqui as duas margens se juntariam na maior).
+    .toggle + .toggle {
+      box-sizing: border-box;
+      height: 30px;
+      margin: 20px 0 0;
+      padding-bottom: 6px;
+    }
+
+    .crest {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+    }
+
+    .chevron {
+      width: 14px;
+      height: 10px;
+      margin-left: auto;
     }
 
     .person {
@@ -220,10 +298,113 @@ export class StatsSkeleton {
     }
 
     .subtitle {
-      width: 70px;
+      width: 80px;
       height: 13px;
-      margin: 12px 0 4px;
     }
   `,
 })
 export class LineupsSkeleton {}
+
+/** Últimos 5 jogos (fechado): título com a seta e, por time, escudo, nome, média e os 5 resultados. */
+@Component({
+  selector: 'app-form-skeleton',
+  template: `
+    <div class="card" aria-busy="true" aria-label="Carregando últimos jogos">
+      <div class="head" aria-hidden="true"><span class="sk sk-title"></span><span class="sk chevron"></span></div>
+      <div class="teams" aria-hidden="true">
+        @for (t of [0, 1]; track t) {
+          <div class="team">
+            <span class="sk crest"></span>
+            <span class="sk name"></span>
+            <span class="sk badge"></span>
+            <span class="chips">
+              @for (i of [0, 1, 2, 3, 4]; track i) {
+                <span class="sk chip"></span>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  `,
+  styles:
+    CARD +
+    `
+    :host {
+      container-type: inline-size;
+    }
+
+    // Mesmas alturas do card pronto: título 24 px, linha de cada time 21 px.
+    .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 24px;
+      margin-bottom: 12px;
+    }
+
+    .head .sk-title {
+      margin: 0;
+    }
+
+    .chevron {
+      width: 14px;
+      height: 10px;
+    }
+
+    .teams {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 16px;
+    }
+
+    @container (max-width: 560px) {
+      .teams {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .team + .team {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+      }
+    }
+
+    .team {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 21px;
+    }
+
+    .crest {
+      flex: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+    }
+
+    .name {
+      width: 90px;
+      height: 12px;
+    }
+
+    .badge {
+      width: 30px;
+      height: 20px;
+    }
+
+    .chips {
+      display: inline-flex;
+      gap: 3px;
+      margin-left: auto;
+    }
+
+    .chip {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+    }
+  `,
+})
+export class FormSkeleton {}

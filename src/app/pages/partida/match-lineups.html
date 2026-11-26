@@ -70,7 +70,7 @@
               <app-match-coach class="coach" [team]="b.team" [coach]="b.coach" />
             }
             @if (b.absences.length) {
-              <app-match-absences [team]="b.team" [absences]="b.absences" />
+              <app-match-absences [team]="b.team" [absences]="b.absences" [(open)]="absencesOpen" />
             }
           </section>
         }

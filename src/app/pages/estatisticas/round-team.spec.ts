@@ -90,8 +90,12 @@ describe('Time da rodada ao vivo', () => {
 });
 
 describe('Rodada que o time da rodada abre', () => {
-  function open(teams: Record<string, Pick<RoundTeam, 'games' | 'totalGames'>>, current: string) {
+  // Jogos da lista de cada rodada (para saber se ela já começou): por padrão, nenhum começou.
+  function open(teams: Record<string, Pick<RoundTeam, 'games' | 'totalGames'>>, current: string, started: string[] = [], live: string[] = []) {
     const rounds = Object.keys(teams);
+    const day = 1_800_000_000;
+    const fixtures = (round: string) =>
+      of(Array.from({ length: 10 }, (_, i) => ({ fixture: { timestamp: day + i * 3600, status: { short: i === 0 && started.includes(round) ? 'FT' : i === 0 && live.includes(round) ? '1H' : 'NS' } } })));
     TestBed.configureTestingModule({
       imports: [RoundTeamCard],
       providers: [
@@ -101,6 +105,7 @@ describe('Rodada que o time da rodada abre', () => {
             rounds: () => of(rounds),
             currentRound: () => of(current),
             teamOfRound: (round: string) => of({ round, formation: '4-3-3', players: [player(7)], ...teams[round] }),
+            fixtures,
           },
         },
       ],
@@ -116,6 +121,18 @@ describe('Rodada que o time da rodada abre', () => {
 
   it('atual completa e a seguinte sem jogo encerrado: fica na atual', () => {
     expect(open({ R36: { games: 10, totalGames: 10 }, R37: { games: 0, totalGames: 10 } }, 'R36')).toBe('R36');
+  });
+
+  it('atual com jogo atrasado e a seguinte já começou (com jogo encerrado): abre na seguinte', () => {
+    expect(open({ R36: { games: 9, totalGames: 10 }, R37: { games: 1, totalGames: 10 } }, 'R36', ['R37'])).toBe('R37');
+  });
+
+  it('atual incompleta e a seguinte só com jogo em andamento: fica na atual', () => {
+    expect(open({ R36: { games: 9, totalGames: 10 }, R37: { games: 0, totalGames: 10 } }, 'R36', [], ['R37'])).toBe('R36');
+  });
+
+  it('atual incompleta e a seguinte ainda não começou: fica na atual', () => {
+    expect(open({ R36: { games: 9, totalGames: 10 }, R37: { games: 0, totalGames: 10 } }, 'R36')).toBe('R36');
   });
 
   it('atual sem jogo encerrado: abre na anterior', () => {

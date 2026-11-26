@@ -95,7 +95,15 @@ describe('Escalações', () => {
     const fixture = TestBed.createComponent(MatchLineups);
     fixture.componentRef.setInput('fixture', f);
     fixture.detectChanges();
-    const bench = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.bench li')];
+    const root = fixture.nativeElement as HTMLElement;
+    // Reservas fechadas por padrão: só o título, com a quantidade.
+    expect(root.querySelector('.bench li')).toBeNull();
+    const toggle = root.querySelector<HTMLButtonElement>('.bench .section-toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const bench = [...root.querySelectorAll('.bench li')];
     const badge = (name: string) => bench.find((li) => li.textContent?.includes(name))!.querySelector('.rating-badge') as HTMLElement | null;
     expect(badge('D. Santos')?.textContent?.trim()).toBe('Indef.');
     expect(badge('D. Santos')?.title).toBe('Indefinido');
@@ -266,6 +274,8 @@ describe('Escalações', () => {
     expect(assistPos.classList).not.toContain('right');
 
     // Reserva que não jogou: sem selo. Reserva que entrou e ainda não tem nota: selo cinza "Indef.".
+    el.querySelector<HTMLButtonElement>('.bench .section-toggle')!.click();
+    fixture.detectChanges();
     const bench = [...el.querySelectorAll('.bench li')];
     const unused = bench.find((li) => li.textContent?.includes('N. Entrou'))!;
     expect(unused.querySelector('.rating-badge')).toBeNull();

@@ -1,7 +1,33 @@
-<!-- Grade da página: título; artilharia, assistências e time da rodada; filtro; notas e jogadores.
-     O filtro fica logo acima dos dois quadros que ele afeta (notas e jogadores). -->
-<div class="page">
-  <h1 class="area-title">Estatísticas</h1>
+<!-- Grade da página: artilharia, assistências e time da rodada; filtro; notas e jogadores. O filtro fica
+     logo acima dos dois quadros que ele afeta (notas e jogadores). O título fica só para leitores de tela
+     (a aba do topo já diz que é a página de jogadores). -->
+<div class="page" [attr.data-section]="section()">
+  <h1 class="sr-only">Jogadores</h1>
+
+  <!-- Celular e tela média: um quadro por vez, em abas com o ícone de cada quadro (Estatísticas, com o
+       nome). Os títulos dos quadros continuam neles. -->
+  <div class="section-tabs area-tabs" role="tablist" aria-label="Quadros da página">
+    @for (s of sections; track s.id) {
+      <button
+        type="button"
+        role="tab"
+        [class.icon-tab]="s.icon || s.svgIcon"
+        [attr.aria-selected]="section() === s.id"
+        [attr.aria-label]="s.icon || s.svgIcon ? s.label : null"
+        [matTooltip]="s.label"
+        [matTooltipDisabled]="!(s.icon || s.svgIcon)"
+        (click)="section.set(s.id)"
+      >
+        @if (s.svgIcon) {
+          <mat-icon class="tab-icon" [svgIcon]="s.svgIcon" aria-hidden="true" />
+        } @else if (s.icon) {
+          <mat-icon class="tab-icon" [class.filled]="s.filled" aria-hidden="true">{{ s.icon }}</mat-icon>
+        } @else {
+          {{ s.label }}
+        }
+      </button>
+    }
+  </div>
 
   <div class="filter area-filter">
     <div class="switch" role="radiogroup" aria-label="Jogadores considerados">

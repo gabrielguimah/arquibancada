@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { Crest } from '../../shared/crest';
 import { PlayerPhoto } from '../../shared/player-photo';
@@ -42,6 +42,10 @@ export class MatchBench {
     if (!t.coach) return current;
     return { name: t.coach.name, photo: t.coach.photo || (current?.name === t.coach.name ? current.photo : null) };
   }
+
+  // Reservas e desfalques fechados por padrão; abrem e fecham os dois times juntos (colunas alinhadas).
+  protected benchOpen = signal(false);
+  protected absencesOpen = signal(false);
 
   protected tip = playerTip;
   protected ratingClass = ratingClass;

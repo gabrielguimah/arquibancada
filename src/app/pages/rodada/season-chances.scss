@@ -1,0 +1,281 @@
+$muted: var(--muted);
+$line: var(--line-strong);
+
+:host {
+  display: block;
+}
+
+.subtitle {
+  margin: 6px 0 12px;
+  font-size: 0.8rem;
+  color: $muted;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  padding: 6px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+thead th {
+  color: $muted;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-bottom: 1px solid $line;
+}
+
+tbody tr + tr td {
+  border-top: 1px solid var(--line);
+}
+
+.pos {
+  width: 1%;
+  padding-left: 12px;
+  color: $muted;
+  font-weight: 600;
+}
+
+.clube {
+  text-align: left;
+
+  img {
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  .name {
+    vertical-align: middle;
+  }
+}
+
+td.pts {
+  font-weight: 700;
+}
+
+// Adversários que faltam: escudo e, embaixo, "casa"/"fora" (ou o placar, se o jogo está rolando).
+.games {
+  display: inline-flex;
+  gap: 10px;
+}
+
+.game {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+
+  small {
+    color: $muted;
+    font-size: 0.62rem;
+    line-height: 1;
+  }
+
+  &.live small {
+    color: var(--live-text);
+    font-weight: 700;
+  }
+}
+
+.none {
+  color: $muted;
+}
+
+// "+N": os jogos que não cabem na linha (lista ao passar o mouse ou tocar).
+.games {
+  align-items: center;
+}
+
+.more {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: default;
+
+  &:focus-visible {
+    outline: 2px solid var(--button-text);
+    outline-offset: 2px;
+  }
+}
+
+// Lista dos jogos do "+N", no estilo do cartão das "Últimas 5": acima do "+N" (ou abaixo, se não cabe).
+.games-tip {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 8px 12px;
+  transform: translate(-50%, -100%);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.18), 0 0 0 1px var(--line);
+  color: var(--text);
+  font-size: 0.75rem;
+  pointer-events: none;
+
+  &.below {
+    transform: translate(-50%, 0);
+  }
+}
+
+.games-tip-title {
+  font-weight: 600;
+}
+
+// Em colunas, na ordem dos jogos: data, escudo do adversário e mando.
+.games-tip-list {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .date {
+    color: $muted;
+  }
+
+  img {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+
+  .where {
+    font-weight: 700;
+  }
+}
+
+.games-tip-legend {
+  color: $muted;
+  font-size: 0.68rem;
+}
+
+// Cores das chances: cada coluna no tom da sua zona; o fundo fica mais forte quanto maior a chance.
+// Título no azul elétrico da nota máxima (#00FFFF, estrela de melhor da rodada, aba ativa), nos dois
+// temas: fundo quase cheio e, com chance alta, texto azul-escuro (como na aba ativa).
+td.title {
+  --chance: var(--rating-100);
+  --chance-max: 90%;
+
+  &.strong {
+    color: var(--on-highlight);
+  }
+}
+
+.libertadores {
+  --chance: #0040ff;
+}
+
+.sulamericana {
+  --chance: #0ea5e9;
+}
+
+.relegation {
+  --chance: #d62828;
+}
+
+th.chance {
+  min-width: 64px;
+}
+
+td.chance {
+  min-width: 64px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--chance) calc(var(--heat, 0) * var(--chance-max, 38%)), transparent);
+
+  &.zero {
+    font-weight: 400;
+    opacity: 0.4;
+  }
+
+  &.sure {
+    font-weight: 800;
+  }
+}
+
+.short {
+  display: none;
+}
+
+// Bolinhas da legenda, nas cores das colunas.
+.legend {
+  li::before {
+    background: var(--chance);
+  }
+
+  .title {
+    --chance: var(--rating-100);
+  }
+}
+
+// Celular: colunas de chance com o nome abreviado e mais justas.
+@media (max-width: 560px) {
+  .full {
+    display: none;
+  }
+
+  .short {
+    display: inline;
+  }
+
+  th,
+  td {
+    padding-inline: 3px;
+  }
+
+  .pos {
+    padding-left: 8px;
+  }
+
+  // Nome abreviado com reticências: as quatro chances cabem na tela; os próximos jogos ficam na rolagem.
+  .clube {
+    img {
+      margin-right: 6px;
+    }
+
+    .name {
+      display: inline-block;
+      max-width: 84px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  th.chance,
+  td.chance {
+    min-width: 40px;
+  }
+}

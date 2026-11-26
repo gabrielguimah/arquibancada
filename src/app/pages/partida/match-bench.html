@@ -6,76 +6,82 @@
         <app-match-coach class="coach" [team]="t.team" [coach]="c" />
       }
       <h3>
-        <img crest [src]="t.team.logo" alt="" width="18" height="18" />
-        Reservas
+        <button type="button" class="section-toggle" [attr.aria-expanded]="benchOpen()" (click)="benchOpen.set(!benchOpen())">
+          <img crest [src]="t.team.logo" alt="" width="18" height="18" />
+          Reservas
+          <span class="count">{{ t.substitutes.length }}</span>
+          <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
+        </button>
       </h3>
-      <ul>
-        @for (p of t.substitutes; track p.key) {
-          <li [class.unused]="!p.subIn" [class.mvp]="p.best" [title]="tip(p)">
-            <span class="number">{{ p.number }}</span>
-            <img class="mini" playerPhoto [src]="p.photo" alt="" width="28" height="28" loading="lazy" />
-            <!-- Gols, assistências, cartão e melhor da partida logo depois do nome; as setas da troca à direita. -->
-            <span class="bench-name">
-              <span class="player-name">{{ p.name }}</span>
-              <span class="name-events">
-                @if (p.best) {
-                  <!-- Melhor da partida que veio do banco: primeiro ícone, o mesmo selo do campo. -->
-                  <span class="mvp-star" aria-label="Melhor da partida"><mat-icon aria-hidden="true">star</mat-icon></span>
-                }
-                @if (p.goals) {
-                  <span class="ev-wrap" [attr.aria-label]="p.goals + (p.goals > 1 ? ' gols' : ' gol')">
-                    <mat-icon class="ev" aria-hidden="true">sports_soccer</mat-icon>
-                    @if (p.goals > 1) {
-                      <span class="count" aria-hidden="true">{{ p.goals }}</span>
-                    }
+      @if (benchOpen()) {
+        <ul>
+          @for (p of t.substitutes; track p.key) {
+            <li [class.unused]="!p.subIn" [class.mvp]="p.best" [title]="tip(p)">
+              <span class="number">{{ p.number }}</span>
+              <img class="mini" playerPhoto [src]="p.photo" alt="" width="28" height="28" loading="lazy" />
+              <!-- Gols, assistências, cartão e melhor da partida logo depois do nome; as setas da troca à direita. -->
+              <span class="bench-name">
+                <span class="player-name">{{ p.name }}</span>
+                <span class="name-events">
+                  @if (p.best) {
+                    <!-- Melhor da partida que veio do banco: primeiro ícone, o mesmo selo do campo. -->
+                    <span class="mvp-star" aria-label="Melhor da partida"><mat-icon aria-hidden="true">star</mat-icon></span>
+                  }
+                  @if (p.goals) {
+                    <span class="ev-wrap" [attr.aria-label]="p.goals + (p.goals > 1 ? ' gols' : ' gol')">
+                      <mat-icon class="ev" aria-hidden="true">sports_soccer</mat-icon>
+                      @if (p.goals > 1) {
+                        <span class="count" aria-hidden="true">{{ p.goals }}</span>
+                      }
+                    </span>
+                  }
+                  @if (p.ownGoals) {
+                    <span class="ev-wrap" [attr.aria-label]="p.ownGoals + (p.ownGoals > 1 ? ' gols contra' : ' gol contra')">
+                      <mat-icon class="ev own-goal" aria-hidden="true">sports_soccer</mat-icon>
+                      @if (p.ownGoals > 1) {
+                        <span class="count" aria-hidden="true">{{ p.ownGoals }}</span>
+                      }
+                    </span>
+                  }
+                  @if (p.assists) {
+                    <span class="ev-wrap" [attr.aria-label]="p.assists + (p.assists > 1 ? ' assistências' : ' assistência')">
+                      <mat-icon class="ev" svgIcon="chuteira" aria-hidden="true" />
+                      @if (p.assists > 1) {
+                        <span class="count" aria-hidden="true">{{ p.assists }}</span>
+                      }
+                    </span>
+                  }
+                  @if (p.yellow || p.red) {
+                    <span class="card-icon" [class.red]="p.red" [attr.aria-label]="p.red ? 'Expulso' : 'Cartão amarelo'"></span>
+                  }
+                </span>
+              </span>
+              <span class="events">
+                @if (p.subIn) {
+                  <span class="sub-in" [attr.aria-label]="'Entrou aos ' + p.subIn">
+                    <mat-icon aria-hidden="true">arrow_upward</mat-icon>{{ p.subIn }}
                   </span>
                 }
-                @if (p.ownGoals) {
-                  <span class="ev-wrap" [attr.aria-label]="p.ownGoals + (p.ownGoals > 1 ? ' gols contra' : ' gol contra')">
-                    <mat-icon class="ev own-goal" aria-hidden="true">sports_soccer</mat-icon>
-                    @if (p.ownGoals > 1) {
-                      <span class="count" aria-hidden="true">{{ p.ownGoals }}</span>
-                    }
+                @if (p.subOut) {
+                  <span class="sub-out" [attr.aria-label]="'Saiu aos ' + p.subOut">
+                    <mat-icon aria-hidden="true">arrow_downward</mat-icon>{{ p.subOut }}
                   </span>
-                }
-                @if (p.assists) {
-                  <span class="ev-wrap" [attr.aria-label]="p.assists + (p.assists > 1 ? ' assistências' : ' assistência')">
-                    <mat-icon class="ev" svgIcon="chuteira" aria-hidden="true" />
-                    @if (p.assists > 1) {
-                      <span class="count" aria-hidden="true">{{ p.assists }}</span>
-                    }
-                  </span>
-                }
-                @if (p.yellow || p.red) {
-                  <span class="card-icon" [class.red]="p.red" [attr.aria-label]="p.red ? 'Expulso' : 'Cartão amarelo'"></span>
                 }
               </span>
-            </span>
-            <span class="events">
-              @if (p.subIn) {
-                <span class="sub-in" [attr.aria-label]="'Entrou aos ' + p.subIn">
-                  <mat-icon aria-hidden="true">arrow_upward</mat-icon>{{ p.subIn }}
-                </span>
+              @if (p.rating !== null) {
+                <span [class]="ratingClass(p.rating) + ' rating'">{{ formatRating(p.rating) }}</span>
+              } @else if (p.subIn) {
+                <!-- "Indef." só para quem entrou; reserva que não jogou fica sem selo. -->
+                <span [class]="noRating.class + ' rating'" [title]="noRating.title">{{ noRating.label }}</span>
               }
-              @if (p.subOut) {
-                <span class="sub-out" [attr.aria-label]="'Saiu aos ' + p.subOut">
-                  <mat-icon aria-hidden="true">arrow_downward</mat-icon>{{ p.subOut }}
-                </span>
-              }
-            </span>
-            @if (p.rating !== null) {
-              <span [class]="ratingClass(p.rating) + ' rating'">{{ formatRating(p.rating) }}</span>
-            } @else if (p.subIn) {
-              <!-- "Indef." só para quem entrou; reserva que não jogou fica sem selo. -->
-              <span [class]="noRating.class + ' rating'" [title]="noRating.title">{{ noRating.label }}</span>
-            }
-          </li>
-        }
-      </ul>
+            </li>
+          }
+        </ul>
+      }
       <!-- Desfalques do time (lesionados, suspensos, dúvidas), só se houver. -->
       @if (absencesOf(t.team.id); as list) {
         @if (list.length) {
-          <app-match-absences [team]="t.team" [absences]="list" />
+          <app-match-absences [team]="t.team" [absences]="list" [(open)]="absencesOpen" />
         }
       }
     </section>

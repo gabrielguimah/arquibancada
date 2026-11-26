@@ -1,0 +1,125 @@
+<section class="chances" aria-labelledby="tabela-titulo">
+  <p class="subtitle">
+    Simulação de {{ simulations }} finais de campeonato com os jogos que faltam{{ live() ? ', atualizada com os placares ao vivo' : '' }}.
+  </p>
+
+  <div class="table-wrap" (scroll)="hideTip()">
+    <table>
+      <thead>
+        <tr>
+          <th class="pos">#</th>
+          <th class="clube">Clube</th>
+          <th class="pts" title="Pontos">Pts</th>
+          @for (c of columns(); track c.key) {
+            <th class="chance" [class]="c.key" [title]="c.label">
+              <span class="full">{{ c.label }}</span><span class="short" aria-hidden="true">{{ c.short }}</span>
+            </th>
+          }
+          <th class="jogos">Próximos jogos</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of rows(); track r.team.id) {
+          <tr>
+            <td class="pos">{{ r.rank }}</td>
+            <td class="clube">
+              <img crest [src]="r.team.logo" alt="" width="22" height="22" loading="lazy" />
+              <span class="name">{{ r.team.name }}</span><app-favorite-heart [team]="r.team.id" />
+            </td>
+            <td class="pts">{{ r.points }}</td>
+            @for (c of columns(); track c.key) {
+              @let p = r.chances[c.key];
+              <td class="chance" [class]="c.key" [class.zero]="p <= 0" [class.sure]="p >= 1" [class.strong]="p >= 0.5" [style.--heat]="heat(p)" [title]="chanceTip(r, c)">
+                {{ format(p) }}
+              </td>
+            }
+            <td class="jogos">
+              <span class="games">
+                @for (g of r.upcoming.slice(0, shown); track g.id) {
+                  <span class="game" [class.live]="g.live" [title]="gameTip(g)" [attr.aria-label]="gameTip(g)">
+                    <img crest [src]="g.opponent.logo" alt="" width="20" height="20" loading="lazy" />
+                    <small aria-hidden="true">{{ g.live ?? (g.home ? 'casa' : 'fora') }}</small>
+                  </span>
+                } @empty {
+                  <span class="none">—</span>
+                }
+                @if (r.upcoming.length > shown) {
+                  <!-- Os demais jogos: lista ao passar o mouse, no foco ou no toque. -->
+                  <span
+                    class="more"
+                    tabindex="0"
+                    role="button"
+                    [attr.aria-label]="moreLabel(r)"
+                    (mouseenter)="showTip($event, r)"
+                    (mouseleave)="hideTip()"
+                    (focus)="showTip($event, r)"
+                    (blur)="hideTip()"
+                    >+{{ r.upcoming.length - shown }}</span
+                  >
+                }
+              </span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <!-- Regras e legenda (fechado por padrão), como o da classificação. -->
+  <details class="rules">
+    <summary>
+      Regras e legenda
+      <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
+    </summary>
+
+    <ul class="legend">
+      @for (c of columns(); track c.key) {
+        <li [class]="c.key">{{ legendLabel[c.key] }}</li>
+      }
+    </ul>
+
+    <p class="rules-title">Como as chances são calculadas:</p>
+    <ol class="tiebreak">
+      <li>O resto do campeonato é jogado {{ simulations }} vezes, a partir da classificação atual.</li>
+      <li>Os gols de cada jogo são sorteados pela força de ataque e de defesa dos dois times na temporada, com vantagem para o mandante.</li>
+      <li>Jogo em andamento parte do placar do momento, só com o tempo que falta.</li>
+      <li>No fim de cada simulação, a classificação segue os critérios do campeonato: pontos, vitórias, saldo de gols e gols marcados. Empate em tudo isso é decidido por sorteio (confronto direto e cartões ficam de fora).</li>
+      <li>A chance é a parte das simulações em que o time termina naquela faixa da tabela.</li>
+    </ol>
+
+    <dl class="glossary">
+      @for (c of columns(); track c.key) {
+        <dt>{{ c.short }}</dt>
+        <dd>{{ c.label }}</dd>
+      }
+      <dt>0% · 100%</dt>
+      <dd>Não aconteceu (ou aconteceu) em nenhuma das simulações: na prática, já está decidido</dd>
+      <dt>&lt;1% · &gt;99%</dt>
+      <dd>Aconteceu em menos de 1% (ou em mais de 99%) das simulações</dd>
+      <dt>Cor</dt>
+      <dd>Quanto mais forte o fundo, maior a chance</dd>
+      <dt>casa · fora</dt>
+      <dd>Mando de campo do time no jogo; com o jogo em andamento, aparece o placar dele</dd>
+      @if (hasMore()) {
+        <dt>+N</dt>
+        <dd>Os demais jogos do time, com data e mando</dd>
+      }
+    </dl>
+  </details>
+</section>
+
+<!-- Jogos do "+N": fora da tabela (posição fixa na tela), para não ser cortada pela rolagem dela. -->
+@if (tip(); as t) {
+  <div class="games-tip" role="tooltip" [class.below]="t.below" [style.left.px]="t.x" [style.top.px]="t.y">
+    <span class="games-tip-title">Depois, {{ t.team.name }} enfrenta</span>
+    <ol class="games-tip-list">
+      @for (g of t.games; track g.id) {
+        <li>
+          <span class="date">{{ g.date }}</span>
+          <img crest [src]="g.opponent.logo" alt="" width="16" height="16" />
+          <span class="where">{{ g.home ? 'C' : 'F' }}</span>
+        </li>
+      }
+    </ol>
+    <span class="games-tip-legend">C: em casa · F: fora</span>
+  </div>
+}

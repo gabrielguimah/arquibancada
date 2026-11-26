@@ -87,6 +87,8 @@ describe('Página da partida', () => {
   let fixtureCall: ((f: Fixture | null) => Observable<Fixture | null>) | null = null;
   afterEach(() => (fixtureCall = null));
 
+  let rendered: { detectChanges: () => void } | null = null;
+
   function render(f: Fixture | null, id = '1492463') {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -99,6 +101,7 @@ describe('Página da partida', () => {
     });
     const fixture = TestBed.createComponent(Partida);
     fixture.detectChanges();
+    rendered = fixture;
     return fixture.nativeElement as HTMLElement;
   }
 
@@ -109,17 +112,29 @@ describe('Página da partida', () => {
       { team: saoPaulo.id, matches: [{ id: 2, timestamp: 1793838600, home: saoPaulo, away: flamengo, goals: { home: 0, away: 0 } }] },
     ];
     const el = render(match([1, 1], []));
-    const blocks = [...el.querySelectorAll('app-match-form .block')];
-    expect(blocks.map((b) => b.querySelector('.team strong')?.textContent?.trim())).toEqual(['Botafogo', 'São Paulo']);
+    const blocks = () => [...el.querySelectorAll('app-match-form .block')];
+    expect(blocks().map((b) => b.querySelector('.team strong')?.textContent?.trim())).toEqual(['Botafogo', 'São Paulo']);
+    // Fechado: só o resumo (escudo, nome, média e resultados), sem os placares.
+    expect(el.querySelector('app-match-form .rows')).toBeNull();
+    expect([...blocks()[0].querySelectorAll('.team .chip')].map((c) => c.textContent?.trim())).toEqual(['V']);
+    const toggle = el.querySelector<HTMLButtonElement>('app-match-form .toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    rendered!.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
     const row = (b: Element) => b.querySelector('.rows li')!;
-    expect(row(blocks[0]).querySelector('.chip')?.textContent?.trim()).toBe('V');
+    expect(row(blocks()[0]).querySelector('.chip')?.textContent?.trim()).toBe('V');
     const parts = (li: Element) => [...li.querySelectorAll('.date, .name, .score')].map((n) => n.textContent?.trim());
-    expect(parts(row(blocks[0]))).toEqual(['18/11', 'Flamengo', '1 - 2', 'Botafogo']);
-    expect(row(blocks[0]).querySelector('.own')?.textContent?.trim()).toBe('Botafogo');
-    expect(row(blocks[1]).querySelector('.chip')?.textContent?.trim()).toBe('E');
+    expect(parts(row(blocks()[0]))).toEqual(['18/11', 'Flamengo', '1 - 2', 'Botafogo']);
+    expect(row(blocks()[0]).querySelector('.own')?.textContent?.trim()).toBe('Botafogo');
+    expect(row(blocks()[1]).querySelector('.chip')?.textContent?.trim()).toBe('E');
     // Média ao lado do nome; sem nota, sem selo.
-    expect(blocks[0].querySelector('.team .team-rating')?.textContent?.trim()).toBe('6.8');
-    expect(blocks[1].querySelector('.team .team-rating')).toBeNull();
+    expect(blocks()[0].querySelector('.team .team-rating')?.textContent?.trim()).toBe('6.8');
+    expect(blocks()[1].querySelector('.team .team-rating')).toBeNull();
+    // Clicar no time também fecha.
+    blocks()[0].querySelector<HTMLElement>('.team')!.click();
+    rendered!.detectChanges();
+    expect(el.querySelector('app-match-form .rows')).toBeNull();
   });
 
   it('mostra times, placar, situação, gols e informações da partida', () => {
@@ -153,7 +168,7 @@ describe('Página da partida', () => {
     const el = render(match([1, 1], []));
     const sections = el.querySelector('.sections') as HTMLElement;
     expect(sections.dataset['tab']).toBe('timeline');
-    const tabs = [...el.querySelectorAll('.tabs [role="tab"]')] as HTMLButtonElement[];
+    const tabs = [...el.querySelectorAll('.section-tabs [role="tab"]')] as HTMLButtonElement[];
     expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Lance a lance', 'Estatísticas', 'Escalações']);
     tabs[1].click();
     TestBed.inject(ApplicationRef).tick();

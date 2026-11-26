@@ -5,6 +5,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, PlayerStat, RatedPlayer, Team, TopRated } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { Pager } from '../../shared/pager';
+import { PillSwitch } from '../../shared/pill-switch';
 import { RoundTeamCard } from './round-team';
 import { PlayersTable } from './players-table';
 import { formatRating, ratingClass } from '../../shared/rating';
@@ -30,6 +31,9 @@ interface Leader {
   detail: string;
 }
 
+/** Quadro da página (aba no celular). */
+type Section = 'scorers' | 'assists' | 'team' | 'rated' | 'players';
+
 interface Board {
   /** Lugar do quadro na grade da página (grid-area). */
   id: 'scorers' | 'assists' | 'rated';
@@ -50,7 +54,7 @@ interface Source<T> {
 
 @Component({
   selector: 'app-estatisticas',
-  imports: [Crest, MatIcon, MatTooltip, Pager, PlayersTable, RoundTeamCard],
+  imports: [Crest, MatIcon, MatTooltip, Pager, PillSwitch, PlayersTable, RoundTeamCard],
   templateUrl: './estatisticas.html',
   styleUrl: './estatisticas.scss',
 })
@@ -59,6 +63,20 @@ export class Estatisticas {
   private retry?: ReturnType<typeof setTimeout>;
 
   protected filter = signal<Filter>('regulares');
+
+  /** Celular e tela média: o quadro à mostra (no computador, todos na grade). */
+  // Abas com o ícone do título de cada quadro (bola, chuteira, medalha, estrela); a tabela de jogadores,
+  // sem ícone, fica com o nome. O nome vai também no aria-label e no tooltip das abas de ícone.
+  protected sections: Array<{ id: Section; label: string; icon?: string; svgIcon?: string; filled?: boolean }> = [
+    { id: 'scorers', label: 'Artilheiros', icon: 'sports_soccer' },
+    { id: 'assists', label: 'Assistências', svgIcon: 'chuteira' },
+    { id: 'team', label: 'Time da rodada', icon: 'military_tech', filled: true },
+    { id: 'rated', label: 'Melhores notas', icon: 'star', filled: true },
+    { id: 'players', label: 'Estatísticas' },
+  ];
+  protected section = signal<Section>('scorers');
+
+
   // Página atual de cada quadro, pelo título.
   private pages = signal<Record<string, number>>({});
 

@@ -238,6 +238,8 @@ interface TeamStats {
 
 interface TeamMatch {
   timestamp: number;
+  /** O time foi o mandante. */
+  home: boolean;
   rating: number | null;
   stats: TeamStats;
 }
@@ -482,6 +484,7 @@ function matchStats(f: FixtureDetail, teamId: number): TeamMatch {
 
   return {
     timestamp: f.fixture.timestamp,
+    home,
     rating: minutes ? weighted / minutes : null,
     stats: {
       goalsFor,
@@ -1134,7 +1137,9 @@ export class ApiCache extends DurableObject<Env> {
    */
   private teamStatsEntry(): CacheEntry | undefined {
     const entry = this.read(teamStatsKey(this.env.SEASON));
-    const stale = !entry || Date.now() - entry.fetchedAt >= entry.ttl * 1000 || !entry.body.includes('"ratings"');
+    // Versão antiga (sem as notas por jogo ou sem casa/fora): refaz.
+    const outdated = !entry?.body.includes('"ratings"') || !entry.body.includes('"home"');
+    const stale = !entry || Date.now() - entry.fetchedAt >= entry.ttl * 1000 || outdated;
     if (stale && !this.teamStatsBuild) {
       this.teamStatsBuild = this.buildTeamStats()
         .catch((err) => console.error('estatísticas dos times falharam', err))
@@ -1171,7 +1176,12 @@ export class ApiCache extends DurableObject<Env> {
       (ratingEntry ? (JSON.parse(ratingEntry.body) as Array<{ team: TeamRef; rating: number }>) : []).map((r) => [r.team.id, r.rating]),
     );
     const stats = statsEntry
-      ? (JSON.parse(statsEntry.body) as { season: Array<{ team: TeamRef; games: number; stats: TeamStats }>; last5: unknown[] })
+      ? (JSON.parse(statsEntry.body) as {
+          season: Array<{ team: TeamRef; games: number; stats: TeamStats }>;
+          last5: unknown[];
+          home?: unknown;
+          away?: unknown;
+        })
       : null;
     const season = stats
       ? stats.season.map((r) => ({ ...r, rating: ratings.get(r.team.id) ?? null }))
@@ -1179,9 +1189,16 @@ export class ApiCache extends DurableObject<Env> {
         ? (JSON.parse(ratingEntry.body) as unknown[])
         : null;
 
-    const body = JSON.stringify({ updatedAt: new Date().toISOString(), season, last5: stats?.last5 ?? null });
+    const body = JSON.stringify({
+      updatedAt: new Date().toISOString(),
+      season,
+      last5: stats?.last5 ?? null,
+      // Só os jogos em casa / só os fora ({ season, last5 }); null até a versão nova ser montada.
+      home: stats?.home ?? null,
+      away: stats?.away ?? null,
+    });
     // Resposta montada aqui; com alguma lista ainda faltando, o navegador não deve guardá-la.
-    return { body, status: 'HIT', age: 0, ttl: season && stats ? 600 : 0 };
+    return { body, status: 'HIT', age: 0, ttl: season && stats?.home ? 600 : 0 };
   }
 
   /**
@@ -1295,22 +1312,36 @@ export class ApiCache extends DurableObject<Env> {
       }
     }
 
+    // Média das notas de cada jogo (temporada em casa/fora e últimos 5; a da temporada inteira vem das
+    // notas dos jogadores, em teamRatings).
+    const average = (list: TeamMatch[]) => {
+      const values = list.map((m) => m.rating).filter((r): r is number => r !== null);
+      return { rating: values.length ? round2(values.reduce((a, b) => a + b, 0) / values.length) : null, matches: values.map(round2) };
+    };
+    const lastRow = (team: TeamRef, list: TeamMatch[]) => {
+      const recent = list.slice(0, TEAM_LAST_MATCHES);
+      const { rating, matches } = average(recent);
+      return { team, games: recent.length, rating, matches, stats: aggregate(recent) };
+    };
+
     const season = [];
     const last5 = [];
+    // Só os jogos em casa / só os fora: mesmas tabelas (temporada e últimos 5 jogos naquele mando).
+    const home = { season: [] as unknown[], last5: [] as unknown[] };
+    const away = { season: [] as unknown[], last5: [] as unknown[] };
     for (const { team, matches } of byTeam.values()) {
       matches.sort((a, b) => b.timestamp - a.timestamp);
       season.push({ team, games: matches.length, stats: aggregate(matches) });
-      const recent = matches.slice(0, TEAM_LAST_MATCHES);
-      const ratings = recent.map((m) => m.rating).filter((r): r is number => r !== null);
-      last5.push({
-        team,
-        games: recent.length,
-        rating: ratings.length ? round2(ratings.reduce((a, b) => a + b, 0) / ratings.length) : null,
-        matches: ratings.map(round2),
-        stats: aggregate(recent),
-      });
+      last5.push(lastRow(team, matches));
+      for (const [venue, list] of [
+        [home, matches.filter((m) => m.home)],
+        [away, matches.filter((m) => !m.home)],
+      ] as const) {
+        venue.season.push({ team, games: list.length, rating: average(list).rating, stats: aggregate(list) });
+        venue.last5.push(lastRow(team, list));
+      }
     }
-    this.store(teamStatsKey(this.env.SEASON), JSON.stringify({ season, last5, ratings }), TEAM_STATS_TTL);
+    this.store(teamStatsKey(this.env.SEASON), JSON.stringify({ season, last5, home, away, ratings }), TEAM_STATS_TTL);
   }
 
   /** Executa a chamada à API a partir desta instância (usado pelas instâncias "fetch-<região>"). */

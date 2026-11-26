@@ -49,44 +49,16 @@ $muted: var(--muted);
 }
 
 // Seletor só no celular.
-.tabs {
+.section-tabs {
   display: none;
 }
 
 // Celular: uma seção por vez, escolhida no seletor abaixo do cabeçalho.
 @media (max-width: 900px) {
-  .tabs {
+  // Abas Lance a lance / Estatísticas / Escalações (estilo global .section-tabs).
+  .section-tabs {
     display: flex;
-    gap: 4px;
     margin-top: 12px;
-    padding: 3px;
-    border-radius: 999px;
-    background: var(--button-bg);
-
-    button {
-      flex: 1;
-      // Três abas na largura do celular: pouco espaço nas laterais de cada uma.
-      padding: 8px 6px;
-      border: 0;
-      border-radius: 999px;
-      background: transparent;
-      font: inherit;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: $muted;
-      cursor: pointer;
-
-      &[aria-selected='true'] {
-        background: var(--surface);
-        color: var(--accent);
-        box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
-      }
-
-      &:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-      }
-    }
   }
 
   .sections {
@@ -106,10 +78,16 @@ $muted: var(--muted);
       display: contents;
     }
 
-    // Últimos 5 jogos na aba Escalações, abaixo dos reservas.
+    // Últimos 5 jogos na aba Estatísticas, acima das estatísticas da partida (a ordem do HTML é a do
+    // computador, onde ficam embaixo das escalações).
+    .form {
+      order: -1;
+    }
+
+    // Últimos 5 jogos só na aba Estatísticas.
     &[data-tab='timeline'] :is(.stats, .form, .lineups),
-    &[data-tab='stats'] :is(.timeline, .form, .lineups),
-    &[data-tab='lineups'] :is(.timeline, .stats) {
+    &[data-tab='stats'] :is(.timeline, .lineups),
+    &[data-tab='lineups'] :is(.timeline, .stats, .form) {
       display: none;
     }
   }

@@ -1,4 +1,29 @@
-<div class="layout">
+<div class="layout" [attr.data-section]="section()">
+  <!-- Celular e tela média: abas Jogos / Classificação / Chances, como nas páginas Times e da partida (no
+       computador, os jogos ficam à esquerda e a troca Classificação | Chances fica em cima da tabela). -->
+  @let blockedTab = chancesBlocked();
+  <div class="section-tabs" role="tablist" aria-label="Seções da página">
+    <button type="button" role="tab" [attr.aria-selected]="section() === 'jogos'" (click)="setSection('jogos')">Jogos</button>
+    <button type="button" role="tab" [attr.aria-selected]="section() === 'tabela'" (click)="setSection('tabela')">Classificação</button>
+    <button
+      #chancesTabTip="matTooltip"
+      type="button"
+      role="tab"
+      [attr.aria-selected]="section() === 'chances'"
+      [attr.aria-disabled]="blockedTab ? true : null"
+      [attr.aria-describedby]="blockedTab ? 'chances-motivo' : null"
+      [class.blocked]="!!blockedTab"
+      [matTooltip]="blockedTab?.text ?? ''"
+      [matTooltipDisabled]="!blockedTab"
+      (click)="blockedTab ? chancesTabTip.show() : setSection('chances')"
+    >
+      Chances
+      @if (blockedTab?.lock) {
+        <mat-icon class="lock" aria-hidden="true">lock</mat-icon>
+      }
+    </button>
+  </div>
+
   <section class="jogos">
     <!-- Enquanto não se sabe se há jogo hoje, mostra o esqueleto; sem jogo, a seção some. -->
     @if (today() === null) {
@@ -58,12 +83,54 @@
   </section>
 
   <section class="tabela">
-    @if (standings().length || error()) {
-      <h2>Classificação</h2>
-    } @else {
-      <span class="sk sk-title sk-title-tabela" aria-hidden="true"></span>
+    <!-- Classificação ou Chances (uma de cada vez). A troca aparece desde o carregamento e faz o papel do
+         título (o h2 fica só para leitores de tela). Sem chances para mostrar, a opção fica bloqueada. -->
+    <div class="tabela-head">
+      <h2 id="tabela-titulo" class="sr-only">{{ showChances() ? 'Chances' : 'Classificação' }}</h2>
+      <div class="view-switch" role="tablist" aria-label="Ver">
+        <button type="button" role="tab" [attr.aria-selected]="!showChances()" [class.active]="!showChances()" (click)="setView('tabela')">
+          Classificação
+        </button>
+        @let blocked = chancesBlocked();
+        <button
+          #chancesTip="matTooltip"
+          type="button"
+          role="tab"
+          [attr.aria-selected]="showChances()"
+          [attr.aria-disabled]="blocked ? true : null"
+          [attr.aria-describedby]="blocked ? 'chances-motivo' : null"
+          [class.active]="showChances()"
+          [class.blocked]="!!blocked"
+          [matTooltip]="blocked?.text ?? ''"
+          [matTooltipDisabled]="!blocked"
+          (click)="blocked ? chancesTip.show() : setView('chances')"
+        >
+          Chances
+          @if (blocked?.lock) {
+            <mat-icon class="lock" aria-hidden="true">lock</mat-icon>
+          }
+        </button>
+        @if (blocked) {
+          <span id="chances-motivo" class="sr-only">{{ blocked.text }}</span>
+        }
+      </div>
+    </div>
+    @if (!standings().length && !error()) {
+      <!-- Subtítulo em esqueleto enquanto a classificação carrega. -->
+      <p class="subtitle" aria-hidden="true"><span class="sk sk-subtitle"></span> <span class="sk sk-subtitle sk-subtitle-2"></span></p>
+    } @else if (standings().length && !showChances()) {
+      <p class="subtitle">Ao vivo: os jogos em andamento já contam, com o placar do momento.</p>
     }
-    @if (standings().length) {
+    <!-- A tabela das chances é baixada à parte (fora do carregamento inicial): pré-carregada quando o
+         navegador fica livre e mostrada quando a grade Chances é escolhida. -->
+    @defer (when showChances(); prefetch on idle) {
+      @if (showChances()) {
+        <app-season-chances [rows]="chances()!.rows" [zones]="chances()!.columns" [live]="chances()!.live" />
+      }
+    }
+    @if (showChances()) {
+      <!-- Grade das chances: acima. -->
+    } @else if (standings().length) {
       <div class="table-wrap" (scroll)="hideFormTip()">
         <table>
           <thead>
@@ -107,7 +174,7 @@
                         >
                       }
                     </span>
-                    {{ s.team.name }}
+                    {{ s.team.name }}<app-favorite-heart [team]="s.team.id" />
                     @if (liveTeams().has(s.team.id)) {
                       <span
                         class="live-dot"
@@ -206,6 +273,12 @@
           </thead>
           <tbody>
             @for (i of skeletonStandings; track i) {
+              <!-- Títulos das zonas nas posições de sempre (Libertadores, pré, Sul-Americana, rebaixamento). -->
+              @if (skeletonZones.includes(i)) {
+                <tr class="zone-title">
+                  <th colspan="10"><span class="sk sk-zone"></span></th>
+                </tr>
+              }
               <tr class="sk-row">
                 <td class="pos"><span class="sk sk-pos"></span></td>
                 <td class="clube">
@@ -221,9 +294,12 @@
           </tbody>
         </table>
       </div>
+      <!-- Barra "Regras e legenda" (fechada) em esqueleto. -->
+      <div class="rules sk-rules" aria-hidden="true">
+        <span class="sk sk-rules-label"></span>
+        <span class="sk sk-rules-chevron"></span>
+      </div>
     }
-
-    <app-team-ratings [ready]="pageLoaded()" />
   </section>
 </div>
 

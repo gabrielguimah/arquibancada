@@ -5,10 +5,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIcon } from '@angular/material/icon';
 import { ApiFootball, Coach, Fixture, Injury, LEAGUE, TeamForm } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { PillSwitch } from '../../shared/pill-switch';
+import { FavoriteHeart } from '../../shared/favorite-heart';
 import { MatchLineups } from './match-lineups';
 import { MatchForm } from './match-form';
 import { MatchStats } from './match-stats';
-import { LineupsSkeleton, StatsSkeleton, TimelineSkeleton } from './match-skeletons';
+import { FormSkeleton, LineupsSkeleton, StatsSkeleton, TimelineSkeleton } from './match-skeletons';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatchTimeline } from './match-timeline';
 import { TZ, isLive } from '../../shared/fixture-card';
@@ -74,7 +76,7 @@ export function refreshDelay(f: Fixture, now: number): number | null {
 /** Página de uma partida (`/partida/:id`): por enquanto, o cabeçalho com placar, gols e informações. */
 @Component({
   selector: 'app-partida',
-  imports: [Crest, LineupsSkeleton, MatIcon, MatMenu, MatMenuTrigger, MatchForm, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
+  imports: [Crest, FavoriteHeart, FormSkeleton, PillSwitch, LineupsSkeleton, MatIcon, MatMenu, MatMenuTrigger, MatchForm, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
   templateUrl: './partida.html',
   styleUrl: './partida.scss',
 })

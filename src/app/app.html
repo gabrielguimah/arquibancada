@@ -1,8 +1,12 @@
 <header class="topbar">
   <span class="logo"><img src="logo.png" alt="" width="34" height="30" /><span class="logo-text">Arquibancada</span></span>
   <nav aria-label="Seções">
-    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Classificação</a>
-    <a routerLink="/estatisticas" routerLinkActive="active">Estatísticas</a>
+    <!-- No celular e em tela média a página vira abas (Jogos, Classificação, Chances): o nome é Campeonato. -->
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+      ><span class="label-wide">Classificação</span><span class="label-narrow">Campeonato</span></a
+    >
+    <a routerLink="/times" routerLinkActive="active">Times</a>
+    <a routerLink="/jogadores" routerLinkActive="active">Jogadores</a>
   </nav>
   <span class="tag">Brasileirão {{ season }}</span>
   <!-- Time do coração: escudo do time escolhido (ou coração vazio); abre a modal para escolher. -->

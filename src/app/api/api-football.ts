@@ -222,6 +222,9 @@ export interface TeamRatings {
   updatedAt: string;
   season: TeamRating[] | null;
   last5: TeamRating[] | null;
+  /** Só os jogos em casa / só os fora (temporada e últimas 5 naquele mando). */
+  home?: { season: TeamRating[] | null; last5: TeamRating[] | null } | null;
+  away?: { season: TeamRating[] | null; last5: TeamRating[] | null } | null;
 }
 
 /** Jogador no time da rodada: nota e posição no jogo da rodada (G, D, M ou F). */
@@ -371,9 +374,19 @@ export class ApiFootball {
    */
   teamRatings(fresh = false): Observable<TeamRatings> {
     const renameAll = (rows: TeamRating[] | null) => rows?.map((r) => ({ ...r, team: rename(r.team) })) ?? null;
+    // Casa e fora: as mesmas duas listas, também com os nomes corrigidos (acentos, grafias).
+    const renameVenue = (v: TeamRatings['home']) => (v ? { season: renameAll(v.season), last5: renameAll(v.last5) } : v);
     return this.http
       .get<TeamRatings>(`${API_URL}/teams/ratings`, { params: fresh ? { t: Date.now() } : {} })
-      .pipe(map((r) => ({ ...r, season: renameAll(r.season), last5: renameAll(r.last5) })));
+      .pipe(
+        map((r) => ({
+          ...r,
+          season: renameAll(r.season),
+          last5: renameAll(r.last5),
+          home: renameVenue(r.home),
+          away: renameVenue(r.away),
+        })),
+      );
   }
 
   /** Números de todos os jogadores do campeonato na temporada (tabela de jogadores). */
@@ -416,6 +429,11 @@ export class ApiFootball {
    * Jogos encerrados da temporada (só para a classificação ao vivo saber quais a API já contou).
    * Mesma chave que o Worker usa nas estatísticas dos times, então o cache é compartilhado.
    */
+  /** Jogos da temporada que ainda não começaram (inclui adiados e sem data): base das chances. */
+  remainingFixtures(): Observable<Fixture[]> {
+    return this.get<Fixture[]>('fixtures', { status: 'NS-TBD-PST' }).pipe(map(renameFixtures));
+  }
+
   finishedFixtures(): Observable<Fixture[]> {
     return this.get<Fixture[]>('fixtures', { status: 'FT-AET-PEN' });
   }

@@ -100,30 +100,30 @@ nav {
   }
 }
 
-// No celular: só o símbolo do logo, as abas na mesma linha e o menu na ponta direita.
+// No celular: logo, time do coração e menu numa linha; as três abas embaixo, dividindo a largura.
 @media (max-width: 560px) {
   .topbar {
-    flex-wrap: nowrap;
-    gap: 10px;
+    gap: 8px 10px;
     padding: 10px 12px 10px 16px;
   }
 
-  .logo-text,
   .tag {
     display: none;
   }
 
-  // Respiro entre o logo e as abas: a pílula da aba selecionada não encosta no logo.
-  .logo {
-    margin-right: 8px;
-
-    img {
-      height: 28px;
-    }
+  .logo img {
+    height: 28px;
   }
 
-  nav a {
-    padding: 6px 10px;
+  nav {
+    order: 1;
+    flex-basis: 100%;
+
+    a {
+      flex: 1;
+      padding: 6px 8px;
+      text-align: center;
+    }
   }
 
   .menu-button {
@@ -136,18 +136,18 @@ nav {
   }
 }
 
-// Celulares mais estreitos: abas um pouco mais justas.
-@media (max-width: 360px) {
-  .topbar {
-    gap: 6px;
+// Nome da primeira aba: "Classificação" no computador; "Campeonato" no celular e em tela média, onde a
+// página tem as abas Jogos, Classificação e Chances.
+.label-narrow {
+  display: none;
+}
+
+@media (max-width: 1000px) {
+  .label-wide {
+    display: none;
   }
 
-  .logo {
-    margin-right: 6px;
-  }
-
-  nav a {
-    padding: 6px 8px;
-    font-size: 0.85rem;
+  .label-narrow {
+    display: inline;
   }
 }

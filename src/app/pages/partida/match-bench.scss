@@ -11,11 +11,21 @@ $muted: var(--muted);
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 16px;
 
+  // Divisória entre os times: fio vertical entre as colunas (horizontal, quando um fica embaixo do outro).
+  .bench-team + .bench-team {
+    padding-left: 16px;
+    border-left: 1px solid var(--line);
+  }
+
   @container (max-width: 480px) {
     grid-template-columns: minmax(0, 1fr);
 
     .bench-team + .bench-team {
-      margin-top: 16px;
+      margin-top: 14px;
+      padding-top: 12px;
+      padding-left: 0;
+      border-top: 1px solid var(--line);
+      border-left: 0;
     }
   }
 }

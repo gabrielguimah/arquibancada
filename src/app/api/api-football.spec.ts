@@ -54,3 +54,20 @@ describe('ApiFootball.coach', () => {
     expect(await result).toBeNull();
   });
 });
+
+describe('ApiFootball.teamRatings', () => {
+  it('corrige o nome dos times em todas as listas, inclusive casa e fora', async () => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    const http = TestBed.inject(HttpTestingController);
+    const result = firstValueFrom(TestBed.inject(ApiFootball).teamRatings());
+    const rows = [{ team: { id: 126, name: 'Sao Paulo', logo: '' }, rating: 7 }];
+    http
+      .expectOne(`${API_URL}/teams/ratings`)
+      .flush({ updatedAt: '', season: rows, last5: rows, home: { season: rows, last5: rows }, away: { season: rows, last5: null } });
+    const r = await result;
+    const names = [r.season, r.last5, r.home?.season, r.home?.last5, r.away?.season].map((list) => list?.[0].team.name);
+    expect(names).toEqual(['São Paulo', 'São Paulo', 'São Paulo', 'São Paulo', 'São Paulo']);
+    expect(r.away?.last5).toBeNull();
+    http.verify();
+  });
+});

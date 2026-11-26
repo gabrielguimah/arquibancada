@@ -26,7 +26,10 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.logo')?.textContent).toContain('Arquibancada');
-    const links = [...compiled.querySelectorAll('nav a')].map((a) => a.textContent?.trim());
-    expect(links).toEqual(['Classificação', 'Estatísticas']);
+    // Primeira aba: "Classificação" no computador, "Campeonato" no celular (o CSS mostra um dos dois).
+    const label = (a: Element) => (a.querySelector('.label-wide') ?? a).textContent?.trim();
+    const links = [...compiled.querySelectorAll('nav a')].map(label);
+    expect(links).toEqual(['Classificação', 'Times', 'Jogadores']);
+    expect(compiled.querySelector('nav a .label-narrow')?.textContent?.trim()).toBe('Campeonato');
   });
 });

@@ -5,6 +5,7 @@ import { ApiFootball, RoundPlayer, RoundTeam } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { PlayerPhoto } from '../../shared/player-photo';
 import { RoundNav } from '../../shared/round-nav';
+import { roundStarted } from '../../shared/fixture-status';
 import { formatRating, ratingClass } from '../../shared/rating';
 
 // Linhas do campo, do ataque (em cima) ao goleiro (embaixo), na formação 4-3-3.
@@ -66,7 +67,9 @@ export class RoundTeamCard {
    * `opening`: na abertura, parte da rodada atual da API e ajusta para a que tem jogo mais recente:
    * - atual ainda sem jogo encerrado: mostra a anterior;
    * - atual completa e a seguinte já com jogo encerrado (jogo antecipado, ou a API ainda não virou a
-   *   rodada): mostra a seguinte.
+   *   rodada): mostra a seguinte;
+   * - atual com jogo por terminar (atrasado, às vezes por meses), mas a seguinte já tem jogo encerrado
+   *   na data dela (jogo antecipado não conta): mostra a seguinte.
    */
   protected select(round: string, opening = false) {
     clearTimeout(this.timer);
@@ -80,6 +83,7 @@ export class RoundTeamCard {
         const [previous, next] = [this.rounds()[index - 1], this.rounds()[index + 1]];
         if (opening && team.games === 0 && previous) return this.select(previous);
         if (opening && team.games === team.totalGames && next) return this.tryNext(round, team, next);
+        if (opening && next) return this.tryStarted(round, team, next);
         this.show(round, team);
       },
       error: () => this.fail(),
@@ -97,6 +101,18 @@ export class RoundTeamCard {
         } else {
           this.show(round, team);
         }
+      },
+      error: () => round === this.round() && this.show(round, team),
+    });
+  }
+
+  /** Rodada `round` incompleta: passa para a `next` se ela já tem jogo encerrado na data dela. */
+  private tryStarted(round: string, team: RoundTeam, next: string) {
+    this.api.fixtures(next).subscribe({
+      next: (fixtures) => {
+        if (round !== this.round()) return;
+        if (roundStarted(fixtures, true)) this.tryNext(round, team, next);
+        else this.show(round, team);
       },
       error: () => round === this.round() && this.show(round, team),
     });

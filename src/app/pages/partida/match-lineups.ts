@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
 import { Coach, Fixture, Injury } from '../../api/api-football';
@@ -54,6 +54,8 @@ export class MatchLineups {
   protected formatRating = formatRating;
   protected noRating = { class: NO_RATING_CLASS, label: NO_RATING_LABEL, title: NO_RATING_TITLE };
   /** Bola já rolou? Antes disso (escalação divulgada, jogo adiado ou cancelado), o campo fica sem selo de nota. */
+  // Desfalques antes da escalação: fechados, abrem e fecham os dois times juntos.
+  protected absencesOpen = signal(false);
   protected started = computed(() => !NOT_STARTED.has(this.fixture().fixture.status.short));
 
   protected tip = playerTip;

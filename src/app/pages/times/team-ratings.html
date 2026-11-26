@@ -1,0 +1,207 @@
+<!-- Celular e tela média: Estatísticas (a tabela) ou Resumo (time do coração e destaques), como as abas da partida. -->
+<div class="section-tabs" role="tablist" aria-label="Seções da página">
+  <button type="button" role="tab" [attr.aria-selected]="section() === 'tabela'" (click)="section.set('tabela')">Estatísticas</button>
+  <button type="button" role="tab" [attr.aria-selected]="section() === 'resumo'" (click)="section.set('resumo')">Resumo</button>
+</div>
+
+<!-- O título fica só para leitores de tela (a aba do topo já diz que é a página de times). -->
+<h1 id="times-title" class="sr-only">Times</h1>
+
+<!-- Botão Filtros: fechado, mostra o que está escolhido; aberto, os seletores de período (temporada inteira
+     ou últimas 5 partidas) e mando (todos, casa ou fora). -->
+<button type="button" class="filters-toggle" [attr.aria-expanded]="filtersOpen()" aria-controls="times-filters" (click)="filtersOpen.set(!filtersOpen())">
+  <mat-icon class="filters-icon" aria-hidden="true">tune</mat-icon>
+  Filtros
+  <span class="filters-summary">{{ filtersSummary() }}</span>
+  <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
+</button>
+
+@if (filtersOpen()) {
+  <div class="toolbar" id="times-filters">
+    <div class="view-switch" role="tablist" aria-label="Período">
+      @for (p of periods; track p.id) {
+        <button type="button" role="tab" [attr.aria-selected]="period() === p.id" [class.active]="period() === p.id" (click)="period.set(p.id)">
+          {{ p.label }}
+        </button>
+      }
+    </div>
+    <!-- Mando: todos os jogos, só em casa ou só fora. -->
+    <div class="view-switch" role="tablist" aria-label="Mando de campo">
+      @for (v of venues; track v.id) {
+        <button type="button" role="tab" [attr.aria-selected]="venue() === v.id" [class.active]="venue() === v.id" (click)="venue.set(v.id)">
+          @if (v.icon) {
+            <mat-icon class="venue-icon" aria-hidden="true">{{ v.icon }}</mat-icon>
+          }
+          {{ v.label }}
+        </button>
+      }
+    </div>
+  </div>
+}
+
+<div class="layout" [attr.data-section]="section()">
+  <div class="main">
+    @if (message()) {
+      <p class="message">{{ message() }}</p>
+    } @else {
+      <div class="card" #tableCard>
+        <!-- Abas: categoria das estatísticas (como na tabela de jogadores). -->
+        <div class="pills tabs" role="tablist" aria-label="Categoria das estatísticas">
+          @for (t of tabs; track t.id) {
+            <button type="button" role="tab" [attr.aria-selected]="t.id === tab().id" [class.on]="t.id === tab().id" (click)="selectTab(t)">
+              {{ t.label }}
+            </button>
+          }
+        </div>
+        <div class="table-wrap">
+          <table [attr.aria-busy]="lines() === null" aria-labelledby="times-title">
+            <thead>
+              <tr>
+                <th class="rank" scope="col">#</th>
+                <th class="team" scope="col">Time</th>
+                @for (m of tab().columns; track m.id) {
+                  <th scope="col" class="stat" [class.sorted]="sort().column === m.id" [attr.aria-sort]="ariaSort(m)">
+                    <button type="button" [matTooltip]="m.title" (click)="sortBy(m)">
+                      {{ m.label }}
+                      <span class="arrow" aria-hidden="true">{{ sort().column === m.id && sort().ascending ? '▲' : '▼' }}</span>
+                    </button>
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @if (lines(); as list) {
+                @for (l of list; track l.row.team.id) {
+                  <tr>
+                    <td class="rank">{{ l.rank }}</td>
+                    <td class="team">
+                      <span class="who">
+                        <img crest [src]="l.row.team.logo" alt="" width="22" height="22" loading="lazy" />
+                        <span class="text">{{ l.row.team.name }}</span><app-favorite-heart [team]="l.row.team.id" />
+                      </span>
+                    </td>
+                    @for (c of l.cells; track c.metric.id) {
+                      <td class="stat" [class.sorted]="sort().column === c.metric.id">
+                        @if (c.metric.rating && c.value !== null) {
+                          <span
+                            [class]="ratingClass(c.value)"
+                            [matTooltip]="ratingTip(l.row)"
+                            [matTooltipDisabled]="!ratingTip(l.row)"
+                            >{{ c.text }}</span
+                          >
+                        } @else {
+                          {{ c.text }}
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              } @else {
+                @for (i of skeleton; track i) {
+                  <tr aria-hidden="true">
+                    <td class="rank"><span class="sk sk-rank"></span></td>
+                    <td class="team">
+                      <span class="who"><span class="sk sk-crest"></span><span class="sk sk-name"></span></span>
+                    </td>
+                    @for (m of tab().columns; track m.id) {
+                      <td class="stat"><span class="sk sk-value"></span></td>
+                    }
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Coluna ao lado da tabela (no celular, na aba Resumo): os líderes de cada categoria e o time do coração. -->
+  <aside class="side" aria-label="Resumo dos times">
+    <section class="side-card" aria-labelledby="highlights-title">
+      <h2 id="highlights-title" class="side-title">
+        <mat-icon class="side-icon" aria-hidden="true">military_tech</mat-icon>
+        Destaques
+      </h2>
+      <p class="side-sub">{{ periodLabel() }}</p>
+      <ul class="highlights" [attr.aria-busy]="highlights() === null">
+        @if (highlights(); as list) {
+          @for (h of list; track h.label) {
+            <li>
+              <button type="button" (click)="showMetric(h.metric.id)" [title]="'Ver ' + h.metric.title.toLowerCase() + ' na tabela'">
+                <img crest [src]="h.row.team.logo" alt="" width="28" height="28" loading="lazy" />
+                <span class="hl-text">
+                  <small>{{ h.label }}</small>
+                  <strong>{{ h.row.team.name }}<app-favorite-heart [team]="h.row.team.id" /></strong>
+                </span>
+                @if (h.metric.rating) {
+                  <!-- Melhor nota: o selo colorido da nota, como na tabela. -->
+                  <span [class]="ratingClass(h.row.rating!)">{{ h.text }}</span>
+                } @else {
+                  <span class="hl-value">{{ h.text }}</span>
+                }
+              </button>
+            </li>
+          }
+        } @else {
+          @for (i of highlightSkeleton; track i) {
+            <li class="sk-row" aria-hidden="true">
+              <span class="sk sk-crest-md"></span>
+              <span class="hl-text"><span class="sk sk-small"></span><span class="sk sk-name"></span></span>
+              <span class="sk sk-num"></span>
+            </li>
+          }
+        }
+      </ul>
+    </section>
+
+    <section class="side-card fav-card" aria-labelledby="fav-title">
+      <h2 id="fav-title" class="side-title">
+        <mat-icon class="side-icon" aria-hidden="true">favorite</mat-icon>
+        Seu time do coração
+      </h2>
+      @if (!favorite.team()) {
+        <!-- Sem time: convite no meio do card (o card acompanha a altura da tabela). -->
+        <div class="fav-empty">
+          <mat-icon class="fav-empty-icon" aria-hidden="true">favorite</mat-icon>
+          <p class="side-text">Escolha seu time para ver a posição dele em cada estatística.</p>
+          <button type="button" class="side-button" (click)="chooseFavorite()">Escolher time</button>
+        </div>
+      } @else if (favoriteCard(); as f) {
+        <div class="fav-team">
+          <img crest [src]="f.team.logo" alt="" width="32" height="32" />
+          <strong>{{ f.team.name }}</strong>
+        </div>
+        <p class="side-sub">{{ periodLabel() }}, entre os {{ f.total }} times</p>
+        @if (f.ranks.length) {
+          <ul class="fav-ranks">
+            @for (r of f.ranks; track r.metric.id) {
+              <li>
+                <button type="button" (click)="showMetric(r.metric.id)" [title]="'Ver ' + r.metric.title.toLowerCase() + ' na tabela'">
+                  <span class="fav-label">{{ r.label }}</span>
+                  <span class="fav-value">{{ r.text }}</span>
+                  <span class="fav-rank" [class]="r.tone ?? ''">{{ r.rank }}º</span>
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="side-text">{{ f.team.name }} não está entre os times do campeonato.</p>
+        }
+      } @else {
+        <!-- Esqueleto enquanto as estatísticas carregam: mesmo cabeçalho e mesmas linhas do card pronto. -->
+        <div class="fav-team" aria-hidden="true"><span class="sk sk-crest-lg"></span><span class="sk sk-name"></span></div>
+        <p class="side-sub" aria-hidden="true"><span class="sk sk-sub"></span></p>
+        <ul class="fav-ranks" aria-busy="true">
+          @for (i of favSkeleton; track i) {
+            <li class="sk-row" aria-hidden="true">
+              <span class="sk sk-label"></span>
+              <span class="sk sk-num"></span>
+              <span class="sk sk-pill"></span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </aside>
+</div>

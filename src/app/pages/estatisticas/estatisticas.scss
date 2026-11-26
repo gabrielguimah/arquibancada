@@ -5,7 +5,6 @@ $line: var(--line);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-areas:
-    'title title title'
     'scorers assists team'
     'filter filter filter'
     'rated players players';
@@ -14,23 +13,59 @@ $line: var(--line);
   margin: 0 auto;
   padding: 24px 16px;
 
-  // Celular e tablet: uma coluna, com o filtro logo acima dos quadros que ele afeta (notas e jogadores).
+  // Celular e tablet: uma coluna (lista simples, sem as linhas da grade: quadro escondido não deixa
+  // espaço), com as abas em cima e um quadro por vez. O filtro (Regulares / Todos) só aparece nos
+  // quadros que ele afeta (melhores notas e estatísticas), logo acima deles.
   @media (max-width: 1000px) {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'title' 'scorers' 'assists' 'team' 'filter' 'rated' 'players';
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     max-width: 560px;
+
+    // Na lista do celular, o filtro fica à esquerda (no computador, encostado embaixo na linha dele).
+    .filter {
+      align-self: flex-start;
+    }
+
+    &:not([data-section='scorers']) .area-scorers,
+    &:not([data-section='assists']) .area-assists,
+    &:not([data-section='team']) .area-team,
+    &:not([data-section='rated']) .area-rated,
+    &:not([data-section='players']) .area-players,
+    &:not([data-section='rated']):not([data-section='players']) .area-filter {
+      display: none;
+    }
   }
 }
 
-@each $area in title, filter, scorers, assists, rated, team, players {
+// Abas dos quadros (estilo global .section-tabs): só no celular e em tela média. As de ícone são mais
+// estreitas; a de Estatísticas (com o nome) fica com o resto.
+.section-tabs {
+  display: none;
+
+  @media (max-width: 1000px) {
+    display: flex;
+  }
+
+  button:not(.icon-tab) {
+    flex: 2;
+  }
+}
+
+.tab-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+
+  &.filled {
+    font-variation-settings: 'FILL' 1;
+  }
+}
+
+@each $area in tabs, filter, scorers, assists, rated, team, players {
   .area-#{$area} {
     grid-area: $area;
   }
-}
-
-h1 {
-  margin: 0;
-  font-size: 1.25rem;
 }
 
 .filter {
@@ -78,16 +113,6 @@ h1 {
   width: 17px;
   height: 17px;
   cursor: help;
-}
-
-// Texto só para leitores de tela (o tooltip não é anunciado ao focar a opção).
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 .board {

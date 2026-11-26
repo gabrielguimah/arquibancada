@@ -1,15 +1,20 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
+import { MatTooltip } from '@angular/material/tooltip';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { ApiFootball, Fixture, FormMatch, Standing, Team } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { PillSwitch } from '../../shared/pill-switch';
+import { FavoriteHeart } from '../../shared/favorite-heart';
 import { FixtureCard, TZ, isLive, todayInBrasilia } from '../../shared/fixture-card';
 import { FixtureCardSkeleton } from '../../shared/fixture-card-skeleton';
 import { LiveFixtures } from '../../shared/live-fixtures';
 import { RoundNav } from '../../shared/round-nav';
 import { FINISHED, liveStandings } from './live-standings';
-import { OVER } from '../../shared/fixture-status';
-import { TeamRatingsTables } from './team-ratings';
+import { OVER, roundStarted } from '../../shared/fixture-status';
+import { ChanceZone, SimMatch, simulateChances } from './chances';
+import type { ChanceRow, UpcomingGame } from './season-chances';
+import { SeasonChances } from './season-chances';
 
 // Jogos encerrados: os eventos deles (cartões) vêm de uma busca própria, com cache longo no Worker.
 // Os jogos ao vivo vêm de LiveFixtures, compartilhado com os avisos de gol.
@@ -65,11 +70,14 @@ interface FormTip {
   selector: 'app-rodada',
   imports: [
     Crest,
+    FavoriteHeart,
     FixtureCard,
     FixtureCardSkeleton,
     MatIcon,
-    TeamRatingsTables,
+    MatTooltip,
+    PillSwitch,
     RoundNav,
+    SeasonChances,
   ],
   templateUrl: './rodada.html',
   styleUrl: './rodada.scss',
@@ -99,13 +107,6 @@ export class Rodada {
   private roundView = computed(() => this.withLive(this.fixtures()));
   private todayView = computed(() => this.withLive(this.today() ?? []));
 
-  // Jogos (da rodada e de hoje) já carregaram uma vez; trocar de rodada depois não volta a esperar.
-  private fixturesLoaded = signal(false);
-  // Classificação e jogos carregados, ou falhou: libera a seção Times, que fica no esqueleto até lá
-  // para não aparecer antes do resto da página.
-  protected pageLoaded = computed(
-    () => !!this.error() || (this.standings().length > 0 && this.fixturesLoaded()),
-  );
 
   protected hasLive = computed(() =>
     [...this.roundView(), ...this.todayView()].some((f) => isLive(f)),
@@ -143,6 +144,114 @@ export class Rodada {
   // Classificação com os jogos em andamento (e os encerrados que a API ainda não contou).
   private liveTable = computed(() =>
     liveStandings(this.standings(), [...this.roundView(), ...this.todayView()], this.seasonFinished()),
+  );
+
+  // Jogos da temporada que ainda não começaram (chances); null até a primeira resposta.
+  private remaining = signal<Fixture[] | null>(null);
+
+  /**
+   * Chances de título, Libertadores, Sul-Americana e rebaixamento: simula os jogos que faltam a partir da
+   * classificação com os encerrados. Jogos em andamento entram com o placar e o tempo que falta, então as
+   * chances mudam com os gols. `null` sem jogos pela frente (ou enquanto a lista não chegou).
+   */
+  protected chances = computed(() => {
+    const remaining = this.remaining();
+    const table = this.liveTable();
+    if (!remaining || !table.length) return null;
+    // Só depois dos primeiros jogos: antes disso, a força de cada time sai de quase nada e as chances
+    // não dizem muito. Vale o número de jogos da maioria (mediana): um jogo adiado não esconde o painel.
+    if (medianPlayed(table) < CHANCES_MIN_GAMES) return null;
+    const pageGames = [...this.roundView(), ...this.todayView()];
+    const live = [...new Map(pageGames.filter(isLive).map((f) => [f.fixture.id, f])).values()];
+    // Status mais recente que a página conhece: a lista de não iniciados fica em cache por até 10 min.
+    const known = new Map(pageGames.map((f) => [f.fixture.id, f.fixture.status.short]));
+    const upcoming = this.withLive(remaining).filter((f) => {
+      const status = known.get(f.fixture.id) ?? f.fixture.status.short;
+      return NOT_STARTED.has(status);
+    });
+    if (!upcoming.length && !live.length) return null;
+
+    // Base: a classificação sem os jogos em andamento (eles entram na simulação, com o placar atual).
+    const settled = live.length
+      ? liveStandings(this.standings(), pageGames.filter((f) => !isLive(f)), this.seasonFinished())
+      : table;
+    const matches: SimMatch[] = [
+      ...live.map((f) => ({
+        home: f.teams.home.id,
+        away: f.teams.away.id,
+        homeGoals: f.goals.home ?? 0,
+        awayGoals: f.goals.away ?? 0,
+        remaining: remainingFraction(f),
+      })),
+      ...upcoming.map((f) => ({ home: f.teams.home.id, away: f.teams.away.id, homeGoals: 0, awayGoals: 0, remaining: 1 })),
+    ];
+    const zones = this.positionZones();
+    const result = simulateChances(settled, matches, zones);
+
+    const games = new Map<number, UpcomingGame[]>();
+    const add = (team: number, game: UpcomingGame) => games.set(team, [...(games.get(team) ?? []), game]);
+    for (const f of [...live, ...[...upcoming].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)]) {
+      const { home, away } = f.teams;
+      const running = isLive(f);
+      const [hg, ag] = [f.goals.home ?? 0, f.goals.away ?? 0];
+      // Data do jogo; adiado ou sem data definida ainda: "a definir".
+      const date = ['TBD', 'PST'].includes(f.fixture.status.short)
+        ? 'a definir'
+        : new Date(f.fixture.timestamp * 1000).toLocaleDateString('pt-BR', { timeZone: TZ, day: '2-digit', month: '2-digit' });
+      add(home.id, { id: f.fixture.id, opponent: away, home: true, date, live: running ? `${hg}-${ag}` : null });
+      add(away.id, { id: f.fixture.id, opponent: home, home: false, date, live: running ? `${ag}-${hg}` : null });
+    }
+    const rows: ChanceRow[] = table.map((s) => ({
+      team: s.team,
+      rank: s.rank,
+      points: s.points,
+      upcoming: games.get(s.team.id) ?? [],
+      chances: result.get(s.team.id)!,
+    }));
+    const present = new Set(zones);
+    const columns = new Set<'title' | 'libertadores' | 'sulamericana' | 'relegation'>(['title']);
+    if (present.has('libertadores')) columns.add('libertadores');
+    if (present.has('sulamericana')) columns.add('sulamericana');
+    if (present.has('rebaixamento')) columns.add('relegation');
+    return { rows, columns, live: live.length > 0 };
+  });
+
+  /**
+   * Por que a opção Chances está bloqueada (`null`: liberada). Com cadeado quando não há o que mostrar
+   * (começo da temporada ou campeonato encerrado); sem cadeado enquanto os dados ainda carregam.
+   */
+  protected chancesBlocked = computed<{ text: string; lock: boolean } | null>(() => {
+    if (this.chances()) return null;
+    const table = this.liveTable();
+    if (!table.length || !this.remaining()) return CHANCES_LOCKS.carregando;
+    return medianPlayed(table) < CHANCES_MIN_GAMES ? CHANCES_LOCKS.inicio : CHANCES_LOCKS.encerrado;
+  });
+
+  // Grade exibida: a classificação (padrão) ou as chances. Sem chances para mostrar, sempre a classificação.
+  private view = signal<'tabela' | 'chances'>('tabela');
+  protected showChances = computed(() => this.view() === 'chances' && !!this.chances() && !this.chancesBlocked());
+
+  protected setView(view: 'tabela' | 'chances') {
+    this.hideFormTip();
+    this.view.set(view);
+  }
+
+  /** Celular e tela média: aba escolhida. Classificação e Chances trocam também a grade da coluna da tabela. */
+  protected section = signal<'jogos' | 'tabela' | 'chances'>('jogos');
+
+  protected setSection(section: 'jogos' | 'tabela' | 'chances') {
+    this.section.set(section);
+    if (section !== 'jogos') this.setView(section);
+  }
+
+  /** Zona de cada posição (1ª, 2ª…), como na tabela: Libertadores e pré-Libertadores juntas. */
+  private positionZones = computed<ChanceZone[]>(() =>
+    this.standingGroups().flatMap((g) => {
+      const id = g.zone?.id;
+      const zone: ChanceZone =
+        id === 'libertadores' || id === 'pre-libertadores' ? 'libertadores' : id === 'sulamericana' || id === 'rebaixamento' ? id : null;
+      return g.rows.map(() => zone);
+    }),
   );
 
   protected standingGroups = computed<StandingGroup[]>(() => {
@@ -210,8 +319,11 @@ export class Rodada {
       .subscribe({
         next: ([fixtures, next, today]) => {
           if (round !== this.round()) return;
-          // Rodada escolhida pelo site e com todos os jogos encerrados (ou adiados/cancelados): vai para a seguinte.
-          if (this.autoRound && nextRound && fixtures.length && fixtures.every((f) => OVER.has(f.fixture.status.short))) {
+          // Rodada escolhida pelo site: vai para a seguinte quando todos os jogos desta acabaram (ou foram
+          // adiados/cancelados) ou quando a seguinte já começou. Um jogo atrasado (às vezes por meses) não
+          // prende a página na rodada dele; ele continua em "Partidas de hoje" no dia em que for jogado.
+          const over = fixtures.length > 0 && fixtures.every((f) => OVER.has(f.fixture.status.short));
+          if (this.autoRound && nextRound && (over || roundStarted(this.withLive(next)))) {
             return this.selectRound(nextRound, true);
           }
           this.fixtures.set(fixtures);
@@ -225,9 +337,9 @@ export class Rodada {
             nextStarts.length ? nextStarts[Math.floor(nextStarts.length / 2)] : null,
           );
           this.loadSeasonFinished([...fixtures, ...today]);
+          this.loadRemaining();
           this.error.set(null);
           this.loading.set(false);
-          this.fixturesLoaded.set(true);
           this.timer = setTimeout(
             () => this.load(),
             this.hasLive() ? REFRESH_LIVE_MS : REFRESH_IDLE_MS,
@@ -259,6 +371,16 @@ export class Rodada {
       .finishedFixtures()
       .pipe(catchError(() => of(null)))
       .subscribe((list) => this.seasonFinished.set(list));
+  }
+
+  /** Jogos que faltam (chances). Se falhar, mantém a lista anterior. */
+  private loadRemaining() {
+    this.api
+      .remainingFixtures()
+      .pipe(catchError(() => of(null)))
+      .subscribe((list) => {
+        if (list) this.remaining.set(list);
+      });
   }
 
   /** Busca a classificação, a não ser que já haja uma busca dela em andamento (a do construtor, na primeira carga). */
@@ -333,6 +455,8 @@ export class Rodada {
   // Uma rodada tem 10 jogos; 6 cards de esqueleto já preenchem a tela.
   protected skeletonCards = [0, 1, 2, 3, 4, 5];
   protected skeletonStandings = Array.from({ length: 20 }, (_, i) => i);
+  // Linhas antes das quais o esqueleto põe um título de zona (1º, 5º, 7º e 17º: as zonas de sempre).
+  protected skeletonZones = [0, 4, 6, 16];
 
   protected isDelayed(f: Fixture): boolean {
     const start = this.nextRoundStart();
@@ -393,6 +517,34 @@ export class Rodada {
     for (const g of this.standingGroups()) if (g.zone) seen.set(g.zone.id, g.zone);
     return [...seen.values()];
   });
+}
+
+// Jogos que cada time precisa ter disputado (a maioria deles) para as chances aparecerem.
+const CHANCES_MIN_GAMES = 5;
+
+// Jogo que ainda não começou (adiado e sem data também: ainda vai ser disputado).
+const NOT_STARTED = new Set(['NS', 'TBD', 'PST']);
+
+// Motivos da opção Chances bloqueada (tooltip): com cadeado quando não há o que mostrar; sem cadeado
+// enquanto os dados carregam.
+const CHANCES_LOCKS = {
+  carregando: { text: 'Carregando as chances…', lock: false },
+  inicio: { text: `As chances aparecem depois que os times disputarem ${CHANCES_MIN_GAMES} jogos.`, lock: true },
+  encerrado: { text: 'Campeonato encerrado: não há mais jogos para simular.', lock: true },
+};
+
+/** Jogos disputados pela maioria dos times (mediana): um jogo adiado não muda a conta. */
+function medianPlayed(table: Standing[]): number {
+  const played = table.map((s) => s.all.played).sort((a, b) => a - b);
+  return played[Math.floor(played.length / 2)] ?? 0;
+}
+
+/** Fração do jogo em andamento que ainda falta (pelo minuto): 1 no início, 0,5 no intervalo. */
+function remainingFraction(f: Fixture): number {
+  const { short, elapsed } = f.fixture.status;
+  if (short === 'HT') return 0.5;
+  if (!['1H', '2H', 'LIVE'].includes(short)) return 0;
+  return Math.max(0, Math.min(1, (90 - (elapsed ?? 0)) / 90));
 }
 
 const CONTINENTAL = new Set(['libertadores', 'pre-libertadores', 'sulamericana']);

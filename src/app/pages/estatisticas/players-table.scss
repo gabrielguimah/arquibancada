@@ -27,41 +27,6 @@ $line: var(--line);
   color: $muted;
 }
 
-// Botões em pílula das abas e do Acumulado; roláveis de lado no celular.
-.pills {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-
-  button {
-    flex-shrink: 0;
-    padding: 6px 14px;
-    border: 0;
-    border-radius: 999px;
-    background: var(--button-bg);
-    font: inherit;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--button-text);
-    cursor: pointer;
-
-    &:hover {
-      background: var(--button-bg-hover);
-    }
-
-    &.on {
-      background: var(--accent);
-      color: var(--surface);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-  }
-}
-
 .tabs {
   padding: 0 16px;
 }
@@ -118,8 +83,16 @@ tbody tr {
   height: 39px;
 }
 
+// Larguras exatas das colunas presas: cada uma começa onde a anterior termina (sem fresta por onde o que
+// rola por baixo aparecia, nem uma coluna por cima da outra).
+$rank-width: 52px;
+$team-width: 42px;
+
 .rank {
-  width: 28px;
+  box-sizing: border-box;
+  width: $rank-width;
+  min-width: $rank-width;
+  max-width: $rank-width;
   padding-left: 16px;
   text-align: center;
   color: $muted;
@@ -127,7 +100,10 @@ tbody tr {
 }
 
 .team {
-  width: 26px;
+  box-sizing: border-box;
+  width: $team-width;
+  min-width: $team-width;
+  max-width: $team-width;
   text-align: center;
 
   img {
@@ -180,15 +156,29 @@ tbody tr {
 }
 
 .team {
-  left: 52px;
+  left: $rank-width;
 }
 
 .name {
-  left: 94px;
+  left: $rank-width + $team-width;
+  // Fio à direita da última coluna presa (separa do que rola por baixo) e 1 px de fundo à esquerda (em
+  // telas com pixel fracionado, a emenda não deixa ver o que passa por baixo).
+  box-shadow:
+    inset -1px 0 0 $line,
+    -1px 0 0 var(--surface);
 }
 
 .stat {
   text-align: right;
+}
+
+// Títulos das colunas de número à direita, como os números (a regra geral dos títulos, mais específica
+// com o escopo do Angular, deixava à esquerda).
+thead th.stat {
+  text-align: right;
+}
+
+.stat {
 
   &:last-child {
     padding-right: 16px;

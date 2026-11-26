@@ -1,15 +1,23 @@
-<section class="card" aria-labelledby="form-title">
-  <h2 id="form-title">Últimos 5 jogos</h2>
-  <div class="teams">
+<section class="card" [class.open]="expanded()" aria-labelledby="form-title">
+  <!-- Fechado: só escudo, nome, média e resultados de cada time. Aberto: os jogos com placar. -->
+  <h2 id="form-title">
+    <button type="button" class="toggle" [attr.aria-expanded]="expanded()" aria-controls="form-teams" (click)="toggle()">
+      Últimos 5 jogos
+      <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
+    </button>
+  </h2>
+  <div class="teams" id="form-teams">
     @if (forms() === null && !failed()) {
       @for (side of [0, 1]; track side) {
         <div class="block" aria-busy="true">
           <div class="team"><span class="sk sk-crest"></span><span class="sk sk-name"></span></div>
-          <ul class="rows">
-            @for (i of skeletonRows; track i) {
-              <li class="sk-row"><span class="sk"></span></li>
-            }
-          </ul>
+          @if (expanded()) {
+            <ul class="rows">
+              @for (i of skeletonRows; track i) {
+                <li class="sk-row"><span class="sk"></span></li>
+              }
+            </ul>
+          }
         </div>
       }
     } @else if (failed()) {
@@ -17,7 +25,8 @@
     } @else {
       @for (b of blocks(); track b.team.id) {
         <div class="block">
-          <div class="team">
+          <!-- Clicar no time também abre/fecha (o teclado usa o botão do título). -->
+          <div class="team" (click)="toggle()">
             <img crest [src]="b.team.logo" alt="" width="20" height="20" />
             <strong>{{ b.team.name }}</strong>
             @if (b.rating !== null) {
@@ -29,22 +38,24 @@
               }
             </span>
           </div>
-          @if (b.rows.length) {
-            <ul class="rows">
-              @for (r of b.rows; track r.id) {
-                <li [attr.aria-label]="resultLabel[r.result] + ', ' + r.date + ': ' + r.home.name + ' ' + r.homeGoals + ' a ' + r.awayGoals + ' ' + r.away.name">
-                  <span class="chip" [class]="'r-' + r.result" aria-hidden="true">{{ r.result }}</span>
-                  <span class="date" aria-hidden="true">{{ r.date }}</span>
-                  <span class="name home" [class.own]="r.atHome" aria-hidden="true">{{ r.home.name }}</span>
-                  <img crest [src]="r.home.logo" alt="" width="16" height="16" loading="lazy" />
-                  <span class="score" aria-hidden="true">{{ r.homeGoals }} - {{ r.awayGoals }}</span>
-                  <img crest [src]="r.away.logo" alt="" width="16" height="16" loading="lazy" />
-                  <span class="name" [class.own]="!r.atHome" aria-hidden="true">{{ r.away.name }}</span>
-                </li>
-              }
-            </ul>
-          } @else {
-            <p class="message">Nenhum jogo antes deste na temporada.</p>
+          @if (expanded()) {
+            @if (b.rows.length) {
+              <ul class="rows">
+                @for (r of b.rows; track r.id) {
+                  <li [attr.aria-label]="resultLabel[r.result] + ', ' + r.date + ': ' + r.home.name + ' ' + r.homeGoals + ' a ' + r.awayGoals + ' ' + r.away.name">
+                    <span class="chip" [class]="'r-' + r.result" aria-hidden="true">{{ r.result }}</span>
+                    <span class="date" aria-hidden="true">{{ r.date }}</span>
+                    <span class="name home" [class.own]="r.atHome" aria-hidden="true">{{ r.home.name }}</span>
+                    <img crest [src]="r.home.logo" alt="" width="16" height="16" loading="lazy" />
+                    <span class="score" aria-hidden="true">{{ r.homeGoals }} - {{ r.awayGoals }}</span>
+                    <img crest [src]="r.away.logo" alt="" width="16" height="16" loading="lazy" />
+                    <span class="name" [class.own]="!r.atHome" aria-hidden="true">{{ r.away.name }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="message">Nenhum jogo antes deste na temporada.</p>
+            }
           }
         </div>
       }

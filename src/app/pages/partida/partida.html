@@ -19,7 +19,7 @@
       }
       <div class="scoreboard">
         <div class="team home">
-          <span class="name">{{ f.teams.home.name }}</span>
+          <span class="name">{{ f.teams.home.name }}<app-favorite-heart [team]="f.teams.home.id" /></span>
           <img crest [src]="f.teams.home.logo" alt="" width="48" height="48" />
         </div>
 
@@ -43,7 +43,7 @@
 
         <div class="team away">
           <img crest [src]="f.teams.away.logo" alt="" width="48" height="48" />
-          <span class="name">{{ f.teams.away.name }}</span>
+          <span class="name">{{ f.teams.away.name }}<app-favorite-heart [team]="f.teams.away.id" /></span>
         </div>
       </div>
 
@@ -141,14 +141,18 @@
       <app-timeline-skeleton class="timeline" />
       <!-- Sem saber se o jogo começou, o das estatísticas só aparece na aba do celular (como o card vazio). -->
       <app-stats-skeleton class="stats empty" />
-      <app-lineups-skeleton class="lineups" />
+      <!-- Escalações e, embaixo, últimos 5 jogos, como nos cards prontos. -->
+      <div class="right">
+        <app-lineups-skeleton class="lineups" />
+        <app-form-skeleton class="form" />
+      </div>
     </div>
   }
 </div>
 
 <ng-template #tabsBar>
   <!-- Celular: um seletor escolhe o que aparece (lance a lance, estatísticas ou escalações). -->
-  <div class="tabs" role="tablist" aria-label="Seções da partida">
+  <div class="section-tabs" role="tablist" aria-label="Seções da partida">
     <button type="button" role="tab" [attr.aria-selected]="tab() === 'timeline'" (click)="tab.set('timeline')">
       Lance a lance
     </button>

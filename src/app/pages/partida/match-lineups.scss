@@ -527,10 +527,30 @@ $muted: var(--muted);
 // Subgrid: o técnico e os desfalques dos dois times começam na mesma altura.
 .before {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 16px;
   row-gap: 16px;
   margin-top: 16px;
+
+  // Divisória entre os times, como nos reservas: vertical lado a lado, horizontal um embaixo do outro.
+  .before-team + .before-team {
+    padding-left: 16px;
+    border-left: 1px solid var(--line);
+  }
+
+  // Card estreito (menos de duas colunas de ~220 px): um time embaixo do outro.
+  @container (max-width: 488px) {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
+
+    .before-team + .before-team {
+      margin-top: 14px;
+      padding-top: 12px;
+      padding-left: 0;
+      border-top: 1px solid var(--line);
+      border-left: 0;
+    }
+  }
 }
 
 .before-team {

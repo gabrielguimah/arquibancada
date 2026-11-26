@@ -1,11 +1,14 @@
-import { Component, input } from '@angular/core';
+import { Component, input, model } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { Team } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { PlayerPhoto } from '../../shared/player-photo';
 import { Absence } from './absences';
 
-/** Desfalques de um time (lesionados, suspensos e dúvidas), com o motivo de cada um. */
+/**
+ * Desfalques de um time (lesionados, suspensos e dúvidas), com o motivo de cada um. Fechado por padrão
+ * (só o título com a quantidade), para não ocupar espaço; quem usa decide se abre os dois times juntos.
+ */
 @Component({
   selector: 'app-match-absences',
   imports: [Crest, MatIcon, PlayerPhoto],
@@ -15,4 +18,5 @@ import { Absence } from './absences';
 export class MatchAbsences {
   team = input.required<Team>();
   absences = input.required<Absence[]>();
+  open = model(false);
 }

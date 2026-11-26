@@ -12,6 +12,29 @@ export const FINISHED = new Set(['FT', 'AET', 'PEN']);
 /** Não vai mais rolar: encerrado, adiado, cancelado, abandonado ou W.O. */
 export const OVER = new Set([...FINISHED, 'PST', 'CANC', 'ABD', 'AWD', 'WO']);
 
+// Distância máxima até a data típica da rodada para um jogo contar como "a rodada começou". Rodadas
+// duram de 2 a 4 dias; jogo antecipado (semanas antes) fica de fora.
+const ROUND_WINDOW_S = 4 * 24 * 3600;
+
+/**
+ * A rodada já começou: algum jogo dela já rolou ou está rolando (`finishedOnly`: já terminou), perto da
+ * data típica da rodada (a mediana dos horários). Um jogo antecipado, disputado semanas antes do resto,
+ * não conta: senão a rodada "começaria" com a anterior ainda em andamento.
+ */
+export function roundStarted(
+  fixtures: Array<{ fixture: { timestamp: number; status: { short: string } } }>,
+  finishedOnly = false,
+): boolean {
+  const dated = fixtures.filter((f) => !['PST', 'TBD'].includes(f.fixture.status.short)).map((f) => f.fixture.timestamp).sort((a, b) => a - b);
+  if (!dated.length) return false;
+  const median = dated[Math.floor(dated.length / 2)];
+  return fixtures.some((f) => {
+    const s = f.fixture.status.short;
+    const counts = FINISHED.has(s) || s === 'AWD' || s === 'WO' || (!finishedOnly && LIVE_STATUSES.has(s));
+    return counts && Math.abs(f.fixture.timestamp - median) <= ROUND_WINDOW_S;
+  });
+}
+
 // Ordem das situações de um jogo, para saber qual de duas respostas está mais adiantada.
 export const PROGRESS: Record<string, number> = { TBD: 0, NS: 0, '1H': 1, HT: 2, '2H': 3, BT: 4, ET: 5, P: 6, AET: 7, PEN: 7, FT: 7 };
 

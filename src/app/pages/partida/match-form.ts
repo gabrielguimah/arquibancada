@@ -1,4 +1,5 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
+import { MatIcon } from '@angular/material/icon';
 import { Fixture, Team, TeamForm } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { TZ } from '../../shared/fixture-status';
@@ -29,7 +30,7 @@ interface FormBlock {
 /** Últimos 5 jogos de cada time antes desta partida: resultado, data, adversário e placar. */
 @Component({
   selector: 'app-match-form',
-  imports: [Crest],
+  imports: [Crest, MatIcon],
   templateUrl: './match-form.html',
   styleUrl: './match-form.scss',
 })
@@ -64,6 +65,13 @@ export class MatchForm {
 
   protected ratingClass = ratingClass;
   protected formatRating = formatRating;
+  /** Jogos com placar à mostra; fechado, só o resumo de cada time. */
+  protected expanded = signal(false);
+
+  protected toggle() {
+    this.expanded.update((open) => !open);
+  }
+
   protected resultLabel = { V: 'Vitória', E: 'Empate', D: 'Derrota' };
   protected skeletonRows = [0, 1, 2, 3, 4];
 }

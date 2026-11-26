@@ -1,5 +1,4 @@
-import { Component, inject } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
+import { Component, Injector, inject } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -8,7 +7,6 @@ import { SEASON } from './api/api-football';
 import { BrowserNotifications } from './shared/browser-notifications';
 import { Crest } from './shared/crest';
 import { FavoriteTeam } from './shared/favorite-team';
-import { FavoriteTeamDialog } from './shared/favorite-team-dialog';
 import { GoalNotifier } from './shared/goal-notifier';
 import { GoalSounds } from './shared/goal-sounds';
 import { GoalToasts } from './shared/goal-toasts';
@@ -26,17 +24,12 @@ export class App {
   protected readonly notifications = inject(BrowserNotifications);
   protected readonly sounds = inject(GoalSounds);
   protected readonly favorite = inject(FavoriteTeam);
-  private readonly dialog = inject(MatDialog);
+  private readonly injector = inject(Injector);
 
-  protected openFavorite() {
-    this.dialog.open(FavoriteTeamDialog, {
-      panelClass: 'favorite-dialog',
-      width: '800px',
-      maxWidth: 'calc(100vw - 32px)',
-      maxHeight: 'calc(100dvh - 48px)',
-      autoFocus: 'dialog',
-      ariaLabelledBy: 'favorite-title',
-    });
+  /** A modal (e a biblioteca de diálogos) só é baixada no primeiro clique: fica fora do carregamento inicial. */
+  protected async openFavorite() {
+    const { openFavoriteTeamDialog } = await import('./shared/favorite-team-dialog');
+    openFavoriteTeamDialog(this.injector);
   }
 
   /** Desligar as notificações desliga também o som. */
