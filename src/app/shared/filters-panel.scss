@@ -1,0 +1,64 @@
+:host {
+  display: block;
+}
+
+// Botão Filtros na linha inteira: ícone, nome e o que está escolhido à esquerda, a seta no fim da linha
+// (abre e fecha o conteúdo).
+.filters-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--button-bg-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--button-text);
+    outline-offset: 2px;
+  }
+
+  .filters-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+  }
+
+  .filters-summary {
+    font-weight: 500;
+    opacity: 0.8;
+
+    &::before {
+      content: '·';
+      margin-right: 6px;
+    }
+  }
+
+  .chevron {
+    width: 20px;
+    height: 20px;
+    margin-left: auto;
+    font-size: 20px;
+    transition: transform 0.2s;
+  }
+
+  &[aria-expanded='true'] .chevron {
+    transform: rotate(180deg);
+  }
+}
+
+// Conteúdo aberto (os seletores da página), logo abaixo do botão. Sem margem por fora: o espaço até o
+// que vem depois (12 px, o mesmo entre abas, filtro e grade) é da página.
+.filters-panel {
+  margin-top: 12px;
+}

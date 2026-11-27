@@ -16,9 +16,21 @@ $line: var(--line);
   padding: 0 16px;
 
   h2 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     margin: 0;
     font-size: 1rem;
   }
+}
+
+// Ícone de jogador ao lado do título, como os dos outros quadros (bola, chuteira, estrela).
+.title-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: var(--accent);
+  font-variation-settings: 'FILL' 1;
 }
 
 .subtitle {

@@ -44,6 +44,30 @@ describe('LiveFixtures', () => {
     expect([...live.byId().keys()]).toEqual([1, 2, 3]);
   });
 
+  it('resposta mais velha que a já mostrada (cache de outra hora) não volta o placar', async () => {
+    const at = (elapsed: number, home: number) => {
+      const f = game(1, '2H', -80);
+      f.fixture.status.elapsed = elapsed;
+      f.goals = { home, away: 1 };
+      return f;
+    };
+    const responses = [at(70, 3), at(62, 2), at(71, 3)];
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ApiFootball, useValue: { fixturesOn: () => of([game(1, '2H', -80)]), fixturesByIds: () => of([responses.shift()!]) } },
+      ],
+    });
+    const live = TestBed.inject(LiveFixtures);
+    await live.poll(NOW);
+    expect(live.byId().get(1)?.goals.home).toBe(3);
+    // 3 x 1 aos 70', e chega uma resposta de 62' com 2 x 1: fica o 3 x 1.
+    await live.poll(NOW);
+    expect(live.byId().get(1)?.goals.home).toBe(3);
+    expect(live.byId().get(1)?.fixture.status.elapsed).toBe(70);
+    await live.poll(NOW);
+    expect(live.byId().get(1)?.fixture.status.elapsed).toBe(71);
+  });
+
   it('sem jogo para acompanhar, espera até 5 min antes do próximo início', async () => {
     TestBed.configureTestingModule({
       providers: [{ provide: ApiFootball, useValue: { fixturesOn: () => of([game(1, 'NS', 20)]), fixturesByIds: () => of([]) } }],

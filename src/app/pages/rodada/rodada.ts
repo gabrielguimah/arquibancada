@@ -1,10 +1,10 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
-import { MatTooltip } from '@angular/material/tooltip';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { ApiFootball, Fixture, FormMatch, Standing, Team } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
-import { PillSwitch } from '../../shared/pill-switch';
+import { SectionTabs, TabOption } from '../../shared/section-tabs';
+import { ToggleGroup, ToggleOption } from '../../shared/toggle-group';
 import { FavoriteHeart } from '../../shared/favorite-heart';
 import { FixtureCard, TZ, isLive, todayInBrasilia } from '../../shared/fixture-card';
 import { FixtureCardSkeleton } from '../../shared/fixture-card-skeleton';
@@ -74,8 +74,8 @@ interface FormTip {
     FixtureCard,
     FixtureCardSkeleton,
     MatIcon,
-    MatTooltip,
-    PillSwitch,
+    SectionTabs,
+    ToggleGroup,
     RoundNav,
     SeasonChances,
   ],
@@ -238,6 +238,17 @@ export class Rodada {
 
   /** Celular e tela média: aba escolhida. Classificação e Chances trocam também a grade da coluna da tabela. */
   protected section = signal<'jogos' | 'tabela' | 'chances'>('jogos');
+
+  // Abas do celular e troca do computador: Chances bloqueada (com o motivo no tooltip) quando não há chances.
+  protected sectionOptions = computed<TabOption<'jogos' | 'tabela' | 'chances'>[]>(() => [
+    { id: 'jogos', label: 'Jogos' },
+    { id: 'tabela', label: 'Classificação' },
+    { id: 'chances', label: 'Chances', blocked: this.chancesBlocked() },
+  ]);
+  protected viewOptions = computed<ToggleOption<'tabela' | 'chances'>[]>(() => [
+    { id: 'tabela', label: 'Classificação' },
+    { id: 'chances', label: 'Chances', blocked: this.chancesBlocked() },
+  ]);
 
   protected setSection(section: 'jogos' | 'tabela' | 'chances') {
     this.section.set(section);

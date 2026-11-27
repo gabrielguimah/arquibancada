@@ -1,43 +1,17 @@
-<!-- Celular e tela média: Estatísticas (a tabela) ou Resumo (time do coração e destaques), como as abas da partida. -->
-<div class="section-tabs" role="tablist" aria-label="Seções da página">
-  <button type="button" role="tab" [attr.aria-selected]="section() === 'tabela'" (click)="section.set('tabela')">Estatísticas</button>
-  <button type="button" role="tab" [attr.aria-selected]="section() === 'resumo'" (click)="section.set('resumo')">Resumo</button>
-</div>
+<!-- Celular e tela média: Estatísticas (a tabela) ou Resumo (time do coração e destaques). -->
+<app-section-tabs [options]="sections" [(value)]="section" />
 
 <!-- O título fica só para leitores de tela (a aba do topo já diz que é a página de times). -->
 <h1 id="times-title" class="sr-only">Times</h1>
 
-<!-- Botão Filtros: fechado, mostra o que está escolhido; aberto, os seletores de período (temporada inteira
-     ou últimas 5 partidas) e mando (todos, casa ou fora). -->
-<button type="button" class="filters-toggle" [attr.aria-expanded]="filtersOpen()" aria-controls="times-filters" (click)="filtersOpen.set(!filtersOpen())">
-  <mat-icon class="filters-icon" aria-hidden="true">tune</mat-icon>
-  Filtros
-  <span class="filters-summary">{{ filtersSummary() }}</span>
-  <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
-</button>
-
-@if (filtersOpen()) {
-  <div class="toolbar" id="times-filters">
-    <div class="view-switch" role="tablist" aria-label="Período">
-      @for (p of periods; track p.id) {
-        <button type="button" role="tab" [attr.aria-selected]="period() === p.id" [class.active]="period() === p.id" (click)="period.set(p.id)">
-          {{ p.label }}
-        </button>
-      }
-    </div>
-    <!-- Mando: todos os jogos, só em casa ou só fora. -->
-    <div class="view-switch" role="tablist" aria-label="Mando de campo">
-      @for (v of venues; track v.id) {
-        <button type="button" role="tab" [attr.aria-selected]="venue() === v.id" [class.active]="venue() === v.id" (click)="venue.set(v.id)">
-          @if (v.icon) {
-            <mat-icon class="venue-icon" aria-hidden="true">{{ v.icon }}</mat-icon>
-          }
-          {{ v.label }}
-        </button>
-      }
-    </div>
+<!-- Filtros (componente compartilhado): fechado, mostra o que está escolhido; aberto, os seletores de
+     período (temporada inteira ou últimas 5 partidas) e mando (todos, casa ou fora). -->
+<app-filters [summary]="filtersSummary()">
+  <div class="toolbar">
+    <app-toggle-group label="Período" [options]="periods" [(value)]="period" [stretch]="true" />
+    <app-toggle-group label="Mando de campo" [options]="venues" [(value)]="venue" [stretch]="true" />
   </div>
-}
+</app-filters>
 
 <div class="layout" [attr.data-section]="section()">
   <div class="main">
@@ -45,6 +19,11 @@
       <p class="message">{{ message() }}</p>
     } @else {
       <div class="card" #tableCard>
+        <!-- Título do card, como nos outros: escudo, nome e o período/mando escolhidos nos filtros. -->
+        <header class="card-head">
+          <h2 id="times-table-title"><mat-icon class="title-icon" aria-hidden="true">shield</mat-icon>Times</h2>
+          <p class="subtitle">{{ periodLabel() }}</p>
+        </header>
         <!-- Abas: categoria das estatísticas (como na tabela de jogadores). -->
         <div class="pills tabs" role="tablist" aria-label="Categoria das estatísticas">
           @for (t of tabs; track t.id) {
@@ -54,7 +33,7 @@
           }
         </div>
         <div class="table-wrap">
-          <table [attr.aria-busy]="lines() === null" aria-labelledby="times-title">
+          <table [attr.aria-busy]="lines() === null" aria-labelledby="times-table-title">
             <thead>
               <tr>
                 <th class="rank" scope="col">#</th>

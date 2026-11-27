@@ -152,15 +152,5 @@
 
 <ng-template #tabsBar>
   <!-- Celular: um seletor escolhe o que aparece (lance a lance, estatísticas ou escalações). -->
-  <div class="section-tabs" role="tablist" aria-label="Seções da partida">
-    <button type="button" role="tab" [attr.aria-selected]="tab() === 'timeline'" (click)="tab.set('timeline')">
-      Lance a lance
-    </button>
-    <button type="button" role="tab" [attr.aria-selected]="tab() === 'stats'" (click)="tab.set('stats')">
-      Estatísticas
-    </button>
-    <button type="button" role="tab" [attr.aria-selected]="tab() === 'lineups'" (click)="tab.set('lineups')">
-      Escalações
-    </button>
-  </div>
+  <app-section-tabs label="Seções da partida" [options]="tabs" [(value)]="tab" />
 </ng-template>

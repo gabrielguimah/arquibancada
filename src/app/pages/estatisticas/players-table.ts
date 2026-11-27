@@ -1,5 +1,6 @@
 import { Component, DestroyRef, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, PlayerRow, PlayerStats } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
@@ -38,7 +39,7 @@ interface Line {
  */
 @Component({
   selector: 'app-players-table',
-  imports: [Crest, Pager, MatTooltip, PlayerPhoto],
+  imports: [Crest, MatIcon, Pager, MatTooltip, PlayerPhoto],
   templateUrl: './players-table.html',
   styleUrl: './players-table.scss',
 })

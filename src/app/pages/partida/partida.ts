@@ -5,7 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIcon } from '@angular/material/icon';
 import { ApiFootball, Coach, Fixture, Injury, LEAGUE, TeamForm } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
-import { PillSwitch } from '../../shared/pill-switch';
+import { SectionTabs, TabOption } from '../../shared/section-tabs';
 import { FavoriteHeart } from '../../shared/favorite-heart';
 import { MatchLineups } from './match-lineups';
 import { MatchForm } from './match-form';
@@ -14,7 +14,7 @@ import { FormSkeleton, LineupsSkeleton, StatsSkeleton, TimelineSkeleton } from '
 import { NgTemplateOutlet } from '@angular/common';
 import { MatchTimeline } from './match-timeline';
 import { TZ, isLive } from '../../shared/fixture-card';
-import { FINISHED, OVER, dayInBrasilia } from '../../shared/fixture-status';
+import { dayInBrasilia, FINISHED, notBehind, OVER } from '../../shared/fixture-status';
 import { liveClock } from '../../shared/live-clock';
 import { LiveFixtures } from '../../shared/live-fixtures';
 import { Highlight, HighlightKind, highlights, statusLabel } from './match-header';
@@ -76,7 +76,7 @@ export function refreshDelay(f: Fixture, now: number): number | null {
 /** Página de uma partida (`/partida/:id`): por enquanto, o cabeçalho com placar, gols e informações. */
 @Component({
   selector: 'app-partida',
-  imports: [Crest, FavoriteHeart, FormSkeleton, PillSwitch, LineupsSkeleton, MatIcon, MatMenu, MatMenuTrigger, MatchForm, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
+  imports: [Crest, FavoriteHeart, FormSkeleton, SectionTabs, LineupsSkeleton, MatIcon, MatMenu, MatMenuTrigger, MatchForm, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
   templateUrl: './partida.html',
   styleUrl: './partida.scss',
 })
@@ -90,12 +90,19 @@ export class Partida {
   protected sides = ['home', 'away'] as const;
   /** Seção visível no celular (no computador, as duas aparecem lado a lado). */
   protected tab = signal<'timeline' | 'stats' | 'lineups'>('timeline');
-  // Partida como veio da busca desta página; `fixture` prefere a dos jogos ao vivo do site (a mesma
-  // que a Classificação usa, atualizada a cada 15 s), quando ela está sendo acompanhada.
+  protected tabs: TabOption<'timeline' | 'stats' | 'lineups'>[] = [
+    { id: 'timeline', label: 'Lance a lance' },
+    { id: 'stats', label: 'Estatísticas' },
+    { id: 'lineups', label: 'Escalações' },
+  ];
+  // Partida como veio da busca desta página (ou dos jogos ao vivo do site, enquanto eles a acompanham);
+  // `fixture` mostra a mais adiantada entre ela e a dos jogos ao vivo (a mesma que a Classificação usa,
+  // atualizada a cada 15 s). Nunca volta no tempo: resposta mais velha que a da tela é ignorada.
   private loaded = signal<Fixture | null>(null);
   protected fixture = computed(() => {
     const f = this.loaded();
-    return (f && this.liveFixtures.byId().get(f.fixture.id)) ?? f;
+    const live = f ? this.liveFixtures.byId().get(f.fixture.id) : undefined;
+    return live ? notBehind(f, live) : f;
   });
   protected loading = signal(true);
   /** Lesionados, suspensos e dúvidas dos dois times; vazio se a API não tiver (ou falhar). */
@@ -229,7 +236,11 @@ export class Partida {
   private load(id: number, attempt = 0) {
     // Jogo acompanhado pelos jogos ao vivo do site (a cada 15 s, com eventos, escalação e notas): a página
     // já mostra esses dados, então não busca a partida de novo (seria outra chamada à API, com outra chave).
-    if (this.loaded() && this.liveFixtures.byId().has(id)) {
+    const live = this.liveFixtures.byId().get(id);
+    if (this.loaded() && live) {
+      // A cópia da página acompanha a dos jogos ao vivo: se eles pararem de acompanhar o jogo (por um
+      // instante que seja), a tela não cai para o placar de quando a página abriu.
+      this.loaded.set(notBehind(this.loaded(), live));
       this.timer = setTimeout(() => this.load(id), REFRESH_LIVE_MS);
       return;
     }
@@ -242,7 +253,7 @@ export class Partida {
         }
         const first = !this.loaded();
         this.error.set(null);
-        this.loaded.set(f);
+        this.loaded.set(notBehind(this.loaded(), f));
         this.loadCoaches(f);
         if (first && !OVER.has(f.fixture.status.short)) this.loadBroadcasts(f);
         if (first) this.loadTeamForms(f);

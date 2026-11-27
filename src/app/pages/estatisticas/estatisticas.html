@@ -6,28 +6,13 @@
 
   <!-- Celular e tela média: um quadro por vez, em abas com o ícone de cada quadro (Estatísticas, com o
        nome). Os títulos dos quadros continuam neles. -->
-  <div class="section-tabs area-tabs" role="tablist" aria-label="Quadros da página">
-    @for (s of sections; track s.id) {
-      <button
-        type="button"
-        role="tab"
-        [class.icon-tab]="s.icon || s.svgIcon"
-        [attr.aria-selected]="section() === s.id"
-        [attr.aria-label]="s.icon || s.svgIcon ? s.label : null"
-        [matTooltip]="s.label"
-        [matTooltipDisabled]="!(s.icon || s.svgIcon)"
-        (click)="section.set(s.id)"
-      >
-        @if (s.svgIcon) {
-          <mat-icon class="tab-icon" [svgIcon]="s.svgIcon" aria-hidden="true" />
-        } @else if (s.icon) {
-          <mat-icon class="tab-icon" [class.filled]="s.filled" aria-hidden="true">{{ s.icon }}</mat-icon>
-        } @else {
-          {{ s.label }}
-        }
-      </button>
-    }
-  </div>
+  <app-section-tabs class="area-tabs" label="Quadros da página" [options]="sections" [(value)]="section" />
+
+  <!-- Celular e tela média: o mesmo filtro dentro do botão Filtros, no padrão da página Times (só nos
+       quadros que ele afeta). No computador, o seletor de sempre, logo acima deles. -->
+  <app-filters class="mobile-filters" [summary]="filter() === 'regulares' ? 'Regulares' : 'Todos os jogadores'">
+    <app-toggle-group kind="radiogroup" label="Jogadores considerados" [options]="filterOptions()" [(value)]="filter" [stretch]="true" />
+  </app-filters>
 
   <div class="filter area-filter">
     <div class="switch" role="radiogroup" aria-label="Jogadores considerados">

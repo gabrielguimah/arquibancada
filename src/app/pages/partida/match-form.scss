@@ -115,6 +115,12 @@ $muted: var(--muted);
   font-size: 0.65rem;
   font-weight: 700;
 
+  // Parcial da partida em andamento: contorno no azul do ao vivo (como nas "Últimas 5" da classificação).
+  &.live {
+    outline: 2px solid var(--live);
+    outline-offset: 1px;
+  }
+
   &.r-V {
     background: var(--win);
   }
@@ -153,6 +159,15 @@ $muted: var(--muted);
   color: $muted;
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
+}
+
+// Esta partida, rolando: "ao vivo" e o placar no azul do ao vivo.
+li.live {
+  .date,
+  .score {
+    color: var(--live-text);
+    font-weight: 700;
+  }
 }
 
 .name {

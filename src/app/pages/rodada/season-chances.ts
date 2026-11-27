@@ -1,5 +1,6 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
+import { MatTooltip } from '@angular/material/tooltip';
 import { Team } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
 import { FavoriteHeart } from '../../shared/favorite-heart';
@@ -60,7 +61,7 @@ const TIP_ROOM = 320;
  */
 @Component({
   selector: 'app-season-chances',
-  imports: [Crest, FavoriteHeart, MatIcon],
+  imports: [Crest, FavoriteHeart, MatIcon, MatTooltip],
   templateUrl: './season-chances.html',
   styleUrl: './season-chances.scss',
   // Rolou a página: a lista ficaria solta no lugar antigo.
@@ -75,6 +76,11 @@ export class SeasonChances {
 
   protected columns = computed(() => COLUMNS.filter((c) => c.key === 'title' || this.zones().has(c.key)));
   protected simulations = SIMULATIONS.toLocaleString('pt-BR');
+  /** Como as chances são calculadas, no tooltip do ícone de informação do título. */
+  protected aboutChances = computed(
+    () =>
+      `Simulação de ${this.simulations} finais de campeonato com os jogos que faltam${this.live() ? ', atualizada com os placares ao vivo' : ''}.`,
+  );
   protected format = formatChance;
   protected shown = SHOWN_GAMES;
   // Faixas da tabela na legenda (as vagas seguem as posições da classificação).
@@ -95,6 +101,11 @@ export class SeasonChances {
 
   protected chanceTip(r: ChanceRow, c: ChanceColumn): string {
     return `${r.team.name}: ${formatChance(r.chances[c.key])} de chance (${c.label})`;
+  }
+
+  /** O time está jogando agora (bolinha ao vivo ao lado do nome, como na classificação). */
+  protected playing(r: ChanceRow): boolean {
+    return r.upcoming.some((g) => g.live !== null);
   }
 
   protected gameTip(g: UpcomingGame): string {

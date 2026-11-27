@@ -7,6 +7,13 @@ import { Estatisticas } from './estatisticas/estatisticas';
 import { Rodada } from './rodada/rodada';
 import { Times } from './times/times';
 
+/** Motivo da opção Chances bloqueada: o texto que o tooltip liga ao botão (aria-describedby). */
+function reason(el: HTMLElement): string | undefined {
+  const button = el.querySelectorAll<HTMLElement>('.section-tabs button')[2] ?? el.querySelectorAll<HTMLElement>('.view-switch button')[1];
+  const ids = button?.getAttribute('aria-describedby')?.split(' ') ?? [];
+  return ids.map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
+}
+
 // API que nunca responde: as páginas ficam no estado de carregamento.
 const pendingApi: Partial<Record<keyof ApiFootball, () => typeof NEVER>> = {
   rounds: () => NEVER,
@@ -40,12 +47,12 @@ describe('Esqueletos de carregamento', () => {
     expect(el.querySelectorAll('.skeleton app-fixture-card-skeleton').length).toBeGreaterThan(0);
     expect(el.querySelectorAll('.tabela tr.sk-row').length).toBe(20);
     expect(el.querySelector('app-team-ratings')).toBeNull();
-    // Troca já na tela (sem o título antigo); Chances bloqueada, sem cadeado, enquanto carrega.
-    expect(el.querySelector('.tabela h2')?.classList).toContain('sr-only');
+    // Troca já na tela e o título do card (Classificação) desde o carregamento; Chances bloqueada, sem cadeado, enquanto carrega.
+    expect(el.querySelector('.tabela .card-head h2')?.textContent).toContain('Classificação');
     const chances = el.querySelectorAll('.view-switch button')[1];
     expect(chances.getAttribute('aria-disabled')).toBe('true');
     expect(chances.querySelector('.lock')).toBeNull();
-    expect(el.querySelector('#chances-motivo')?.textContent).toContain('Carregando');
+    expect(reason(el)).toContain('Carregando');
   });
 
   it('Times: título e filtros já na tela, tabela em esqueleto', async () => {
@@ -120,6 +127,18 @@ describe('Jogadores no celular', () => {
     expect(tabs()[3].getAttribute('aria-selected')).toBe('true');
     // Os títulos dos quadros continuam lá.
     expect(el.querySelector('.area-rated h2')?.textContent).toContain('Melhores notas');
+
+    // Filtro do celular: dentro do botão Filtros (com o escolhido no resumo), no padrão dos seletores.
+    const toggle = el.querySelector<HTMLButtonElement>('.mobile-filters .filters-toggle')!;
+    expect(toggle.querySelector('.filters-summary')?.textContent?.trim()).toBe('Regulares');
+    expect(el.querySelector('.mobile-filters .view-switch')).toBeNull();
+    toggle.click();
+    TestBed.tick();
+    const options = [...el.querySelectorAll<HTMLButtonElement>('.mobile-filters .view-switch button')];
+    expect(options.map((b) => b.textContent?.replace('info', '').trim())).toEqual(['Regulares', 'Todos os jogadores']);
+    options[1].click();
+    TestBed.tick();
+    expect(toggle.querySelector('.filters-summary')?.textContent?.trim()).toBe('Todos os jogadores');
   });
 });
 

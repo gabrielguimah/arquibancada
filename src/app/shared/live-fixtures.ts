@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiFootball, Fixture } from '../api/api-football';
 import { isLive, todayInBrasilia } from './fixture-card';
-import { fresher } from './fixture-status';
+import { fresher, notBehind } from './fixture-status';
 
 export { fresher };
 
@@ -62,8 +62,10 @@ export class LiveFixtures {
     );
     if (watch.length) {
       const listed = new Map(today.map((f) => [f.fixture.id, f]));
+      const previous = this.byId();
+      // Resposta mais velha que a já mostrada (cache de outra hora): fica a anterior.
       const fixtures = (await firstValueFrom(this.api.fixturesByIds(watch.map((f) => f.fixture.id)))).map((f) =>
-        fresher(f, listed.get(f.fixture.id)),
+        notBehind(previous.get(f.fixture.id), fresher(f, listed.get(f.fixture.id))),
       );
       this.byId.set(new Map(fixtures.map((f) => [f.fixture.id, f])));
       this.listeners.forEach((l) => l(fixtures));

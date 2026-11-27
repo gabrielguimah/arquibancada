@@ -4,8 +4,10 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, PlayerStat, RatedPlayer, Team, TopRated } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { FiltersPanel } from '../../shared/filters-panel';
 import { Pager } from '../../shared/pager';
-import { PillSwitch } from '../../shared/pill-switch';
+import { SectionTabs, TabOption } from '../../shared/section-tabs';
+import { ToggleGroup, ToggleOption } from '../../shared/toggle-group';
 import { RoundTeamCard } from './round-team';
 import { PlayersTable } from './players-table';
 import { formatRating, ratingClass } from '../../shared/rating';
@@ -54,7 +56,7 @@ interface Source<T> {
 
 @Component({
   selector: 'app-estatisticas',
-  imports: [Crest, MatIcon, MatTooltip, Pager, PillSwitch, PlayersTable, RoundTeamCard],
+  imports: [Crest, FiltersPanel, MatIcon, MatTooltip, Pager, PlayersTable, RoundTeamCard, SectionTabs, ToggleGroup],
   templateUrl: './estatisticas.html',
   styleUrl: './estatisticas.scss',
 })
@@ -65,12 +67,12 @@ export class Estatisticas {
   protected filter = signal<Filter>('regulares');
 
   /** Celular e tela média: o quadro à mostra (no computador, todos na grade). */
-  // Abas com o ícone do título de cada quadro (bola, chuteira, medalha, estrela); a tabela de jogadores,
+  // Abas com o ícone do título de cada quadro (bola, chuteira, time, estrela); a tabela de jogadores,
   // sem ícone, fica com o nome. O nome vai também no aria-label e no tooltip das abas de ícone.
-  protected sections: Array<{ id: Section; label: string; icon?: string; svgIcon?: string; filled?: boolean }> = [
+  protected sections: TabOption<Section>[] = [
     { id: 'scorers', label: 'Artilheiros', icon: 'sports_soccer' },
     { id: 'assists', label: 'Assistências', svgIcon: 'chuteira' },
-    { id: 'team', label: 'Time da rodada', icon: 'military_tech', filled: true },
+    { id: 'team', label: 'Time da rodada', icon: 'groups', filled: true },
     { id: 'rated', label: 'Melhores notas', icon: 'star', filled: true },
     { id: 'players', label: 'Estatísticas' },
   ];
@@ -91,6 +93,12 @@ export class Estatisticas {
     const apps = [...(this.scorers().data ?? []), ...(this.assists().data ?? [])].map((r) => r.appearances);
     return apps.length ? Math.ceil(Math.max(...apps) * REGULAR_FRACTION) : 0;
   });
+
+  /** Regulares / Todos (o filtro dentro do botão Filtros, no celular), com a regra no ícone de informação. */
+  protected filterOptions = computed<ToggleOption<Filter>[]>(() => [
+    { id: 'regulares', label: 'Regulares', info: this.regularTip() },
+    { id: 'todos', label: 'Todos os jogadores' },
+  ]);
 
   protected regularTip = computed(() => {
     const min = this.minAppearances();

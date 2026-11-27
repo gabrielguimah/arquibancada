@@ -6,92 +6,28 @@ $line: var(--line);
 }
 
 // Título e, ao lado, o período (pílulas, como Classificação | Chances).
-// Seletores de período e mando (estilo global .view-switch) na largura da coluna, as opções dividindo o
-// espaço; ícone do mando (casa, avião) antes do nome.
-.view-switch {
-  display: flex;
-
-  button {
-    flex: 1 1 auto;
-  }
-
-  .venue-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 18px;
-    font-variation-settings: 'FILL' 1;
-  }
+// Título do card da tabela (estilo global .card-head): sem respiro embaixo, as abas vêm logo depois.
+.card-head {
+  padding-bottom: 0;
 }
 
-// Abas das categorias (estilo global .pills), no topo do card da tabela.
+// Abas das categorias (estilo global .pills), logo abaixo do título do card.
 .pills {
-  padding: 12px 14px 4px;
+  padding: 10px 14px 4px;
 }
 
-// Abas Estatísticas / Resumo (estilo global .section-tabs): só no celular e em tela média.
-.section-tabs {
+// Abas, filtro e grade: o mesmo espaço entre eles (12 px). As abas só no celular e em tela média.
+app-section-tabs {
   display: none;
+  margin-bottom: 12px;
 
   @media (max-width: 1000px) {
-    display: flex;
-    margin-bottom: 12px;
+    display: block;
   }
 }
 
-// Botão Filtros na linha inteira: ícone, nome e o que está escolhido à esquerda, a seta no fim da linha
-// (abre e fecha os seletores).
-.filters-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
+app-filters {
   margin-bottom: 12px;
-  padding: 8px 14px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--button-bg);
-  color: var(--button-text);
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--button-bg-hover);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--button-text);
-    outline-offset: 2px;
-  }
-
-  .filters-icon {
-    width: 20px;
-    height: 20px;
-    font-size: 20px;
-  }
-
-  .filters-summary {
-    font-weight: 500;
-    opacity: 0.8;
-
-    &::before {
-      content: '·';
-      margin-right: 6px;
-    }
-  }
-
-  .chevron {
-    width: 20px;
-    height: 20px;
-    margin-left: auto;
-    font-size: 20px;
-    transition: transform 0.2s;
-  }
-
-  &[aria-expanded='true'] .chevron {
-    transform: rotate(180deg);
-  }
 }
 
 // Os dois seletores (período e mando) na linha inteira, com a mesma largura: lado a lado, metade cada;
@@ -100,7 +36,6 @@ $line: var(--line);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px 16px;
-  margin-bottom: 12px;
 
   @media (max-width: 560px) {
     grid-template-columns: minmax(0, 1fr);

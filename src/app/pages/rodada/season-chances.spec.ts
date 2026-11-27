@@ -46,4 +46,11 @@ describe('SeasonChances', () => {
     fixture.detectChanges();
     expect(el.querySelector('.games-tip')).toBeNull();
   });
+
+  it('time jogando agora: bolinha ao vivo ao lado do nome', () => {
+    const live: UpcomingGame = { id: 99, opponent: team(200), home: true, date: '26/11', live: '1-0' };
+    const el = render([row(1, [live, ...games(1)]), row(2, games(2))]).nativeElement as HTMLElement;
+    const dots = [...el.querySelectorAll('tbody tr')].map((tr) => !!tr.querySelector('.clube .live-dot'));
+    expect(dots).toEqual([true, false]);
+  });
 });

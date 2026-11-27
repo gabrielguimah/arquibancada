@@ -1,7 +1,23 @@
-<section class="chances" aria-labelledby="tabela-titulo">
-  <p class="subtitle">
-    Simulação de {{ simulations }} finais de campeonato com os jogos que faltam{{ live() ? ', atualizada com os placares ao vivo' : '' }}.
-  </p>
+<section class="chances" aria-labelledby="chances-titulo">
+  <div class="table-card">
+    <header class="card-head">
+      <!-- Como as chances são calculadas: no ícone de informação ao lado do título (toque no celular). -->
+      <h2 id="chances-titulo">
+        <mat-icon class="title-icon" aria-hidden="true">casino</mat-icon>Chances
+        <mat-icon
+          #about="matTooltip"
+          class="info-tip"
+          tabindex="0"
+          role="img"
+          [attr.aria-label]="aboutChances()"
+          [matTooltip]="aboutChances()"
+          matTooltipPosition="below"
+          (click)="about.toggle()"
+          >info</mat-icon
+        >
+      </h2>
+      <p class="subtitle">{{ simulations }} simulações dos jogos que faltam</p>
+    </header>
 
   <div class="table-wrap" (scroll)="hideTip()">
     <table>
@@ -25,6 +41,9 @@
             <td class="clube">
               <img crest [src]="r.team.logo" alt="" width="22" height="22" loading="lazy" />
               <span class="name">{{ r.team.name }}</span><app-favorite-heart [team]="r.team.id" />
+              @if (playing(r)) {
+                <span class="live-dot" title="Jogando agora" aria-label="Jogando agora"></span>
+              }
             </td>
             <td class="pts">{{ r.points }}</td>
             @for (c of columns(); track c.key) {
@@ -63,6 +82,7 @@
         }
       </tbody>
     </table>
+  </div>
   </div>
   <!-- Regras e legenda (fechado por padrão), como o da classificação. -->
   <details class="rules">

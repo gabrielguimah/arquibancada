@@ -97,8 +97,9 @@ const CLOCK_MAX_GAP_MS = 40_000;
 const CLOCK_SAMPLES = 20;
 // A API publica cada virada de minuto com atraso, e o relógio estimado por elas herda esse atraso: no
 // Atlético-MG x Corinthians (25/11/2026), ficou uns 30 s atrás do Sofascore (que registra o segundo exato
-// do início de cada tempo). O site recebe o relógio adiantado nesse tanto.
-const CLOCK_LEAD_MS = 30_000;
+// do início de cada tempo). Com 30 s de adiantamento, ficou uns 30 s à frente do placar do Google; 20 s
+// fica no meio, mais perto do Sofascore (27/11/2026). O site recebe o relógio adiantado nesse tanto.
+const CLOCK_LEAD_MS = 20_000;
 
 // Endpoints liberados e por quanto tempo (segundos) cada resposta fica em cache.
 // `fixtures` tem TTL dinâmico, calculado a partir dos jogos da resposta.

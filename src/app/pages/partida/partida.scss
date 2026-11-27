@@ -49,15 +49,16 @@ $muted: var(--muted);
 }
 
 // Seletor só no celular.
-.section-tabs {
+// Abas do celular (componente app-section-tabs): só até 900 px.
+app-section-tabs {
   display: none;
 }
 
 // Celular: uma seção por vez, escolhida no seletor abaixo do cabeçalho.
 @media (max-width: 900px) {
-  // Abas Lance a lance / Estatísticas / Escalações (estilo global .section-tabs).
-  .section-tabs {
-    display: flex;
+  // Abas Lance a lance / Estatísticas / Escalações: 12 px do cabeçalho e 12 px até as seções.
+  app-section-tabs {
+    display: block;
     margin-top: 12px;
   }
 

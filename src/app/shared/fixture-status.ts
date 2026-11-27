@@ -50,6 +50,23 @@ interface Progress {
 }
 
 /**
+ * Resposta que chegou depois mas está atrás da que já está na tela (situação, minuto e acréscimo): veio de
+ * um cache mais velho (outra chave no Worker, ou o Worker devolvendo a última guardada quando a API
+ * recusa). Fica com a anterior: o placar nunca "volta no tempo" (ex.: 3 x 1 voltando a 2 x 1). Empate fica
+ * com a nova (gol anulado no mesmo minuto ainda passa). Situação fora da ordem conhecida (suspenso,
+ * interrompido…): aceita a nova.
+ */
+export function notBehind<F extends Progress>(previous: F | null | undefined, next: F): F {
+  if (!previous) return next;
+  const rank = (f: Progress) => PROGRESS[f.fixture.status.short];
+  const [a, b] = [rank(previous), rank(next)];
+  if (a === undefined || b === undefined) return next;
+  const behind =
+    b - a || (next.fixture.status.elapsed ?? 0) - (previous.fixture.status.elapsed ?? 0) || (next.fixture.status.extra ?? 0) - (previous.fixture.status.extra ?? 0);
+  return behind < 0 ? previous : next;
+}
+
+/**
  * A busca por id (com eventos) e a lista do dia têm caches separados no Worker e na API, e às vezes a
  * lista já mostra o jogo começado (ou o gol) enquanto a busca por id ainda não. Fica com a situação e o
  * placar da mais adiantada; eventos, escalações e notas vêm sempre da busca por id.

@@ -13,6 +13,8 @@ $line: var(--line-strong);
 
   @media (max-width: 1000px) {
     grid-template-columns: minmax(0, 1fr);
+    // Uma coluna: entre as abas e a seção, o mesmo espaço das outras páginas (12 px).
+    gap: 12px;
 
     .jogos {
       width: 100%;
@@ -27,14 +29,21 @@ $line: var(--line-strong);
     .tabela-head {
       display: none;
     }
+
+    // Sem a troca em cima, o card da tabela encosta nas abas (o espaço é o da grade, 12 px).
+    .table-card {
+      margin-top: 0;
+    }
   }
 }
 
 .hoje {
   margin-bottom: 28px;
 
+  // No tamanho dos títulos dos cards (16 px), como Classificação e Chances ao lado.
   h2 {
     margin-bottom: 10px;
+    font-size: 1rem;
   }
 }
 
@@ -48,24 +57,14 @@ h2 {
 }
 
 // Subtítulo da grade (o das chances fica no próprio painel, no mesmo estilo).
-.tabela .subtitle {
-  margin: 6px 0 0;
-  font-size: 0.8rem;
-  color: $muted;
-}
 
-// A troca Classificação | Chances (estilo global .view-switch) faz o papel do título: letra um pouco maior.
-.view-switch button {
-  font-size: 0.95rem;
-}
 
-// Abas Jogos / Classificação / Chances (estilo global .section-tabs): só no celular e em tela média.
-.section-tabs {
+// Abas Jogos / Classificação / Chances (componente app-section-tabs): só no celular e em tela média.
+app-section-tabs {
   display: none;
 
   @media (max-width: 1000px) {
-    display: flex;
-    margin-bottom: -8px;
+    display: block;
   }
 }
 
@@ -142,30 +141,6 @@ tr.sk-row {
   margin: 0 auto;
 }
 
-.sk-subtitle {
-  display: inline-block;
-  width: 330px;
-  max-width: 100%;
-  height: 11px;
-  vertical-align: middle;
-}
-
-// No celular o subtítulo de verdade quebra em duas linhas: o esqueleto também.
-.sk-subtitle-2 {
-  display: none;
-}
-
-@media (max-width: 560px) {
-  .sk-subtitle {
-    width: 100%;
-  }
-
-  .sk-subtitle-2 {
-    display: inline-block;
-    width: 40%;
-  }
-}
-
 .sk-zone {
   display: inline-block;
   width: 80px;
@@ -214,12 +189,17 @@ $zones: (
   rebaixamento: $red,
 );
 
-.table-wrap {
+.table-card {
   margin-top: 12px;
+}
+
+// Título do card no tamanho dos outros cards (a regra geral de h2 desta página é a de seção, maior).
+.card-head h2 {
+  font-size: 1rem;
+}
+
+.table-wrap {
   overflow-x: auto;
-  background: var(--surface);
-  border-radius: 10px;
-  box-shadow: 0 1px 2px var(--shadow);
 }
 
 table {
@@ -254,14 +234,50 @@ thead th {
 // Barra lateral: corre por todas as linhas da zona.
 // Coluna da posição justa: barra da zona, círculo e nome bem próximos. `width: 1%` impede que a
 // sobra de largura da tabela venha para cá.
+// Colunas presas à esquerda (posição e clube), como na tabela de times: no celular a tabela rola de lado e
+// elas ficam. Largura exata da posição: a do clube começa onde ela termina (sem fresta por onde o que
+// rola por baixo aparecia).
+$pos-width: 40px;
+$club-width-mobile: 152px;
+
 .pos {
-  width: 1%;
+  box-sizing: border-box;
+  width: $pos-width;
+  min-width: $pos-width;
+  max-width: $pos-width;
   padding-left: 12px;
   padding-right: 2px;
 }
 
+th.pos,
+td.pos,
+th.clube,
+td.clube {
+  position: sticky;
+  z-index: 1;
+  background: var(--surface);
+}
+
+th.pos,
+td.pos {
+  left: 0;
+}
+
+th.clube,
+td.clube {
+  left: $pos-width;
+  // 1 px de fundo à esquerda: em telas com pixel fracionado, a emenda com a posição não deixa ver o que
+  // passa por baixo.
+  box-shadow: -1px 0 0 var(--surface);
+}
+
+// Título da zona preso à esquerda enquanto a linha rola.
+.zone-label {
+  position: sticky;
+  left: 12px;
+}
+
 tbody td.pos {
-  position: relative;
 
   &::before {
     content: '';
@@ -436,6 +452,52 @@ tbody tr.playing {
 @media (max-width: 560px) {
   .gols {
     display: none;
+  }
+
+  // Coluna do clube com largura fixa (nome com "…" se não couber) e fio à direita, separando do que rola.
+  // A rolagem para sempre no começo de uma coluna, logo depois das presas: sem número cortado ao meio
+  // aparecendo junto do clube.
+  th.clube,
+  td.clube {
+    box-sizing: border-box;
+    width: $club-width-mobile;
+    min-width: $club-width-mobile;
+    max-width: $club-width-mobile;
+    // Fio à direita e 1 px de fundo à esquerda.
+    box-shadow:
+      inset -1px 0 0 var(--line),
+      -1px 0 0 var(--surface);
+  }
+
+  // Faixa de 2 px de fundo logo depois do fio: a largura das colunas tem fração de pixel, e uma lasca da
+  // coluna que passou por baixo aparecia ali (a sombra de fora da célula presa não cobre a vizinha).
+  td.clube::after,
+  th.clube::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -2px;
+    bottom: 0;
+    width: 2px;
+    background: var(--surface);
+  }
+
+  .club-name {
+    display: inline-block;
+    max-width: 78px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+  }
+
+  .table-wrap {
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: $pos-width + $club-width-mobile;
+  }
+
+  th:not(.clube),
+  td:not(.clube) {
+    scroll-snap-align: start;
   }
 }
 

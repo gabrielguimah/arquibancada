@@ -4,6 +4,13 @@ import { NEVER, Observable, of } from 'rxjs';
 import { ApiFootball, Fixture, Standing } from '../../api/api-football';
 import { Rodada } from './rodada';
 
+/** Motivo da opção Chances bloqueada: o texto que o tooltip liga ao botão (aria-describedby). */
+function reason(el: HTMLElement): string | undefined {
+  const button = el.querySelectorAll<HTMLElement>('.section-tabs button')[2] ?? el.querySelectorAll<HTMLElement>('.view-switch button')[1];
+  const ids = button?.getAttribute('aria-describedby')?.split(' ') ?? [];
+  return ids.map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
+}
+
 const ROUND = 'Regular Season - 37';
 
 /** Classificação de 20 times, todos com `played` jogos. */
@@ -64,20 +71,20 @@ describe('Classificação: opção Chances', () => {
     const { chances, el } = await render(table(3), of([upcoming(1, 2)]));
     expect(chances().getAttribute('aria-disabled')).toBe('true');
     expect(chances().querySelector('.lock')).toBeTruthy();
-    expect(el.querySelector('#chances-motivo')?.textContent).toContain('depois que os times disputarem 5 jogos');
+    expect(reason(el)).toContain('depois que os times disputarem 5 jogos');
   });
 
   it('campeonato encerrado (nenhum jogo pela frente): cadeado e o motivo', async () => {
     const { chances, el } = await render(table(38), of([]));
     expect(chances().querySelector('.lock')).toBeTruthy();
-    expect(el.querySelector('#chances-motivo')?.textContent).toContain('Campeonato encerrado');
+    expect(reason(el)).toContain('Campeonato encerrado');
   });
 
   it('carregando: bloqueada, mas sem cadeado', async () => {
     const { chances, el } = await render(table(36), NEVER);
     expect(chances().getAttribute('aria-disabled')).toBe('true');
     expect(chances().querySelector('.lock')).toBeNull();
-    expect(el.querySelector('#chances-motivo')?.textContent).toContain('Carregando');
+    expect(reason(el)).toContain('Carregando');
   });
 
   it('bloqueada: o toque mostra o tooltip com o motivo e não troca a grade', async () => {
@@ -86,7 +93,7 @@ describe('Classificação: opção Chances', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(document.querySelector('.mat-mdc-tooltip')?.textContent).toContain('depois que os times disputarem 5 jogos');
-    expect(el.querySelector('#tabela-titulo')?.textContent?.trim()).toBe('Classificação');
+    expect(el.querySelector('#tabela-titulo')?.textContent).toContain('Classificação');
     expect(el.querySelector('app-season-chances')).toBeNull();
   });
 
@@ -100,7 +107,7 @@ describe('Classificação: opção Chances', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(el.querySelector('app-season-chances')).toBeTruthy();
-    expect(el.querySelector('#tabela-titulo')?.textContent?.trim()).toBe('Chances');
+    expect(el.querySelector('#chances-titulo')?.textContent).toContain('Chances');
   });
 
   it('abas do celular: começa em Jogos; Classificação e Chances trocam a grade', async () => {

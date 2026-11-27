@@ -4,8 +4,10 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, TeamRating, TeamRatings } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
-import { PillSwitch } from '../../shared/pill-switch';
+import { SectionTabs, TabOption } from '../../shared/section-tabs';
+import { ToggleGroup, ToggleOption } from '../../shared/toggle-group';
 import { FavoriteHeart } from '../../shared/favorite-heart';
+import { FiltersPanel } from '../../shared/filters-panel';
 import { FavoriteTeam } from '../../shared/favorite-team';
 import { openFavoriteTeamDialog } from '../../shared/favorite-team-dialog';
 import { formatRating, ratingClass } from '../../shared/rating';
@@ -78,7 +80,7 @@ interface Line {
  */
 @Component({
   selector: 'app-team-ratings',
-  imports: [Crest, FavoriteHeart, MatIcon, MatTooltip, PillSwitch],
+  imports: [Crest, FavoriteHeart, FiltersPanel, MatIcon, MatTooltip, SectionTabs, ToggleGroup],
   host: { class: 'times' },
   templateUrl: './team-ratings.html',
   styleUrl: './team-ratings.scss',
@@ -87,11 +89,11 @@ export class TeamRatingsTables {
   private api = inject(ApiFootball);
   private retry?: ReturnType<typeof setTimeout>;
 
-  protected periods: Array<{ id: Period; label: string }> = [
+  protected periods: ToggleOption<Period>[] = [
     { id: 'season', label: 'Temporada' },
     { id: 'last5', label: 'Últimas 5 partidas' },
   ];
-  protected venues: Array<{ id: Venue; label: string; icon?: string }> = [
+  protected venues: ToggleOption<Venue>[] = [
     { id: 'all', label: 'Todos' },
     { id: 'home', label: 'Casa', icon: 'home' },
     { id: 'away', label: 'Fora', icon: 'flight' },
@@ -107,8 +109,6 @@ export class TeamRatingsTables {
   protected message = signal<string | null>(null);
   protected period = signal<Period>('season');
   protected venue = signal<Venue>('all');
-  /** Seletores de período e mando à mostra (o botão Filtros abre e fecha). */
-  protected filtersOpen = signal(false);
   /** O que está escolhido, no botão Filtros (para ver sem abrir). */
   protected filtersSummary = computed(() => {
     const period = this.period() === 'season' ? 'Temporada' : 'Últimas 5';
@@ -117,6 +117,10 @@ export class TeamRatingsTables {
   });
   /** Celular e tela média: o que aparece, a tabela ou o resumo (no computador, os dois lado a lado). */
   protected section = signal<'tabela' | 'resumo'>('tabela');
+  protected sections: TabOption<'tabela' | 'resumo'>[] = [
+    { id: 'tabela', label: 'Estatísticas' },
+    { id: 'resumo', label: 'Resumo' },
+  ];
   protected tab = signal<TeamTab>(TEAM_TABS[0]);
   protected sort = signal<Sort>(initialSort(TEAM_TABS[0]));
 

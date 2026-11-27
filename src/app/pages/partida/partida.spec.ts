@@ -105,6 +105,21 @@ describe('Página da partida', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
+  it('últimos 5 jogos com a partida rolando: o parcial entra como o mais recente, com contorno ao vivo', () => {
+    const flamengo = { id: 127, name: 'Flamengo', logo: '' };
+    const past = (id: number, day: number) => ({ id, timestamp: 1793000000 + day * 86400, home: botafogo, away: flamengo, goals: { home: 1, away: 0 } });
+    // Botafogo com 5 jogos (vitórias) antes desta partida; o mais antigo sai para entrar o parcial.
+    teamForms = [{ team: botafogo.id, matches: [past(5, 5), past(4, 4), past(3, 3), past(2, 2), past(1, 1)] }];
+    // Botafogo 0 x 1 São Paulo, no 2º tempo: parcial de derrota para o Botafogo, de vitória para o São Paulo.
+    const el = render(match([0, 1], [], '2H'));
+    const chips = (i: number) => [...el.querySelectorAll('app-match-form .block')[i].querySelectorAll('.team .chip')];
+    expect(chips(0).map((c) => c.textContent?.trim())).toEqual(['V', 'V', 'V', 'V', 'D']);
+    expect(chips(0).at(-1)?.classList).toContain('live');
+    expect(chips(0).slice(0, 4).some((c) => c.classList.contains('live'))).toBe(false);
+    expect(chips(1).map((c) => c.textContent?.trim())).toEqual(['V']);
+    expect(chips(1)[0].classList).toContain('live');
+  });
+
   it('últimos 5 jogos: resultado do ponto de vista de cada time, data, adversário e placar', () => {
     const flamengo = { id: 127, name: 'Flamengo', logo: '' };
     teamForms = [

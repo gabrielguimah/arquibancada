@@ -19,46 +19,35 @@ $line: var(--line);
   @media (max-width: 1000px) {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    // O mesmo espaço entre abas, filtro e quadro (12 px), como nas outras páginas.
+    gap: 12px;
     max-width: 560px;
 
-    // Na lista do celular, o filtro fica à esquerda (no computador, encostado embaixo na linha dele).
-    .filter {
-      align-self: flex-start;
+    // O seletor de sempre sai; o filtro fica dentro do botão Filtros (abaixo).
+    .area-filter {
+      display: none;
+    }
+
+    &:not([data-section='rated']):not([data-section='players']) .mobile-filters {
+      display: none;
     }
 
     &:not([data-section='scorers']) .area-scorers,
     &:not([data-section='assists']) .area-assists,
     &:not([data-section='team']) .area-team,
     &:not([data-section='rated']) .area-rated,
-    &:not([data-section='players']) .area-players,
-    &:not([data-section='rated']):not([data-section='players']) .area-filter {
+    &:not([data-section='players']) .area-players {
       display: none;
     }
   }
 }
 
-// Abas dos quadros (estilo global .section-tabs): só no celular e em tela média. As de ícone são mais
-// estreitas; a de Estatísticas (com o nome) fica com o resto.
-.section-tabs {
+// Abas dos quadros (componente app-section-tabs): só no celular e em tela média.
+app-section-tabs {
   display: none;
 
   @media (max-width: 1000px) {
-    display: flex;
-  }
-
-  button:not(.icon-tab) {
-    flex: 2;
-  }
-}
-
-.tab-icon {
-  width: 20px;
-  height: 20px;
-  font-size: 20px;
-
-  &.filled {
-    font-variation-settings: 'FILL' 1;
+    display: block;
   }
 }
 
@@ -300,4 +289,14 @@ $row-height: 51px;
 .sk-value {
   width: 28px;
   height: 16px;
+}
+
+// Filtros do celular (componente compartilhado, com o seletor Regulares / Todos dentro). No computador,
+// não aparece.
+.mobile-filters {
+  display: none;
+
+  @media (max-width: 1000px) {
+    display: block;
+  }
 }

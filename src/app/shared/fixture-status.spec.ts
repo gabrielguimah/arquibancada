@@ -1,4 +1,4 @@
-import { roundStarted } from './fixture-status';
+import { notBehind, roundStarted } from './fixture-status';
 
 const DAY = 24 * 3600;
 const game = (timestamp: number, short = 'NS') => ({ fixture: { timestamp, status: { short } } });
@@ -39,5 +39,28 @@ describe('roundStarted', () => {
     const fixtures = [...weekend(start), game(start + 90 * DAY, 'PST'), game(start + 90 * DAY, 'PST')];
     fixtures[0] = game(start, 'FT');
     expect(roundStarted(fixtures)).toBe(true);
+  });
+});
+
+describe('notBehind', () => {
+  const at = (short: string, elapsed: number | null, home: number, extra: number | null = null) => ({
+    fixture: { status: { short, elapsed, extra } },
+    goals: { home, away: 1 },
+  });
+
+  it('resposta atrás da da tela (minuto ou situação anterior): fica a da tela', () => {
+    expect(notBehind(at('2H', 70, 3), at('2H', 62, 2)).goals.home).toBe(3);
+    expect(notBehind(at('2H', 50, 3), at('HT', 45, 2)).goals.home).toBe(3);
+    expect(notBehind(at('2H', 90, 3, 4), at('2H', 90, 2, 2)).goals.home).toBe(3);
+  });
+
+  it('mais adiantada ou empatada: fica a nova (gol anulado no mesmo minuto passa)', () => {
+    expect(notBehind(at('2H', 70, 3), at('2H', 71, 3)).fixture.status.elapsed).toBe(71);
+    expect(notBehind(at('2H', 70, 3), at('2H', 70, 2)).goals.home).toBe(2);
+    expect(notBehind(null, at('1H', 5, 0)).fixture.status.elapsed).toBe(5);
+  });
+
+  it('situação fora da ordem conhecida (suspenso, interrompido): aceita a nova', () => {
+    expect(notBehind(at('2H', 70, 3), at('SUSP', 70, 3)).fixture.status.short).toBe('SUSP');
   });
 });

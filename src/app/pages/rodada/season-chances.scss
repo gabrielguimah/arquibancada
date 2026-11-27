@@ -5,17 +5,29 @@ $line: var(--line-strong);
   display: block;
 }
 
-.subtitle {
-  margin: 6px 0 12px;
-  font-size: 0.8rem;
+// Card da tabela (estilos globais .table-card e .card-head): logo abaixo da troca Classificação | Chances.
+.table-card {
+  margin-top: 12px;
+}
+
+// No celular as abas fazem a troca: o card encosta nelas (o espaço é o da grade da página, 12 px).
+@media (max-width: 1000px) {
+  .table-card {
+    margin-top: 0;
+  }
+}
+
+// Ícone de informação ao lado do título (o texto de como as chances são calculadas vai no tooltip).
+.info-tip {
+  width: 18px;
+  height: 18px;
   color: $muted;
+  font-size: 18px;
+  cursor: help;
 }
 
 .table-wrap {
   overflow-x: auto;
-  background: var(--surface);
-  border-radius: 10px;
-  box-shadow: 0 1px 2px var(--shadow);
 }
 
 table {
@@ -43,11 +55,41 @@ tbody tr + tr td {
   border-top: 1px solid var(--line);
 }
 
+// Colunas presas à esquerda (posição e clube), como na classificação e na tabela de times. Largura exata
+// da posição: a do clube começa onde ela termina.
+$pos-width: 40px;
+$pos-width-mobile: 32px;
+$club-width-mobile: 136px;
+
 .pos {
-  width: 1%;
+  box-sizing: border-box;
+  width: $pos-width;
+  min-width: $pos-width;
+  max-width: $pos-width;
   padding-left: 12px;
   color: $muted;
   font-weight: 600;
+}
+
+th.pos,
+td.pos,
+th.clube,
+td.clube {
+  position: sticky;
+  z-index: 1;
+  background: var(--surface);
+}
+
+th.pos,
+td.pos {
+  left: 0;
+}
+
+th.clube,
+td.clube {
+  left: $pos-width;
+  // 1 px de fundo à esquerda: a emenda com a posição não deixa ver o que passa por baixo.
+  box-shadow: -1px 0 0 var(--surface);
 }
 
 .clube {
@@ -59,6 +101,11 @@ tbody tr + tr td {
   }
 
   .name {
+    vertical-align: middle;
+  }
+
+  .live-dot {
+    margin-left: 6px;
     vertical-align: middle;
   }
 }
@@ -257,7 +304,47 @@ td.chance {
   }
 
   .pos {
+    width: $pos-width-mobile;
+    min-width: $pos-width-mobile;
+    max-width: $pos-width-mobile;
     padding-left: 8px;
+  }
+
+  // Clube com largura fixa e fio à direita; a rolagem para no começo de uma coluna, logo depois dele.
+  th.clube,
+  td.clube {
+    left: $pos-width-mobile;
+    box-sizing: border-box;
+    width: $club-width-mobile;
+    min-width: $club-width-mobile;
+    max-width: $club-width-mobile;
+    // Fio à direita e 1 px de fundo à esquerda.
+    box-shadow:
+      inset -1px 0 0 var(--line),
+      -1px 0 0 var(--surface);
+  }
+
+  // Faixa de 2 px de fundo logo depois do fio: a largura das colunas tem fração de pixel, e uma lasca da
+  // coluna que passou por baixo aparecia ali (a sombra de fora da célula presa não cobre a vizinha).
+  td.clube::after,
+  th.clube::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -2px;
+    bottom: 0;
+    width: 2px;
+    background: var(--surface);
+  }
+
+  .table-wrap {
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: $pos-width-mobile + $club-width-mobile;
+  }
+
+  th:not(.clube),
+  td:not(.clube) {
+    scroll-snap-align: start;
   }
 
   // Nome abreviado com reticências: as quatro chances cabem na tela; os próximos jogos ficam na rolagem.
@@ -268,7 +355,7 @@ td.chance {
 
     .name {
       display: inline-block;
-      max-width: 84px;
+      max-width: 72px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
