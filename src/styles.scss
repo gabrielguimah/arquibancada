@@ -6,7 +6,7 @@
 @use '@angular/material' as mat;
 
 // Selo da nota: uma cor por décimo, de 5,0 a 10 (classes r-50 … r-100; abaixo de 5 usa r-50).
-// ratingClass() em shared/rating.ts escolhe o décimo; cada paleta define as cores com rating-gradient().
+// ratingClass() em shared/utils/rating.ts escolhe o décimo; cada paleta define as cores com rating-gradient().
 $rating-min: 50;
 $rating-max: 100;
 
@@ -455,7 +455,7 @@ html {
   }
 }
 
-// Fundo deslizante da opção escolhida (diretiva PillSwitch, shared/pill-switch.ts): uma camada atrás dos
+// Fundo deslizante da opção escolhida (diretiva PillSwitch, shared/directives/pill-switch.ts): uma camada atrás dos
 // botões, na posição e largura da escolhida (--pill-x, --pill-w), que desliza ao trocar. Com ela, o
 // botão escolhido fica sem fundo próprio (só a cor do texto muda).
 .view-switch,
@@ -754,7 +754,7 @@ html, body {
   }
 }
 
-/* Selo da nota (0–10); a faixa vem de ratingClass() em shared/rating.ts, as cores da paleta. */
+/* Selo da nota (0–10); a faixa vem de ratingClass() em shared/utils/rating.ts, as cores da paleta. */
 .rating-badge {
   display: inline-block;
   min-width: 40px;

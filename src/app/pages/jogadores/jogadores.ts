@@ -1,17 +1,17 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiFootball, PlayerStat, RatedPlayer, Team, TopRated } from '../../api/api-football';
-import { Card } from '../../shared/card';
-import { Notice, NoticeMessage } from '../../shared/notice';
-import { Crest } from '../../shared/crest';
-import { FiltersPanel } from '../../shared/filters-panel';
-import { ACCUMULATIONS, Accumulation } from './player-columns';
-import { Pager } from '../../shared/pager';
-import { SectionTabs, TabOption } from '../../shared/section-tabs';
-import { ToggleGroup, ToggleOption } from '../../shared/toggle-group';
-import { RoundTeamCard } from './round-team';
-import { PlayersTable } from './players-table';
-import { formatRating, ratingClass } from '../../shared/rating';
+import { Card } from '../../shared/components/card/card';
+import { Notice, NoticeMessage } from '../../shared/components/notice/notice';
+import { Crest } from '../../shared/directives/crest';
+import { FiltersPanel } from '../../shared/components/filters-panel/filters-panel';
+import { ACCUMULATIONS, Accumulation } from './utils/player-columns';
+import { Pager } from '../../shared/components/pager/pager';
+import { SectionTabs, TabOption } from '../../shared/components/section-tabs/section-tabs';
+import { ToggleGroup, ToggleOption } from '../../shared/components/toggle-group/toggle-group';
+import { RoundTeamCard } from './round-team/round-team';
+import { PlayersTable } from './players-table/players-table';
+import { formatRating, ratingClass } from '../../shared/utils/rating';
 
 // Linhas por página de cada quadro (a altura dos quadros).
 const PAGE_SIZE = 10;

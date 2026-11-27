@@ -1,24 +1,24 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { ApiFootball, Fixture, FormMatch, Standing, Team } from '../../api/api-football';
-import { Crest } from '../../shared/crest';
-import { FormChip } from '../../shared/form-chip';
-import { Card } from '../../shared/card';
-import { Collapsible } from '../../shared/collapsible';
-import { SectionTabs, TabOption } from '../../shared/section-tabs';
-import { ToggleGroup, ToggleOption } from '../../shared/toggle-group';
-import { FavoriteHeart } from '../../shared/favorite-heart';
-import { FixtureCard, TZ, isLive, todayInBrasilia } from '../../shared/fixture-card';
-import { FixtureCardSkeleton } from '../../shared/fixture-card-skeleton';
-import { LiveFixtures } from '../../shared/live-fixtures';
-import { RoundNav } from '../../shared/round-nav';
-import { FINISHED, liveStandings } from './live-standings';
-import { OVER, roundStarted } from '../../shared/fixture-status';
-import { ChanceZone, SimMatch, simulateChances } from './chances';
-import type { ChanceRow, UpcomingGame } from './season-chances';
-import { SeasonChances } from './season-chances';
+import { Crest } from '../../shared/directives/crest';
+import { FormChip } from '../../shared/components/form-chip/form-chip';
+import { Card } from '../../shared/components/card/card';
+import { Collapsible } from '../../shared/components/collapsible/collapsible';
+import { SectionTabs, TabOption } from '../../shared/components/section-tabs/section-tabs';
+import { ToggleGroup, ToggleOption } from '../../shared/components/toggle-group/toggle-group';
+import { FavoriteHeart } from '../../shared/components/favorite-heart/favorite-heart';
+import { FixtureCard, TZ, isLive, todayInBrasilia } from '../../shared/components/fixture-card/fixture-card';
+import { FixtureCardSkeleton } from '../../shared/components/fixture-card/fixture-card-skeleton/fixture-card-skeleton';
+import { LiveFixtures } from '../../shared/services/live-fixtures';
+import { RoundNav } from '../../shared/components/round-nav/round-nav';
+import { FINISHED, liveStandings } from './utils/live-standings';
+import { OVER, roundStarted } from '../../shared/utils/fixture-status';
+import { ChanceZone, SimMatch, simulateChances } from './utils/chances';
+import type { ChanceRow, UpcomingGame } from './season-chances/season-chances';
+import { SeasonChances } from './season-chances/season-chances';
 import { MatTooltip } from '@angular/material/tooltip';
-import { Notice } from '../../shared/notice';
+import { Notice } from '../../shared/components/notice/notice';
 
 // Jogos encerrados: os eventos deles (cartões) vêm de uma busca própria, com cache longo no Worker.
 // Os jogos ao vivo vêm de LiveFixtures, compartilhado com os avisos de gol.

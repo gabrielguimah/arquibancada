@@ -4,13 +4,13 @@ import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { SEASON } from './api/api-football';
-import { BrowserNotifications } from './shared/browser-notifications';
-import { Crest } from './shared/crest';
-import { FavoriteTeam } from './shared/favorite-team';
-import { GoalNotifier } from './shared/goal-notifier';
-import { GoalSounds } from './shared/goal-sounds';
-import { GoalToasts } from './shared/goal-toasts';
-import { ThemeService } from './shared/theme';
+import { BrowserNotifications } from './shared/services/browser-notifications';
+import { Crest } from './shared/directives/crest';
+import { FavoriteTeam } from './shared/services/favorite-team';
+import { GoalNotifier } from './shared/services/goal-notifier';
+import { GoalSounds } from './shared/services/goal-sounds';
+import { GoalToasts } from './shared/components/goal-toasts/goal-toasts';
+import { ThemeService } from './shared/services/theme';
 
 @Component({
   selector: 'app-root',
@@ -28,7 +28,7 @@ export class App {
 
   /** A modal (e a biblioteca de diálogos) só é baixada no primeiro clique: fica fora do carregamento inicial. */
   protected async openFavorite() {
-    const { openFavoriteTeamDialog } = await import('./shared/favorite-team-dialog');
+    const { openFavoriteTeamDialog } = await import('./shared/components/favorite-team-dialog/favorite-team-dialog');
     openFavoriteTeamDialog(this.injector);
   }
 

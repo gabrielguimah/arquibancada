@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { TeamRatingsTables } from './team-ratings';
+import { TeamRatingsTables } from './team-ratings/team-ratings';
 
 /** Aba Times: nota média e estatísticas dos times (temporada e últimas 5 partidas). */
 @Component({

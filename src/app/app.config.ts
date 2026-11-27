@@ -7,7 +7,7 @@ import { PreloadAllModules, provideRouter, withPreloading } from '@angular/route
 
 import { routes } from './app.routes';
 import { retryTransientErrors } from './api/retry';
-import { BOOT_SVG } from './shared/boot.svg';
+import { BOOT_SVG } from './shared/utils/boot.svg';
 
 export const appConfig: ApplicationConfig = {
   providers: [

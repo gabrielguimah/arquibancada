@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { ApiFootball, Broadcast, Fixture, FixtureEvent, TeamForm } from '../../api/api-football';
-import { highlights } from './match-header';
+import { highlights } from './utils/match-header';
 import { Partida, refreshDelay } from './partida';
 
 const botafogo = { id: 120, name: 'Botafogo', logo: '' };
