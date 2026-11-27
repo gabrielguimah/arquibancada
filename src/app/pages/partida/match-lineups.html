@@ -1,5 +1,4 @@
-<section class="card" aria-labelledby="lineups-title">
-  <h2 id="lineups-title">Escalações</h2>
+<app-card icon="stadium" heading="Escalações" subtitle="Formação, notas e banco" [live]="live()">
 
   @if (data(); as d) {
     <div class="layout">
@@ -23,7 +22,7 @@
                 <ol class="line">
                   @for (pos of line; track pos.spot.key) {
                     @let p = pos.spot;
-                    <li class="spot" [class.mvp]="p.best" [title]="tip(p)" [style.--x]="pos.x" [style.--y]="pos.y" [style.--n]="line.length">
+                    <li class="spot" [class.mvp]="p.best" [matTooltip]="tip(p)" [style.--x]="pos.x" [style.--y]="pos.y" [style.--n]="line.length">
                       <ng-container [ngTemplateOutlet]="photo" [ngTemplateOutletContext]="{ $implicit: p }" />
                       <span class="name">
                         <span class="number">{{ p.number }}</span>
@@ -43,7 +42,7 @@
       <app-match-bench [teams]="[d.home, d.away]" [injuries]="injuries()" [coaches]="coaches()" />
     </div>
   } @else {
-    <p class="message">Escalações ainda não divulgadas. Elas costumam sair cerca de 1 hora antes do jogo.</p>
+    <app-notice class="message">Escalações ainda não divulgadas. Elas costumam sair cerca de 1 hora antes do jogo.</app-notice>
     <!-- Antes da escalação: técnico atual e desfalques de cada time (o que houver). -->
     @if (extrasLoading()) {
       <div class="before" aria-busy="true" aria-label="Carregando técnicos e desfalques">
@@ -77,7 +76,7 @@
       </div>
     }
   }
-</section>
+</app-card>
 
 <!-- Faixa do time acima (mandante) e abaixo (visitante) do campo: escudo, nome, nota média e formação. -->
 <ng-template #teamBar let-t let-side="side">
@@ -85,7 +84,7 @@
     <img crest [src]="t.team.logo" alt="" width="22" height="22" />
     <strong>{{ t.team.name }}</strong>
     @if (t.rating !== null) {
-      <span [class]="ratingClass(t.rating) + ' team-rating'" title="Nota média do time">{{ formatRating(t.rating) }}</span>
+      <span [class]="ratingClass(t.rating) + ' team-rating'" matTooltip="Nota média do time">{{ formatRating(t.rating) }}</span>
     }
     @if (t.formation) {
       <span class="formation">{{ t.formation }}</span>
@@ -127,7 +126,7 @@
     @if (p.rating !== null) {
       <span [class]="ratingClass(p.rating) + ' rating pos bottom-right'">{{ formatRating(p.rating) }}</span>
     } @else if (started()) {
-      <span [class]="noRating.class + ' rating pos bottom-right'" [title]="noRating.title">{{ noRating.label }}</span>
+      <span [class]="noRating.class + ' rating pos bottom-right'" [matTooltip]="noRating.title">{{ noRating.label }}</span>
     }
   </span>
 </ng-template>

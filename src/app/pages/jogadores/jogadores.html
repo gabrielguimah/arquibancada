@@ -8,58 +8,27 @@
        nome). Os títulos dos quadros continuam neles. -->
   <app-section-tabs class="area-tabs" label="Quadros da página" [options]="sections" [(value)]="section" />
 
-  <!-- Celular e tela média: o mesmo filtro dentro do botão Filtros, no padrão da página Times (só nos
-       quadros que ele afeta). No computador, o seletor de sempre, logo acima deles. -->
-  <app-filters class="mobile-filters" [summary]="filter() === 'regulares' ? 'Regulares' : 'Todos os jogadores'">
-    <app-toggle-group kind="radiogroup" label="Jogadores considerados" [options]="filterOptions()" [(value)]="filter" [stretch]="true" />
+  <!-- Filtro dos quadros de notas e da tabela de jogadores (Regulares / Todos), no botão Filtros da linha
+       inteira, como em Times. No celular, só nos quadros que ele afeta. -->
+  <app-filters class="area-filter" [summary]="filtersSummary()">
+    <div class="toolbar">
+      <app-toggle-group kind="radiogroup" label="Jogadores considerados" [options]="filterOptions()" [(value)]="filter" [stretch]="true" />
+      <!-- Acumulado: só a tabela de jogadores muda (totais ou médias). -->
+      <app-toggle-group kind="radiogroup" label="Acumulado" [options]="accumulations" [(value)]="mode" [stretch]="true" />
+    </div>
   </app-filters>
 
-  <div class="filter area-filter">
-    <div class="switch" role="radiogroup" aria-label="Jogadores considerados">
-      <button
-        type="button"
-        role="radio"
-        [attr.aria-checked]="filter() === 'regulares'"
-        [class.on]="filter() === 'regulares'"
-        aria-describedby="regulares-tip"
-        (click)="filter.set('regulares')"
-      >
-        Regulares
-        <mat-icon class="info" [matTooltip]="regularTip()" matTooltipPosition="below"
-          >info</mat-icon
-        >
-        <span class="sr-only" id="regulares-tip">{{ regularTip() }}</span>
-      </button>
-      <button
-        type="button"
-        role="radio"
-        [attr.aria-checked]="filter() === 'todos'"
-        [class.on]="filter() === 'todos'"
-        (click)="filter.set('todos')"
-      >
-        Todos os jogadores
-      </button>
-    </div>
-  </div>
-
   @for (b of boards(); track b.title) {
-    <section class="board" [class]="'area-' + b.id" [attr.aria-labelledby]="'board-' + $index">
-      <header>
-        <div>
-          <h2 [id]="'board-' + $index">
-            @if (b.id === 'scorers') {
-              <mat-icon class="title-icon" aria-hidden="true">sports_soccer</mat-icon>
-            } @else if (b.id === 'assists') {
-              <mat-icon class="title-icon" svgIcon="chuteira" aria-hidden="true" />
-            } @else if (b.id === 'rated') {
-              <mat-icon class="title-icon filled" aria-hidden="true">star</mat-icon>
-            }
-            {{ b.title }}
-          </h2>
-          <p class="subtitle">{{ b.subtitle }}</p>
-        </div>
-        <span class="unit">{{ b.unit }}</span>
-      </header>
+    <app-card
+      class="board"
+      [class]="'area-' + b.id"
+      [icon]="b.icon"
+      [svgIcon]="b.svgIcon"
+      [heading]="b.title"
+      [subtitle]="b.subtitle"
+      [flush]="true"
+    >
+      <span card-header-end class="unit">{{ b.unit }}</span>
 
       @if (b.loading) {
         <ol class="rows" aria-busy="true" aria-label="Carregando">
@@ -74,8 +43,8 @@
             </li>
           }
         </ol>
-      } @else if (b.message) {
-        <p class="message">{{ b.message }}</p>
+      } @else if (b.message; as m) {
+        <app-notice class="message" [kind]="m.kind">{{ m.text }}</app-notice>
       } @else {
         <ol class="rows">
           @for (r of visible(b); track r.id) {
@@ -114,10 +83,10 @@
         [label]="'Páginas de ' + b.title.toLowerCase()"
         (pageChange)="setPage(b, $event)"
       />
-    </section>
+    </app-card>
   }
 
   <app-round-team class="area-team" />
 
-  <app-players-table class="area-players" [regulars]="filter() === 'regulares'" />
+  <app-players-table class="area-players" [regulars]="filter() === 'regulares'" [mode]="mode()" />
 </div>

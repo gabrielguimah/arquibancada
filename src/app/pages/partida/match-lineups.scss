@@ -20,17 +20,6 @@ $muted: var(--muted);
   container-type: inline-size;
 }
 
-.card {
-  padding: 14px 16px 16px;
-  background: var(--surface);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px var(--shadow);
-
-  h2 {
-    margin: 0 0 12px;
-    font-size: 1rem;
-  }
-}
 
 // Campo em cima, reservas embaixo.
 .layout {
@@ -517,11 +506,7 @@ $muted: var(--muted);
   }
 }
 
-.message {
-  margin: 0;
-  font-size: 0.85rem;
-  color: $muted;
-}
+// Aviso (app-notice, com o texto e a cor do site).
 
 // Antes de sair a escalação: técnico e desfalques, um time por coluna (uma só se o card ficar estreito).
 // Subgrid: o técnico e os desfalques dos dois times começam na mesma altura.

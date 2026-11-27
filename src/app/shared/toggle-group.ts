@@ -46,7 +46,16 @@ export interface ToggleOption<T extends string = string> {
           }
           {{ o.label }}
           @if (o.info) {
-            <mat-icon class="info" [matTooltip]="o.info" matTooltipPosition="below" [attr.aria-label]="o.info">info</mat-icon>
+            <!-- No toque, abre e fecha a dica (sem trocar a opção). -->
+            <mat-icon
+              #info="matTooltip"
+              class="info"
+              [matTooltip]="o.info"
+              matTooltipPosition="below"
+              [attr.aria-label]="o.info"
+              (click)="$event.stopPropagation(); info.toggle()"
+              >info</mat-icon
+            >
           }
           @if (o.blocked?.lock) {
             <mat-icon class="lock" aria-hidden="true">lock</mat-icon>

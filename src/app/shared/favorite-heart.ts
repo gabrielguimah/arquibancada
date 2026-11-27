@@ -1,14 +1,15 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { FavoriteTeam } from './favorite-team';
+import { MatTooltip } from '@angular/material/tooltip';
 
 /** Coração ao lado do nome do time, só se ele for o time do coração escolhido no cabeçalho. */
 @Component({
   selector: 'app-favorite-heart',
-  imports: [MatIcon],
+  imports: [MatTooltip, MatIcon],
   template: `
     @if (favorite()) {
-      <mat-icon class="heart" role="img" aria-label="Time do coração" title="Time do coração">favorite</mat-icon>
+      <mat-icon class="heart" role="img" aria-label="Time do coração" matTooltip="Time do coração">favorite</mat-icon>
     }
   `,
   styles: `

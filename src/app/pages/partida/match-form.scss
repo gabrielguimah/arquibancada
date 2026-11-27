@@ -26,50 +26,8 @@ $muted: var(--muted);
   }
 }
 
-// Mesmo visual dos outros cards da partida.
-.card {
-  padding: 14px 16px 16px;
-  background: var(--surface);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px var(--shadow);
 
-  h2 {
-    margin: 0 0 12px;
-    font-size: 1rem;
-  }
-}
-
-// Título que abre e fecha o card: o card todo na largura, com a seta à direita.
-.toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 4px;
-    border-radius: 6px;
-  }
-
-  .chevron {
-    color: $muted;
-    transition: transform 0.2s;
-  }
-}
-
-.open .toggle .chevron {
-  transform: rotate(180deg);
-}
-
-// Fechado: só o resumo de cada time, sem o espaço que separa dos jogos.
-.card:not(.open) .team {
+app-card:not(.open) .team {
   margin-bottom: 0;
 }
 
@@ -104,36 +62,6 @@ $muted: var(--muted);
 }
 
 // Mesmas cores das "Últimas 5" da classificação.
-.chip {
-  display: inline-grid;
-  flex: none;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 0.65rem;
-  font-weight: 700;
-
-  // Parcial da partida em andamento: contorno no azul do ao vivo (como nas "Últimas 5" da classificação).
-  &.live {
-    outline: 2px solid var(--live);
-    outline-offset: 1px;
-  }
-
-  &.r-V {
-    background: var(--win);
-  }
-
-  &.r-E {
-    background: #9aa8a2;
-  }
-
-  &.r-D {
-    background: #dc2626;
-  }
-}
-
 .rows {
   margin: 0;
   padding: 0;
@@ -143,7 +71,8 @@ $muted: var(--muted);
 // Resultado, data e o jogo: mandante (alinhado à direita), escudo, placar, escudo e visitante.
 .rows li {
   display: grid;
-  grid-template-columns: 18px 38px minmax(0, 1fr) 16px auto 16px minmax(0, 1fr);
+  // Coluna da data com folga para "ao vivo" numa linha só (o jogo desta partida, rolando).
+  grid-template-columns: 18px 44px minmax(0, 1fr) 16px auto 16px minmax(0, 1fr);
   align-items: center;
   gap: 6px;
   padding: 6px 0;
@@ -159,6 +88,7 @@ $muted: var(--muted);
   color: $muted;
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 // Esta partida, rolando: "ao vivo" e o placar no azul do ao vivo.
@@ -195,9 +125,7 @@ li.live {
 }
 
 .message {
-  margin: 4px 0 0;
-  color: $muted;
-  font-size: 0.8rem;
+  margin-top: 4px;
 }
 
 // Esqueleto enquanto carrega.

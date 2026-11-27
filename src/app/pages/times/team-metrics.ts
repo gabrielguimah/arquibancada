@@ -1,4 +1,5 @@
 import { TeamRating, TeamStats } from '../../api/api-football';
+import { formatNumber, formatPercent } from '../../shared/number-format';
 import { formatRating } from '../../shared/rating';
 
 /** Coluna da tabela de times (cada uma ordena a tabela ao clicar no título). */
@@ -17,7 +18,7 @@ export interface TeamMetric {
   rating?: boolean;
 }
 
-const count = (v: number) => String(v);
+const count = (v: number) => formatNumber(v);
 const stat = (key: keyof TeamStats) => (r: TeamRating) => r.stats?.[key] ?? null;
 
 // Só o que a API-Football traz. Primeiro o resumo (jogos, nota, gols), depois ataque, posse, defesa e disciplina.
@@ -26,11 +27,11 @@ export const TEAM_METRICS: TeamMetric[] = [
   { id: 'rating', label: 'Nota', title: 'Nota média', value: (r) => r.rating, format: formatRating, rating: true },
   { id: 'goalsFor', label: 'Gols', title: 'Gols marcados', value: stat('goalsFor'), format: count },
   { id: 'goalsAgainst', label: 'Sofridos', title: 'Gols sofridos', value: stat('goalsAgainst'), format: count, ascending: true },
-  { id: 'xg', label: 'xG', title: 'Gols esperados (xG)', value: stat('xg'), format: (v) => v.toFixed(2) },
+  { id: 'xg', label: 'xG', title: 'Gols esperados (xG)', value: stat('xg'), format: (v) => formatNumber(v, 2) },
   { id: 'cleanSheets', label: 'Sem sofrer', title: 'Jogos sem sofrer gols', value: stat('cleanSheets'), format: count },
   { id: 'shots', label: 'Finaliz.', title: 'Finalizações', value: stat('shots'), format: count },
   { id: 'shotsOnGoal', label: 'No gol', title: 'Finalizações no gol', value: stat('shotsOnGoal'), format: count },
-  { id: 'possession', label: 'Posse', title: 'Posse de bola', value: stat('possession'), format: (v) => `${v.toFixed(1)}%` },
+  { id: 'possession', label: 'Posse', title: 'Posse de bola', value: stat('possession'), format: (v) => formatPercent(v, 1) },
   { id: 'passesAccurate', label: 'Passes', title: 'Passes certos', value: stat('passesAccurate'), format: count },
   { id: 'keyPasses', label: 'Passes dec.', title: 'Passes decisivos', value: stat('keyPasses'), format: count },
   { id: 'dribbles', label: 'Dribles', title: 'Dribles certos', value: stat('dribbles'), format: count },

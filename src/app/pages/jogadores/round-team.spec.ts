@@ -56,7 +56,7 @@ describe('Melhor da rodada', () => {
 
   it('notas sempre com uma casa, mesmo repetidas; a nota máxima é só "10"', () => {
     const { ratings } = render([player(10), player(8.24), player(8.2), player(7.5)]);
-    expect(ratings()).toEqual(['10', '8.2', '8.2', '7.5']);
+    expect(ratings()).toEqual(['10', '8,2', '8,2', '7,5']);
   });
 });
 
@@ -76,12 +76,12 @@ describe('Time da rodada ao vivo', () => {
     const fixture = TestBed.createComponent(RoundTeamCard);
     fixture.detectChanges();
     const ratings = () => [...(fixture.nativeElement as HTMLElement).querySelectorAll('.spot .rating')].map((r) => r.textContent?.trim());
-    expect(ratings()).toEqual(['7.5']);
+    expect(ratings()).toEqual(['7,5']);
 
     vi.advanceTimersByTime(60_000);
     fixture.detectChanges();
     expect(teamOfRound).toHaveBeenCalledTimes(2);
-    expect(ratings()).toEqual(['9.1']);
+    expect(ratings()).toEqual(['9,1']);
 
     // Rodada completa: não busca mais.
     vi.advanceTimersByTime(5 * 60_000);

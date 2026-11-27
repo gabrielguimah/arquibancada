@@ -1,6 +1,6 @@
 @let f = fixture();
 <!-- O card inteiro abre a página da partida. -->
-<a class="card" [class.live]="live()" [routerLink]="['/partida', f.fixture.id]" [attr.title]="venue() || null">
+<a class="card" [class.live]="live()" [routerLink]="['/partida', f.fixture.id]" [matTooltip]="venue() || null">
   <div class="status">
     @if (clock(); as c) {
       <span class="clock" aria-label="Tempo de jogo">{{ c }}</span>
@@ -27,14 +27,14 @@
         <span class="name">
           {{ team.name }}<app-favorite-heart [team]="team.id" />
           @for (card of redCards()[side]; track $index) {
-            <span class="red-card" [title]="'Cartão vermelho: ' + card" [attr.aria-label]="'Cartão vermelho: ' + card"></span>
+            <span class="red-card" [matTooltip]="'Cartão vermelho: ' + card" [attr.aria-label]="'Cartão vermelho: ' + card"></span>
           }
         </span>
         <span class="goals">{{ f.goals[side] ?? '' }}</span>
       </div>
     }
     @if (delayed()) {
-      <span class="tag" title="Jogo desta rodada disputado depois da rodada seguinte">Atrasado</span>
+      <span class="tag" matTooltip="Jogo desta rodada disputado depois da rodada seguinte">Atrasado</span>
     }
   </div>
 </a>

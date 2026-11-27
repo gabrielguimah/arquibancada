@@ -1,7 +1,9 @@
+import { Card } from '../../shared/card';
 import { Component, computed, input } from '@angular/core';
 import { Fixture } from '../../api/api-football';
 import { isLive } from '../../shared/fixture-card';
 import { matchStats } from './stats';
+import { Notice } from '../../shared/notice';
 
 /**
  * Estatísticas da partida: valor do mandante à esquerda, do visitante à direita e, embaixo de cada
@@ -9,6 +11,7 @@ import { matchStats } from './stats';
  */
 @Component({
   selector: 'app-match-stats',
+  imports: [Notice, Card],
   templateUrl: './match-stats.html',
   styleUrl: './match-stats.scss',
 })

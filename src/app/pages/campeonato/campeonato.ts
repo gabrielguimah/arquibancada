@@ -1,8 +1,10 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { MatIcon } from '@angular/material/icon';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { ApiFootball, Fixture, FormMatch, Standing, Team } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { FormChip } from '../../shared/form-chip';
+import { Card } from '../../shared/card';
+import { Collapsible } from '../../shared/collapsible';
 import { SectionTabs, TabOption } from '../../shared/section-tabs';
 import { ToggleGroup, ToggleOption } from '../../shared/toggle-group';
 import { FavoriteHeart } from '../../shared/favorite-heart';
@@ -15,6 +17,8 @@ import { OVER, roundStarted } from '../../shared/fixture-status';
 import { ChanceZone, SimMatch, simulateChances } from './chances';
 import type { ChanceRow, UpcomingGame } from './season-chances';
 import { SeasonChances } from './season-chances';
+import { MatTooltip } from '@angular/material/tooltip';
+import { Notice } from '../../shared/notice';
 
 // Jogos encerrados: os eventos deles (cartões) vêm de uma busca própria, com cache longo no Worker.
 // Os jogos ao vivo vêm de LiveFixtures, compartilhado com os avisos de gol.
@@ -67,24 +71,28 @@ interface FormTip {
 }
 
 @Component({
-  selector: 'app-rodada',
+  selector: 'app-campeonato',
   imports: [
+    Notice,
+    Card,
+    Collapsible,
     Crest,
+    FormChip,
     FavoriteHeart,
     FixtureCard,
+    MatTooltip,
     FixtureCardSkeleton,
-    MatIcon,
     SectionTabs,
     ToggleGroup,
     RoundNav,
     SeasonChances,
   ],
-  templateUrl: './rodada.html',
-  styleUrl: './rodada.scss',
+  templateUrl: './campeonato.html',
+  styleUrl: './campeonato.scss',
   // Rolou a página: o cartão do jogo ficaria solto no lugar antigo.
   host: { '(window:scroll)': 'hideFormTip()' },
 })
-export class Rodada {
+export class Campeonato {
   private api = inject(ApiFootball);
   private live = inject(LiveFixtures);
   private timer?: ReturnType<typeof setTimeout>;
@@ -122,6 +130,14 @@ export class Rodada {
   protected todaySorted = computed(() =>
     [...this.todayView()].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp),
   );
+  /** Algum jogo de hoje rolando: o card "Partidas de hoje" fica com o título do ao vivo. */
+  protected todayLive = computed(() => this.todayView().some((f) => isLive(f)));
+  /** Subtítulo do card de hoje: quantos jogos e quantos rolando agora. */
+  protected todaySubtitle = computed(() => {
+    const total = this.todayView().length;
+    const live = this.todayView().filter((f) => isLive(f)).length;
+    return `${total} ${total === 1 ? 'jogo' : 'jogos'}${live ? ` · ${live} ao vivo` : ''} · horário de Brasília`;
+  });
   protected days = computed<FixtureDay[]>(() => {
     const groups = new Map<string, Fixture[]>();
     for (const f of [...this.roundView()].sort(

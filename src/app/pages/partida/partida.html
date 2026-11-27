@@ -1,8 +1,8 @@
 <div class="page">
-  <a class="back" routerLink="/"><mat-icon aria-hidden="true">chevron_left</mat-icon>Classificação</a>
+  <a class="back" routerLink="/"><mat-icon aria-hidden="true">chevron_left</mat-icon>Campeonato</a>
 
   @if (fixture(); as f) {
-    <section class="header" [class.live]="live()" aria-label="Partida">
+    <app-card class="header" [class.live]="live()" label="Partida">
       <!-- Acima do placar: antes e durante o jogo, o "Onde assistir" da CBF (canais num popup; esqueleto
            enquanto busca). Sem canais, a linha nem existe. -->
       @if (showChannels()) {
@@ -106,7 +106,7 @@
         </ul>
         <div class="watch-source">Fonte: CBF</div>
       </mat-menu>
-    </section>
+    </app-card>
 
     <ng-container [ngTemplateOutlet]="tabsBar" />
 
@@ -120,20 +120,20 @@
       </div>
     </div>
   } @else if (error()) {
-    <section class="header message">
-      <p>{{ error() }}</p>
-      <a routerLink="/">Voltar para a classificação</a>
-    </section>
+    <app-card class="header message">
+      <app-notice kind="error">{{ error() }}</app-notice>
+      <a routerLink="/">Voltar para o campeonato</a>
+    </app-card>
   } @else {
     <!-- Esqueleto do cabeçalho enquanto a partida carrega. -->
-    <section class="header" aria-busy="true" aria-label="Carregando partida">
+    <app-card class="header" aria-busy="true" label="Carregando partida">
       <div class="scoreboard" aria-hidden="true">
         <div class="team home"><span class="sk sk-name"></span><span class="sk sk-crest"></span></div>
         <div class="center"><span class="sk sk-score"></span><span class="sk sk-status"></span></div>
         <div class="team away"><span class="sk sk-crest"></span><span class="sk sk-name"></span></div>
       </div>
       <div class="meta" aria-hidden="true"><span class="sk sk-meta"></span></div>
-    </section>
+    </app-card>
 
     <!-- Esqueletos das seções, no mesmo lugar dos cards (no celular, o seletor já funciona). -->
     <ng-container [ngTemplateOutlet]="tabsBar" />

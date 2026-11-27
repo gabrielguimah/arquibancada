@@ -10,10 +10,9 @@ $muted: var(--muted);
   display: grid;
   grid-template-columns: 76px minmax(0, 1fr);
   align-items: center;
+  // Linha dentro do card de jogos (app-card): sem moldura própria, de borda a borda.
   padding: 8px 14px 8px 0;
   background: var(--surface);
-  border-radius: 10px;
-  box-shadow: 0 1px 2px var(--shadow);
   // É um link (abre a partida): sem sublinhado e com o texto na cor normal.
   color: inherit;
   text-decoration: none;
@@ -23,13 +22,13 @@ $muted: var(--muted);
     background-color: var(--surface-hover);
   }
 
+  // Por dentro: o card de jogos corta o que passa das bordas dele.
   &:focus-visible {
     outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline-offset: -2px;
   }
 
-  // Faixa de ao vivo à esquerda, no fundo do card (com sombra interna, os cantos arredondados deixavam
-  // um fio azul em volta do card no celular).
+  // Faixa de ao vivo à esquerda, no fundo da linha.
   &.live {
     background-image: linear-gradient(to right, $live 3px, transparent 3px);
   }

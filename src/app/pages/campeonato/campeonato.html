@@ -4,61 +4,63 @@
   <app-section-tabs [options]="sectionOptions()" [value]="section()" (valueChange)="setSection($event)" />
 
   <section class="jogos">
-    <!-- Enquanto não se sabe se há jogo hoje, mostra o esqueleto; sem jogo, a seção some. -->
+    <!-- Partidas de hoje (card do site), com as linhas dos jogos. Enquanto não se sabe se há jogo hoje,
+         mostra o esqueleto; sem jogo, o card some. -->
     @if (today() === null) {
-      <section class="hoje" aria-busy="true" aria-label="Carregando partidas de hoje">
-        <span class="sk sk-title"></span>
+      <app-card class="hoje" icon="today" heading="Partidas de hoje" subtitle="Carregando…" [flush]="true" aria-busy="true">
         <ul class="fixtures">
           @for (i of [0, 1]; track i) {
             <li><app-fixture-card-skeleton /></li>
           }
         </ul>
-      </section>
+      </app-card>
     } @else if (todaySorted().length) {
-      <section class="hoje" aria-labelledby="hoje-titulo">
-        <h2 id="hoje-titulo">Partidas de hoje</h2>
+      <app-card class="hoje" icon="today" heading="Partidas de hoje" [subtitle]="todaySubtitle()" [live]="todayLive()" [flush]="true">
         <ul class="fixtures">
           @for (f of todaySorted(); track f.fixture.id) {
             <li><app-fixture-card [fixture]="f" /></li>
           }
         </ul>
-      </section>
+      </app-card>
     }
 
-    <!-- Seletor em esqueleto enquanto as partidas carregam (junto com os cards). -->
-    @if (!error() || rounds().length) {
-      <app-round-nav
-        class="round-nav"
-        [rounds]="rounds()"
-        [round]="round()"
-        [loading]="(loading() || !rounds().length) && !error()"
-        (roundChange)="selectRound($event)"
-      />
-    }
+    <!-- Jogos da rodada (card do site): o seletor de rodada e os jogos, separados por dia. -->
+    <app-card class="rodada" icon="calendar_month" heading="Jogos da rodada" subtitle="Horário de Brasília" [flush]="true">
+      <!-- Seletor em esqueleto enquanto as partidas carregam (junto com os jogos). -->
+      @if (!error() || rounds().length) {
+        <app-round-nav
+          class="round-nav"
+          [rounds]="rounds()"
+          [round]="round()"
+          [loading]="(loading() || !rounds().length) && !error()"
+          (roundChange)="selectRound($event)"
+        />
+      }
 
-    @if (error()) {
-      <p class="error">{{ error() }}</p>
-    }
+      @if (error()) {
+        <app-notice class="error" kind="error">{{ error() }}</app-notice>
+      }
 
-    @if (loading()) {
-      <div class="skeleton" aria-busy="true" aria-label="Carregando jogos">
-        <span class="sk sk-day"></span>
+      @if (loading()) {
+        <div class="skeleton" aria-busy="true" aria-label="Carregando jogos">
+          <span class="sk sk-day"></span>
+          <ul class="fixtures">
+            @for (i of skeletonCards; track i) {
+              <li><app-fixture-card-skeleton /></li>
+            }
+          </ul>
+        </div>
+      }
+
+      @for (day of days(); track day.label) {
+        <h3 class="day">{{ day.label }}</h3>
         <ul class="fixtures">
-          @for (i of skeletonCards; track i) {
-            <li><app-fixture-card-skeleton /></li>
+          @for (f of day.fixtures; track f.fixture.id) {
+            <li><app-fixture-card [fixture]="f" [delayed]="isDelayed(f)" /></li>
           }
         </ul>
-      </div>
-    }
-
-    @for (day of days(); track day.label) {
-      <h3 class="day">{{ day.label }}</h3>
-      <ul class="fixtures">
-        @for (f of day.fixtures; track f.fixture.id) {
-          <li><app-fixture-card [fixture]="f" [delayed]="isDelayed(f)" /></li>
-        }
-      </ul>
-    }
+      }
+    </app-card>
   </section>
 
   <section class="tabela">
@@ -77,24 +79,27 @@
     @if (showChances()) {
       <!-- Grade das chances: acima. -->
     } @else if (standings().length) {
-      <div class="table-card">
-      <header class="card-head">
-        <h2 id="tabela-titulo"><mat-icon class="title-icon" aria-hidden="true">leaderboard</mat-icon>Classificação</h2>
-        <p class="subtitle">Atualizada ao vivo com os placares</p>
-      </header>
+      <app-card
+        class="table-card"
+        icon="leaderboard"
+        heading="Classificação"
+        subtitle="Atualizada ao vivo com os placares"
+        titleId="tabela-titulo"
+        [flush]="true"
+      >
       <div class="table-wrap" (scroll)="hideFormTip()">
         <table>
           <thead>
             <tr>
               <th class="pos">#</th>
               <th class="clube">Clube</th>
-              <th class="pts" title="Pontos">Pts</th>
-              <th title="Jogos">J</th>
-              <th title="Vitórias">V</th>
-              <th title="Empates">E</th>
-              <th title="Derrotas">D</th>
-              <th title="Saldo de gols">SG</th>
-              <th class="gols" title="Gols pró : gols contra">Gols</th>
+              <th class="pts" matTooltip="Pontos">Pts</th>
+              <th matTooltip="Jogos">J</th>
+              <th matTooltip="Vitórias">V</th>
+              <th matTooltip="Empates">E</th>
+              <th matTooltip="Derrotas">D</th>
+              <th matTooltip="Saldo de gols">SG</th>
+              <th class="gols" matTooltip="Gols pró : gols contra">Gols</th>
               <th class="forma">Últimas 5</th>
             </tr>
           </thead>
@@ -121,7 +126,7 @@
                           [class.up]="s.change > 0"
                           [class.down]="s.change < 0"
                           [attr.aria-label]="moveLabel(s.change)"
-                          [attr.title]="moveLabel(s.change)"
+                          [matTooltip]="moveLabel(s.change)"
                           >{{ s.change > 0 ? '▲' : '▼' }}{{ s.change > 0 ? s.change : -s.change }}</small
                         >
                       }
@@ -130,7 +135,7 @@
                     @if (liveTeams().has(s.team.id)) {
                       <span
                         class="live-dot"
-                        title="Jogando agora"
+                        matTooltip="Jogando agora"
                         aria-label="Jogando agora"
                       ></span>
                     }
@@ -145,10 +150,10 @@
                   <td class="forma">
                     <span class="chips">
                       @for (r of form(s); track $index) {
-                        <span
+                        <app-form-chip
                           class="chip"
-                          [class]="'r-' + r.result"
-                          [class.live]="r.live"
+                          [result]="r.result"
+                          [live]="r.live"
                           [class.has-match]="!!r.match"
                           [attr.tabindex]="r.match ? 0 : null"
                           [attr.aria-label]="
@@ -156,13 +161,11 @@
                               ? r.match.date + ': ' + r.match.home.name + ' ' + r.match.homeGoals + ' a ' + r.match.awayGoals + ' ' + r.match.away.name
                               : null
                           "
-                          [attr.title]="!r.match && r.live ? 'Jogo em andamento: resultado parcial' : null"
                           (mouseenter)="showFormTip($event, r)"
                           (mouseleave)="hideFormTip()"
                           (focus)="showFormTip($event, r)"
                           (blur)="hideFormTip()"
-                          >{{ r.result }}</span
-                        >
+                        />
                       }
                     </span>
                   </td>
@@ -172,13 +175,11 @@
           }
         </table>
       </div>
-      </div>
+      </app-card>
       <!-- Regras e legenda (fechado por padrão), como no SofaScore. -->
-      <details class="rules">
-        <summary>
-          Regras e legenda
-          <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
-        </summary>
+      <app-card class="rules" [flush]="true">
+      <app-collapsible appearance="bar">
+        <span collapsible-label>Regras e legenda</span>
 
         <ul class="legend">
           @for (z of legend(); track z.id) {
@@ -205,14 +206,11 @@
           </dt>
           <dd>Posições ganhas ou perdidas com os jogos em andamento, em relação à classificação oficial</dd>
         </dl>
-      </details>
+      </app-collapsible>
+      </app-card>
     } @else if (!error()) {
       <!-- Esqueleto da classificação: o mesmo título e subtítulo e as mesmas colunas. -->
-      <div class="table-card">
-      <header class="card-head">
-        <h2><mat-icon class="title-icon" aria-hidden="true">leaderboard</mat-icon>Classificação</h2>
-        <p class="subtitle">Atualizada ao vivo com os placares</p>
-      </header>
+      <app-card class="table-card" icon="leaderboard" heading="Classificação" subtitle="Atualizada ao vivo com os placares" [flush]="true">
       <div class="table-wrap" aria-busy="true" aria-label="Carregando classificação">
         <table aria-hidden="true">
           <thead>
@@ -252,12 +250,12 @@
           </tbody>
         </table>
       </div>
-      </div>
+      </app-card>
       <!-- Barra "Regras e legenda" (fechada) em esqueleto. -->
-      <div class="rules sk-rules" aria-hidden="true">
+      <app-card class="rules sk-rules" [flush]="true" aria-hidden="true">
         <span class="sk sk-rules-label"></span>
         <span class="sk sk-rules-chevron"></span>
-      </div>
+      </app-card>
     }
   </section>
 </div>

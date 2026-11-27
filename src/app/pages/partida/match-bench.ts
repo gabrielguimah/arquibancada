@@ -1,5 +1,6 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
+import { Collapsible } from '../../shared/collapsible';
 import { Crest } from '../../shared/crest';
 import { PlayerPhoto } from '../../shared/player-photo';
 import { NO_RATING_CLASS, NO_RATING_LABEL, NO_RATING_TITLE, formatRating, ratingClass } from '../../shared/rating';
@@ -8,6 +9,7 @@ import { absences } from './absences';
 import { TeamLineup, playerTip } from './lineups';
 import { MatchAbsences } from './match-absences';
 import { MatchCoach } from './match-coach';
+import { MatTooltip } from '@angular/material/tooltip';
 
 /**
  * Reservas e técnico de cada time, abaixo do campo: quem entrou primeiro (com o minuto), gols,
@@ -15,7 +17,7 @@ import { MatchCoach } from './match-coach';
  */
 @Component({
   selector: 'app-match-bench',
-  imports: [Crest, MatchAbsences, MatchCoach, MatIcon, PlayerPhoto],
+  imports: [MatTooltip, Collapsible, Crest, MatchAbsences, MatchCoach, MatIcon, PlayerPhoto],
   templateUrl: './match-bench.html',
   styleUrl: './match-bench.scss',
 })

@@ -5,15 +5,9 @@ $line: var(--line);
   display: block;
 }
 
-// Título e, ao lado, o período (pílulas, como Classificação | Chances).
-// Título do card da tabela (estilo global .card-head): sem respiro embaixo, as abas vêm logo depois.
-.card-head {
-  padding-bottom: 0;
-}
-
-// Abas das categorias (estilo global .pills), logo abaixo do título do card.
+// Abas das categorias (estilo global .pills), logo abaixo do título do card (app-card, que já deixa 8 px).
 .pills {
-  padding: 10px 14px 4px;
+  padding: 2px 16px 4px;
 }
 
 // Abas, filtro e grade: o mesmo espaço entre eles (12 px). As abas só no celular e em tela média.
@@ -42,15 +36,9 @@ app-filters {
   }
 }
 
-.card {
-  // Os cantos arredondados cortam aqui, no card, e não na área que rola: o navegador suaviza a borda
-  // inteira de um recorte arredondado e, numa borda em fração de pixel, o texto que passa por baixo das
-  // colunas presas vazava nesse pixel suavizado (uma linha clara no canto esquerdo, no celular).
-  overflow: hidden;
-  background: var(--surface);
-  border-radius: 10px;
-  box-shadow: 0 1px 2px var(--shadow);
-}
+// Os cantos arredondados cortam no card (app-card com `flush`), e não na área que rola: o navegador
+// suaviza a borda inteira de um recorte arredondado e, numa borda em fração de pixel, o texto que passa
+// por baixo das colunas presas vazava nesse pixel suavizado (uma linha clara no canto esquerdo, no celular).
 
 // Larguras exatas das colunas presas (posição e time): a do time começa onde a da posição termina, e a
 // rolagem para de lado sempre no começo de uma coluna, logo depois delas (sem número cortado ao meio
@@ -215,12 +203,6 @@ thead .sorted {
   color: var(--text);
 }
 
-.message {
-  margin: 0;
-  font-size: 0.85rem;
-  color: $muted;
-}
-
 // Celular: coluna do time mais estreita, para sobrar espaço às colunas (os nomes da Série A cabem inteiros).
 @media (max-width: 560px) {
   .table-wrap {
@@ -265,37 +247,10 @@ thead .sorted {
   display: flex;
   flex: none;
   flex-direction: column;
-  padding: 14px 16px;
 
   &.fav-card {
     flex: 1 1 auto;
   }
-  background: var(--surface);
-  border-radius: 10px;
-  box-shadow: 0 1px 2px var(--shadow);
-}
-
-.side-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  font-size: 1rem;
-}
-
-// Ícone do título na cor da paleta (coração e medalha preenchidos, como nos outros títulos).
-.side-icon {
-  width: 20px;
-  height: 20px;
-  color: var(--button-text);
-  font-size: 20px;
-  font-variation-settings: 'FILL' 1;
-}
-
-.side-sub {
-  margin: 2px 0 10px;
-  font-size: 0.72rem;
-  color: $muted;
 }
 
 .side-text {
@@ -325,7 +280,8 @@ thead .sorted {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 12px;
+  // Embaixo do título do card; as posições logo depois.
+  margin-bottom: 10px;
 
   strong {
     min-width: 0;
@@ -491,13 +447,6 @@ thead .sorted {
   font-variation-settings: 'FILL' 1;
 }
 
-.sk-sub {
-  display: block;
-  width: 170px;
-  height: 10px;
-  // Mesma altura da linha do texto (0,72rem).
-  margin: 2.5px 0;
-}
 
 .sk-label {
   flex: 1;

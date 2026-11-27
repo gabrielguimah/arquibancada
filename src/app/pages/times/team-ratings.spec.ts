@@ -43,7 +43,7 @@ function render(favorite: number | null = null) {
     fixture.detectChanges();
   };
   /** Abre o botão Filtros (os seletores de período e mando começam escondidos). */
-  const openFilters = () => click(el.querySelector<HTMLButtonElement>('.filters-toggle')!);
+  const openFilters = () => click(el.querySelector<HTMLButtonElement>('app-filters .collapsible-toggle')!);
   return { el, names, ranks, header, click, openFilters };
 }
 
@@ -101,7 +101,7 @@ describe('Tabela de times', () => {
 
   it('filtros: fechados por padrão, com o que está escolhido no botão; abertos, os seletores', () => {
     const { el, click, openFilters } = render();
-    const toggle = el.querySelector<HTMLButtonElement>('.filters-toggle')!;
+    const toggle = el.querySelector<HTMLButtonElement>('app-filters .collapsible-toggle')!;
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(toggle.querySelector('.filters-summary')?.textContent?.trim()).toBe('Temporada · Todos');
     expect(el.querySelector('.view-switch')).toBeNull();
@@ -173,7 +173,7 @@ describe('Tabela de times', () => {
     expect(names()[0]).toBe('Time 10');
     expect(el.querySelector('tbody .stat')?.textContent?.trim()).toBe('18');
     expect(el.querySelector('.highlights button')?.textContent).toContain('Time 10');
-    expect(el.querySelector('[aria-labelledby="highlights-title"] .side-sub')?.textContent).toContain('em casa');
+    expect(el.querySelector('.highlights-card .subtitle')?.textContent).toContain('em casa');
 
     click(venues()[2]);
     expect(names()[0]).toBe('Time 15');

@@ -1,18 +1,14 @@
-<section class="card" aria-labelledby="round-team-title">
-  <header>
-    <div>
-      <h2 id="round-team-title"><mat-icon class="title-icon" aria-hidden="true">groups</mat-icon>Time da rodada</h2>
-      <p class="subtitle">4-3-3 com as melhores notas</p>
-    </div>
-    <!-- No cabeçalho, e não embaixo do campo, para não mudar a altura do card. -->
+<app-card class="card" icon="groups" heading="Time da rodada" subtitle="4-3-3 com as melhores notas">
+  <!-- No cabeçalho, e não embaixo do campo, para não mudar a altura do card. -->
+  <ng-container card-header-end>
     @if (team(); as t) {
       @if (!loading() && t.games < t.totalGames) {
-        <span class="note" [title]="t.games + ' de ' + t.totalGames + ' jogos finalizados nesta rodada'"
+        <span class="note" [matTooltip]="t.games + ' de ' + t.totalGames + ' jogos finalizados nesta rodada'"
           >{{ t.games }} de {{ t.totalGames }} jogos finalizados</span
         >
       }
     }
-  </header>
+  </ng-container>
 
   <!-- Seletor em esqueleto enquanto o time da rodada carrega (junto com o campo). -->
   @if (!error() || (rounds().length && !loading())) {
@@ -44,9 +40,9 @@
         </div>
       }
     } @else if (error()) {
-      <p class="message">Não foi possível carregar.</p>
+      <app-notice class="message" kind="error">Não foi possível carregar.</app-notice>
     } @else if (!team()?.players?.length) {
-      <p class="message">Nenhum jogo finalizado nesta rodada ainda.</p>
+      <app-notice class="message">Nenhum jogo finalizado nesta rodada ainda.</app-notice>
     } @else {
       @for (line of lines(); track line.position) {
         <ol class="line">
@@ -54,7 +50,7 @@
             <li
               class="spot"
               [class.best]="isBest(p)"
-              [title]="tip(p)"
+              [matTooltip]="tip(p)"
             >
               <span class="photo">
                 <img
@@ -87,4 +83,4 @@
       }
     }
   </div>
-</section>
+</app-card>

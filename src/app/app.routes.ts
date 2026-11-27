@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
-import { Rodada } from './pages/rodada/rodada';
+import { Campeonato } from './pages/campeonato/campeonato';
 
 export const routes: Routes = [
-  { path: '', component: Rodada, title: 'Arquibancada · Brasileirão ao vivo' },
+  { path: '', component: Campeonato, title: 'Arquibancada · Brasileirão ao vivo' },
   // Carregada só ao abrir a aba, para não pesar na primeira página.
   {
     path: 'times',
@@ -11,7 +11,7 @@ export const routes: Routes = [
   },
   {
     path: 'jogadores',
-    loadComponent: () => import('./pages/estatisticas/estatisticas').then((m) => m.Estatisticas),
+    loadComponent: () => import('./pages/jogadores/jogadores').then((m) => m.Jogadores),
     title: 'Jogadores · Arquibancada',
   },
   // Endereço antigo da aba de jogadores (links salvos e compartilhados).

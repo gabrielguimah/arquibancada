@@ -1,23 +1,25 @@
-<section class="chances" aria-labelledby="chances-titulo">
-  <div class="table-card">
-    <header class="card-head">
-      <!-- Como as chances são calculadas: no ícone de informação ao lado do título (toque no celular). -->
-      <h2 id="chances-titulo">
-        <mat-icon class="title-icon" aria-hidden="true">casino</mat-icon>Chances
-        <mat-icon
-          #about="matTooltip"
-          class="info-tip"
-          tabindex="0"
-          role="img"
-          [attr.aria-label]="aboutChances()"
-          [matTooltip]="aboutChances()"
-          matTooltipPosition="below"
-          (click)="about.toggle()"
-          >info</mat-icon
-        >
-      </h2>
-      <p class="subtitle">{{ simulations }} simulações dos jogos que faltam</p>
-    </header>
+<div class="chances">
+  <app-card
+    class="table-card"
+    icon="casino"
+    heading="Chances"
+    [subtitle]="simulations + ' simulações dos jogos que faltam'"
+    titleId="chances-titulo"
+    [flush]="true"
+  >
+    <!-- Como as chances são calculadas: no ícone de informação ao lado do título (toque no celular). -->
+    <mat-icon
+      card-title-end
+      #about="matTooltip"
+      class="info-tip"
+      tabindex="0"
+      role="img"
+      [attr.aria-label]="aboutChances()"
+      [matTooltip]="aboutChances()"
+      matTooltipPosition="below"
+      (click)="about.toggle()"
+      >info</mat-icon
+    >
 
   <div class="table-wrap" (scroll)="hideTip()">
     <table>
@@ -25,9 +27,9 @@
         <tr>
           <th class="pos">#</th>
           <th class="clube">Clube</th>
-          <th class="pts" title="Pontos">Pts</th>
+          <th class="pts" matTooltip="Pontos">Pts</th>
           @for (c of columns(); track c.key) {
-            <th class="chance" [class]="c.key" [title]="c.label">
+            <th class="chance" [class]="c.key" [matTooltip]="c.label">
               <span class="full">{{ c.label }}</span><span class="short" aria-hidden="true">{{ c.short }}</span>
             </th>
           }
@@ -42,20 +44,20 @@
               <img crest [src]="r.team.logo" alt="" width="22" height="22" loading="lazy" />
               <span class="name">{{ r.team.name }}</span><app-favorite-heart [team]="r.team.id" />
               @if (playing(r)) {
-                <span class="live-dot" title="Jogando agora" aria-label="Jogando agora"></span>
+                <span class="live-dot" matTooltip="Jogando agora" aria-label="Jogando agora"></span>
               }
             </td>
             <td class="pts">{{ r.points }}</td>
             @for (c of columns(); track c.key) {
               @let p = r.chances[c.key];
-              <td class="chance" [class]="c.key" [class.zero]="p <= 0" [class.sure]="p >= 1" [class.strong]="p >= 0.5" [style.--heat]="heat(p)" [title]="chanceTip(r, c)">
+              <td class="chance" [class]="c.key" [class.zero]="p <= 0" [class.sure]="p >= 1" [class.strong]="p >= 0.5" [style.--heat]="heat(p)" [matTooltip]="chanceTip(r, c)">
                 {{ format(p) }}
               </td>
             }
             <td class="jogos">
               <span class="games">
                 @for (g of r.upcoming.slice(0, shown); track g.id) {
-                  <span class="game" [class.live]="g.live" [title]="gameTip(g)" [attr.aria-label]="gameTip(g)">
+                  <span class="game" [class.live]="g.live" [matTooltip]="gameTip(g)" [attr.aria-label]="gameTip(g)">
                     <img crest [src]="g.opponent.logo" alt="" width="20" height="20" loading="lazy" />
                     <small aria-hidden="true">{{ g.live ?? (g.home ? 'casa' : 'fora') }}</small>
                   </span>
@@ -83,13 +85,11 @@
       </tbody>
     </table>
   </div>
-  </div>
+  </app-card>
   <!-- Regras e legenda (fechado por padrão), como o da classificação. -->
-  <details class="rules">
-    <summary>
-      Regras e legenda
-      <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
-    </summary>
+  <app-card class="rules" [flush]="true">
+  <app-collapsible appearance="bar">
+    <span collapsible-label>Regras e legenda</span>
 
     <ul class="legend">
       @for (c of columns(); track c.key) {
@@ -124,8 +124,9 @@
         <dd>Os demais jogos do time, com data e mando</dd>
       }
     </dl>
-  </details>
-</section>
+  </app-collapsible>
+  </app-card>
+</div>
 
 <!-- Jogos do "+N": fora da tabela (posição fixa na tela), para não ser cortada pela rolagem dela. -->
 @if (tip(); as t) {

@@ -37,13 +37,15 @@ $line: var(--line-strong);
   }
 }
 
-.hoje {
-  margin-bottom: 28px;
+// Coluna dos jogos: o card de hoje e o da rodada, um embaixo do outro (12 px no celular, como nas outras
+// páginas).
+.jogos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 
-  // No tamanho dos títulos dos cards (16 px), como Classificação e Chances ao lado.
-  h2 {
-    margin-bottom: 10px;
-    font-size: 1rem;
+  @media (max-width: 1000px) {
+    gap: 12px;
   }
 }
 
@@ -53,7 +55,11 @@ h2 {
 }
 
 .round-nav {
-  margin-bottom: 8px;
+  padding: 0 16px 4px;
+}
+
+.error {
+  padding: 8px 16px 12px;
 }
 
 // Subtítulo da grade (o das chances fica no próprio painel, no mesmo estilo).
@@ -76,27 +82,39 @@ app-section-tabs {
   gap: 8px 16px;
 }
 
+// Dia dos jogos, em faixa no card (como os grupos da classificação).
 .day {
-  margin: 20px 0 8px;
+  margin: 0;
+  padding: 12px 16px 6px;
+  border-bottom: 1px solid var(--line);
   font-size: 0.85rem;
   font-weight: 600;
   color: $muted;
 }
 
+// Jogos em linhas, de borda a borda no card, com um fio entre eles.
 .fixtures {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 8px;
+
+  > li + li {
+    border-top: 1px solid var(--line);
+  }
 }
 
 /* Esqueleto do carregamento: mesmos cards dos jogos, com blocos no lugar do conteúdo. */
 
-.sk-day {
+// Mesma altura da faixa do dia dos jogos (38 px, com o fio de baixo).
+.skeleton .sk-day {
+  display: block;
   width: 120px;
   height: 14px;
-  margin: 20px 0 8px;
+  margin: 12px 16px 11px;
+}
+
+.skeleton .fixtures {
+  border-top: 1px solid var(--line);
 }
 
 /* Classificação */
@@ -174,13 +192,6 @@ tr.sk-row {
   margin: 0 auto;
 }
 
-.sk-title {
-  width: 170px;
-  height: 22px;
-  margin-bottom: 10px;
-}
-
-
 // Cores das zonas (barra lateral, círculo da posição e legenda): azuis saturados, um tom por zona.
 $zones: (
   libertadores: #0040ff,
@@ -191,11 +202,6 @@ $zones: (
 
 .table-card {
   margin-top: 12px;
-}
-
-// Título do card no tamanho dos outros cards (a regra geral de h2 desta página é a de seção, maior).
-.card-head h2 {
-  font-size: 1rem;
 }
 
 .table-wrap {
@@ -410,42 +416,9 @@ tbody tr.playing {
 }
 
 .chip {
-  display: inline-grid;
-
-  // Com o jogo: dá para focar (teclado, toque) e mostra o cartão.
+  // Com o jogo: o cartão aparece ao passar o mouse (ou focar); o resto do desenho é do FormChip.
   &.has-match {
     cursor: default;
-
-    &:focus-visible {
-      outline: 2px solid var(--text);
-      outline-offset: 1px;
-    }
-  }
-
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 0.65rem;
-  font-weight: 700;
-
-  // Parcial de jogo em andamento: contorno no azul do ao vivo.
-  &.live {
-    outline: 2px solid var(--live);
-    outline-offset: 1px;
-  }
-
-  &.r-V {
-    background: var(--win);
-  }
-
-  &.r-E {
-    background: #9aa8a2;
-  }
-
-  &.r-D {
-    background: #dc2626;
   }
 }
 
@@ -508,15 +481,8 @@ tbody tr.playing {
   align-items: center;
 }
 
-.muted {
-  color: $muted;
-}
-
 .error {
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--error-bg);
-  color: var(--error-text);
+  margin-bottom: 12px;
 }
 
 // Cartão do jogo das "Últimas 5": data em cima; mandante, placar e visitante embaixo.

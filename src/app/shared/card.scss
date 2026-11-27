@@ -1,0 +1,82 @@
+// Moldura: o card é o próprio elemento (quem usa pode mudar o display, a altura, o espaço entre os filhos).
+// As variantes ficam em :where(), sem peso: uma classe de quem usa sempre ganha delas.
+:host {
+  display: block;
+  box-sizing: border-box;
+  padding: 12px 16px 16px;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+// Conteúdo até as bordas (tabelas e listas): os cantos arredondados cortam o que passa deles. Sem título
+// (ex.: Regras e legenda), sem respiro nenhum.
+:host(:where(.flush)) {
+  padding: 0;
+  overflow: hidden;
+}
+
+:host(:where(.flush.titled)) {
+  padding-top: 12px;
+}
+
+// Cabeçalho: título e subtítulo à esquerda, o encaixe do fim à direita.
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 12px;
+
+  // Tabelas e listas: as linhas já têm o respiro delas.
+  :host(:where(.flush)) & {
+    padding: 0 16px 8px;
+  }
+}
+
+.card-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+
+  // Jogo ao vivo: o título no azul do ao vivo.
+  &.live {
+    color: var(--live-text);
+  }
+}
+
+// Ícone do título: mesmo tamanho e cor em todos os cards.
+.title-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: var(--accent);
+  font-variation-settings: 'FILL' 1;
+}
+
+.subtitle {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+// Card que abre e fecha: o rótulo (título e subtítulo) um embaixo do outro, a seta à direita.
+.card-label {
+  display: grid;
+  min-width: 0;
+}

@@ -1,14 +1,17 @@
 import { Component, computed, input } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
+import { Card } from '../../shared/card';
 import { Fixture } from '../../api/api-football';
 import { isLive } from '../../shared/fixture-card';
 import { RUNNING } from '../../shared/fixture-status';
 import { timeline } from './timeline';
+import { MatTooltip } from '@angular/material/tooltip';
+import { Notice } from '../../shared/notice';
 
 /** Lance a lance: mandante à esquerda, visitante à direita, do primeiro lance (em cima) ao último. */
 @Component({
   selector: 'app-match-timeline',
-  imports: [MatIcon],
+  imports: [Notice, MatTooltip, Card, MatIcon],
   templateUrl: './match-timeline.html',
   styleUrl: './match-timeline.scss',
 })

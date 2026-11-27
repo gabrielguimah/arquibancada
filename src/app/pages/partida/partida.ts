@@ -1,3 +1,4 @@
+import { Card } from '../../shared/card';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { finalize } from 'rxjs';
@@ -21,6 +22,7 @@ import { Highlight, HighlightKind, highlights, statusLabel } from './match-heade
 import { matchStats } from './stats';
 import { channelsFor } from './broadcast';
 import { MatMenu, MatMenuTrigger } from '@angular/material/menu';
+import { Notice } from '../../shared/notice';
 
 interface HighlightRow {
   kind: HighlightKind;
@@ -76,7 +78,7 @@ export function refreshDelay(f: Fixture, now: number): number | null {
 /** Página de uma partida (`/partida/:id`): por enquanto, o cabeçalho com placar, gols e informações. */
 @Component({
   selector: 'app-partida',
-  imports: [Crest, FavoriteHeart, FormSkeleton, SectionTabs, LineupsSkeleton, MatIcon, MatMenu, MatMenuTrigger, MatchForm, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
+  imports: [Notice, Card, Crest, FavoriteHeart, FormSkeleton, SectionTabs, LineupsSkeleton, MatIcon, MatMenu, MatMenuTrigger, MatchForm, MatchLineups, MatchStats, MatchTimeline, NgTemplateOutlet, RouterLink, StatsSkeleton, TimelineSkeleton],
   templateUrl: './partida.html',
   styleUrl: './partida.scss',
 })

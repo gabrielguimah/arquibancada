@@ -1,5 +1,7 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
+import { MatTooltip } from '@angular/material/tooltip';
+import { Card } from '../../shared/card';
 import { forkJoin } from 'rxjs';
 import { ApiFootball, RoundPlayer, RoundTeam } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
@@ -7,6 +9,7 @@ import { PlayerPhoto } from '../../shared/player-photo';
 import { RoundNav } from '../../shared/round-nav';
 import { roundStarted } from '../../shared/fixture-status';
 import { formatRating, ratingClass } from '../../shared/rating';
+import { Notice } from '../../shared/notice';
 
 // Linhas do campo, do ataque (em cima) ao goleiro (embaixo), na formação 4-3-3.
 const LINES: Array<{ position: RoundPlayer['position']; count: number }> = [
@@ -22,7 +25,7 @@ const REFRESH_MS = 60_000;
 /** Time da rodada em 4-3-3 (melhores notas por posição), com seletor de rodada. */
 @Component({
   selector: 'app-round-team',
-  imports: [Crest, MatIcon, PlayerPhoto, RoundNav],
+  imports: [Notice, Card, Crest, MatIcon, MatTooltip, PlayerPhoto, RoundNav],
   templateUrl: './round-team.html',
   styleUrl: './round-team.scss',
 })

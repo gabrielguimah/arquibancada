@@ -21,10 +21,7 @@
     </footer>
   }
 } @else if (failed()) {
-  <p class="message">
-    Não foi possível carregar os times.
-    <button type="button" class="retry" (click)="load()">Tentar de novo</button>
-  </p>
+  <app-notice class="message" kind="error" [retryable]="true" (retry)="load()">Não foi possível carregar os times.</app-notice>
 } @else {
   <ul class="teams" aria-busy="true" aria-label="Carregando times">
     @for (i of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; track i) {

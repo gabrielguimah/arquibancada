@@ -1,11 +1,14 @@
-<section class="card" [class.open]="expanded()" aria-labelledby="form-title">
-  <!-- Fechado: só escudo, nome, média e resultados de cada time. Aberto: os jogos com placar. -->
-  <h2 id="form-title">
-    <button type="button" class="toggle" [attr.aria-expanded]="expanded()" aria-controls="form-teams" (click)="toggle()">
-      Últimos 5 jogos
-      <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
-    </button>
-  </h2>
+<!-- Fechado: só escudo, nome, média e resultados de cada time. Aberto: os jogos com placar. O título é o
+     botão de abrir e fechar (com a seta), no card do site. -->
+<app-card
+  icon="event_repeat"
+  heading="Últimos 5 jogos"
+  subtitle="Antes desta partida"
+  [live]="live()"
+  [collapsible]="true"
+  [(open)]="expanded"
+  [class.open]="expanded()"
+>
   <div class="teams" id="form-teams">
     @if (forms() === null && !failed()) {
       @for (side of [0, 1]; track side) {
@@ -21,20 +24,20 @@
         </div>
       }
     } @else if (failed()) {
-      <p class="message">Não foi possível carregar os últimos jogos.</p>
+      <app-notice class="message" kind="error">Não foi possível carregar os últimos jogos.</app-notice>
     } @else {
       @for (b of blocks(); track b.team.id) {
         <div class="block">
           <!-- Clicar no time também abre/fecha (o teclado usa o botão do título). -->
-          <div class="team" (click)="toggle()">
+          <div class="team" (click)="expanded.set(!expanded())">
             <img crest [src]="b.team.logo" alt="" width="20" height="20" />
             <strong>{{ b.team.name }}</strong>
             @if (b.rating !== null) {
-              <span [class]="ratingClass(b.rating) + ' team-rating'" title="Nota média nos últimos 5 jogos">{{ formatRating(b.rating) }}</span>
+              <span [class]="ratingClass(b.rating) + ' team-rating'" matTooltip="Nota média nos últimos 5 jogos">{{ formatRating(b.rating) }}</span>
             }
             <span class="chips" aria-hidden="true">
               @for (c of b.chips; track $index) {
-                <span class="chip" [class]="'r-' + c.result" [class.live]="c.live">{{ c.result }}</span>
+                <app-form-chip [result]="c.result" [live]="c.live" [matTooltip]="c.live ? 'Jogo em andamento: resultado parcial' : ''" />
               }
             </span>
           </div>
@@ -46,7 +49,7 @@
                     [class.live]="r.live"
                     [attr.aria-label]="(r.live ? 'Parcial, ' : '') + resultLabel[r.result] + ', ' + r.date + ': ' + r.home.name + ' ' + r.homeGoals + ' a ' + r.awayGoals + ' ' + r.away.name"
                   >
-                    <span class="chip" [class]="'r-' + r.result" [class.live]="r.live" [attr.title]="chipTitle(r.live)" aria-hidden="true">{{ r.result }}</span>
+                    <app-form-chip [result]="r.result" [live]="r.live" aria-hidden="true" />
                     <span class="date" aria-hidden="true">{{ r.date }}</span>
                     <span class="name home" [class.own]="r.atHome" aria-hidden="true">{{ r.home.name }}</span>
                     <img crest [src]="r.home.logo" alt="" width="16" height="16" loading="lazy" />
@@ -57,11 +60,11 @@
                 }
               </ul>
             } @else {
-              <p class="message">Nenhum jogo antes deste na temporada.</p>
+              <app-notice class="message">Nenhum jogo antes deste na temporada.</app-notice>
             }
           }
         </div>
       }
     }
   </div>
-</section>
+</app-card>

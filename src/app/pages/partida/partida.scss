@@ -117,10 +117,8 @@ app-section-tabs {
 .header {
   display: grid;
   gap: 14px;
+  // O card do site (app-card), com mais respiro em cima (placar sem título).
   padding: 20px 16px 16px;
-  background: var(--surface);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px var(--shadow);
 
   // Faixa de ao vivo à esquerda, no fundo do card (com sombra interna, os cantos arredondados deixavam
   // um fio azul em volta do card no celular).
@@ -316,15 +314,16 @@ app-section-tabs {
   margin: -10px 0 -12px;
 }
 
+// "Onde assistir": pílula no padrão dos botões do site (seletores, Filtros).
 .watch {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border: 0;
   border-radius: 999px;
-  background: transparent;
-  color: var(--live-text);
+  background: var(--button-bg);
+  color: var(--button-text);
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
@@ -338,11 +337,11 @@ app-section-tabs {
 
   &:hover,
   &[aria-expanded='true'] {
-    background: color-mix(in srgb, var(--live-text) 12%, transparent);
+    background: var(--button-bg-hover);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--live-text);
+    outline: 2px solid var(--button-text);
     outline-offset: 2px;
   }
 }
@@ -361,11 +360,6 @@ app-section-tabs {
 .message {
   justify-items: center;
   text-align: center;
-
-  p {
-    margin: 0;
-    color: $muted;
-  }
 
   a {
     font-size: 0.85rem;

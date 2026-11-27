@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { MatTooltip } from '@angular/material/tooltip';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Fixture, FixtureEvent, LineupPlayer } from '../../api/api-football';
@@ -98,7 +100,7 @@ describe('Escalações', () => {
     const root = fixture.nativeElement as HTMLElement;
     // Reservas fechadas por padrão: só o título, com a quantidade.
     expect(root.querySelector('.bench li')).toBeNull();
-    const toggle = root.querySelector<HTMLButtonElement>('.bench .section-toggle')!;
+    const toggle = root.querySelector<HTMLButtonElement>('.bench .collapsible-toggle')!;
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     toggle.click();
     fixture.detectChanges();
@@ -106,7 +108,9 @@ describe('Escalações', () => {
     const bench = [...root.querySelectorAll('.bench li')];
     const badge = (name: string) => bench.find((li) => li.textContent?.includes(name))!.querySelector('.rating-badge') as HTMLElement | null;
     expect(badge('D. Santos')?.textContent?.trim()).toBe('Indef.');
-    expect(badge('D. Santos')?.title).toBe('Indefinido');
+    // A explicação fica na dica do Material (matTooltip), como no resto do site.
+    const tip = fixture.debugElement.queryAll(By.directive(MatTooltip)).find((d) => d.nativeElement === badge('D. Santos'));
+    expect(tip?.injector.get(MatTooltip).message).toBe('Indefinido');
     expect(badge('N. Entrou')).toBeNull();
   });
 
@@ -274,7 +278,7 @@ describe('Escalações', () => {
     expect(assistPos.classList).not.toContain('right');
 
     // Reserva que não jogou: sem selo. Reserva que entrou e ainda não tem nota: selo cinza "Indef.".
-    el.querySelector<HTMLButtonElement>('.bench .section-toggle')!.click();
+    el.querySelector<HTMLButtonElement>('.bench .collapsible-toggle')!.click();
     fixture.detectChanges();
     const bench = [...el.querySelectorAll('.bench li')];
     const unused = bench.find((li) => li.textContent?.includes('N. Entrou'))!;

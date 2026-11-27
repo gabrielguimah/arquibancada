@@ -1,3 +1,4 @@
+import { formatNumber } from '../../shared/number-format';
 import { Fixture, FixtureTeamPlayers, FixtureTeamStats } from '../../api/api-football';
 
 /** Uma linha das estatísticas: valor do mandante, nome, valor do visitante e a parte de cada um. */
@@ -67,7 +68,7 @@ const GROUPS: Array<{ title: string; rows: RowDef[] }> = [
     title: 'Geral',
     rows: [
       { label: 'Posse de bola', value: team('Ball Possession'), text: (v) => `${v}%` },
-      { label: 'Gols esperados (xG)', value: team('expected_goals'), text: (v) => v.toFixed(2).replace('.', ',') },
+      { label: 'Gols esperados (xG)', value: team('expected_goals'), text: (v) => formatNumber(v, 2) },
       { label: 'Escanteios', value: team('Corner Kicks') },
       { label: 'Tiros livres', value: team('Free Kicks') },
       { label: 'Impedimentos', value: team('Offsides') },

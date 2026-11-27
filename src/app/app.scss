@@ -135,19 +135,3 @@ nav {
     margin-left: -8px;
   }
 }
-
-// Nome da primeira aba: "Classificação" no computador; "Campeonato" no celular e em tela média, onde a
-// página tem as abas Jogos, Classificação e Chances.
-.label-narrow {
-  display: none;
-}
-
-@media (max-width: 1000px) {
-  .label-wide {
-    display: none;
-  }
-
-  .label-narrow {
-    display: inline;
-  }
-}

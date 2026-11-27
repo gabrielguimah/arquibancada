@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { NEVER, Observable, of } from 'rxjs';
 import { ApiFootball, Fixture, Standing } from '../../api/api-football';
-import { Rodada } from './rodada';
+import { Campeonato } from './campeonato';
 
 /** Motivo da opção Chances bloqueada: o texto que o tooltip liga ao botão (aria-describedby). */
 function reason(el: HTMLElement): string | undefined {
@@ -36,11 +36,11 @@ function upcoming(home: number, away: number): Fixture {
   } as unknown as Fixture;
 }
 
-// A Rodada tem bloco @defer (a tabela das chances): o TestBed precisa compilar antes (compileComponents).
+// A página Campeonato tem bloco @defer (a tabela das chances): o TestBed precisa compilar antes (compileComponents).
 async function render(standings: Standing[], remaining: Observable<Fixture[]>) {
   const empty = () => of([]);
   TestBed.configureTestingModule({
-    imports: [Rodada],
+    imports: [Campeonato],
     providers: [
       provideRouter([]),
       {
@@ -59,7 +59,7 @@ async function render(standings: Standing[], remaining: Observable<Fixture[]>) {
     ],
   });
   await TestBed.compileComponents();
-  const fixture = TestBed.createComponent(Rodada);
+  const fixture = TestBed.createComponent(Campeonato);
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
   const chances = () => el.querySelectorAll<HTMLButtonElement>('.view-switch button')[1];

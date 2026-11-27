@@ -4,25 +4,6 @@ $muted: var(--muted);
   display: block;
 }
 
-// Mesmo espaçamento do card de escalações: lado a lado e sem dados, ficam da mesma altura.
-.card {
-  padding: 14px 16px 16px;
-  background: var(--surface);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px var(--shadow);
-
-  h2 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 12px;
-    font-size: 1rem;
-
-    &.live {
-      color: var(--live-text);
-    }
-  }
-}
 
 .items {
   margin: 0;
@@ -296,8 +277,4 @@ $muted: var(--muted);
   }
 }
 
-.message {
-  margin: 0;
-  font-size: 0.85rem;
-  color: $muted;
-}
+// Aviso (app-notice, com o texto e a cor do site).

@@ -19,6 +19,6 @@ describe('ratingClass', () => {
 
 describe('formatRating', () => {
   it('uma casa decimal; 10 sem casa', () => {
-    expect([8.2, 8.24, 8.25, 6, 9.96, 10].map(formatRating)).toEqual(['8.2', '8.2', '8.3', '6.0', '10', '10']);
+    expect([8.2, 8.24, 8.25, 6, 9.96, 10].map(formatRating)).toEqual(['8,2', '8,2', '8,3', '6,0', '10', '10']);
   });
 });

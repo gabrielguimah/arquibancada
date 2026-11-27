@@ -112,12 +112,26 @@ describe('Página da partida', () => {
     teamForms = [{ team: botafogo.id, matches: [past(5, 5), past(4, 4), past(3, 3), past(2, 2), past(1, 1)] }];
     // Botafogo 0 x 1 São Paulo, no 2º tempo: parcial de derrota para o Botafogo, de vitória para o São Paulo.
     const el = render(match([0, 1], [], '2H'));
-    const chips = (i: number) => [...el.querySelectorAll('app-match-form .block')[i].querySelectorAll('.team .chip')];
+    const chips = (i: number) => [...el.querySelectorAll('app-match-form .block')[i].querySelectorAll('.team app-form-chip')];
     expect(chips(0).map((c) => c.textContent?.trim())).toEqual(['V', 'V', 'V', 'V', 'D']);
     expect(chips(0).at(-1)?.classList).toContain('live');
     expect(chips(0).slice(0, 4).some((c) => c.classList.contains('live'))).toBe(false);
     expect(chips(1).map((c) => c.textContent?.trim())).toEqual(['V']);
     expect(chips(1)[0].classList).toContain('live');
+  });
+
+  it('jogo ao vivo: todos os cards da partida com o título no azul do ao vivo e a bolinha', () => {
+    teamForms = [];
+    const el = render(match([0, 1], [], '2H'));
+    const titles = ['app-match-timeline .card-title-row', 'app-match-stats .card-title-row', 'app-match-lineups .card-title-row', 'app-match-form .card-title-row'];
+    for (const sel of titles) {
+      const title = el.querySelector(sel);
+      // Estatísticas só aparece com estatísticas na resposta; os outros três sempre.
+      if (!title) continue;
+      expect(title.classList).toContain('live');
+      expect(title.querySelector('.live-dot')).toBeTruthy();
+    }
+    expect(el.querySelector('app-match-form .card-title-row')?.classList).toContain('live');
   });
 
   it('últimos 5 jogos: resultado do ponto de vista de cada time, data, adversário e placar', () => {
@@ -131,20 +145,20 @@ describe('Página da partida', () => {
     expect(blocks().map((b) => b.querySelector('.team strong')?.textContent?.trim())).toEqual(['Botafogo', 'São Paulo']);
     // Fechado: só o resumo (escudo, nome, média e resultados), sem os placares.
     expect(el.querySelector('app-match-form .rows')).toBeNull();
-    expect([...blocks()[0].querySelectorAll('.team .chip')].map((c) => c.textContent?.trim())).toEqual(['V']);
-    const toggle = el.querySelector<HTMLButtonElement>('app-match-form .toggle')!;
+    expect([...blocks()[0].querySelectorAll('.team app-form-chip')].map((c) => c.textContent?.trim())).toEqual(['V']);
+    const toggle = el.querySelector<HTMLButtonElement>('app-match-form .collapsible-toggle')!;
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     toggle.click();
     rendered!.detectChanges();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     const row = (b: Element) => b.querySelector('.rows li')!;
-    expect(row(blocks()[0]).querySelector('.chip')?.textContent?.trim()).toBe('V');
+    expect(row(blocks()[0]).querySelector('app-form-chip')?.textContent?.trim()).toBe('V');
     const parts = (li: Element) => [...li.querySelectorAll('.date, .name, .score')].map((n) => n.textContent?.trim());
     expect(parts(row(blocks()[0]))).toEqual(['18/11', 'Flamengo', '1 - 2', 'Botafogo']);
     expect(row(blocks()[0]).querySelector('.own')?.textContent?.trim()).toBe('Botafogo');
-    expect(row(blocks()[1]).querySelector('.chip')?.textContent?.trim()).toBe('E');
+    expect(row(blocks()[1]).querySelector('app-form-chip')?.textContent?.trim()).toBe('E');
     // Média ao lado do nome; sem nota, sem selo.
-    expect(blocks()[0].querySelector('.team .team-rating')?.textContent?.trim()).toBe('6.8');
+    expect(blocks()[0].querySelector('.team .team-rating')?.textContent?.trim()).toBe('6,8');
     expect(blocks()[1].querySelector('.team .team-rating')).toBeNull();
     // Clicar no time também fecha.
     blocks()[0].querySelector<HTMLElement>('.team')!.click();
@@ -236,13 +250,13 @@ describe('Página da partida', () => {
     let calls = 0;
     fixtureCall = (f) => (++calls === 1 ? throwError(() => new Error('429')) : of(f));
     const el = render(match([1, 0], []));
-    expect(el.querySelector('section.message')).toBeNull();
+    expect(el.querySelector('.header.message')).toBeNull();
     expect(el.querySelector('[aria-busy="true"]')).not.toBeNull();
     vi.advanceTimersByTime(2000);
     TestBed.inject(ApplicationRef).tick();
     expect(calls).toBe(2);
     expect(el.querySelector('.team .name')?.textContent?.trim()).toBe('Botafogo');
-    expect(el.querySelector('section.message')).toBeNull();
+    expect(el.querySelector('.header.message')).toBeNull();
     vi.useRealTimers();
   });
 

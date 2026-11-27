@@ -3,6 +3,9 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { Team } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { formatNumber } from '../../shared/number-format';
+import { Card } from '../../shared/card';
+import { Collapsible } from '../../shared/collapsible';
 import { FavoriteHeart } from '../../shared/favorite-heart';
 import { SIMULATIONS, TeamChances, formatChance } from './chances';
 
@@ -61,7 +64,7 @@ const TIP_ROOM = 320;
  */
 @Component({
   selector: 'app-season-chances',
-  imports: [Crest, FavoriteHeart, MatIcon, MatTooltip],
+  imports: [Card, Collapsible, Crest, FavoriteHeart, MatIcon, MatTooltip],
   templateUrl: './season-chances.html',
   styleUrl: './season-chances.scss',
   // Rolou a página: a lista ficaria solta no lugar antigo.
@@ -75,7 +78,7 @@ export class SeasonChances {
   live = input(false);
 
   protected columns = computed(() => COLUMNS.filter((c) => c.key === 'title' || this.zones().has(c.key)));
-  protected simulations = SIMULATIONS.toLocaleString('pt-BR');
+  protected simulations = formatNumber(SIMULATIONS);
   /** Como as chances são calculadas, no tooltip do ícone de informação do título. */
   protected aboutChances = computed(
     () =>

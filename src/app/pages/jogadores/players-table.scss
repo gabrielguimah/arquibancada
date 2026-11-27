@@ -4,59 +4,20 @@ $line: var(--line);
 :host {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  // Mesmo respiro embaixo que os quadros ao lado (paginação no rodapé).
-  padding: 12px 0 8px;
-  background: var(--surface);
-  border-radius: 10px;
-  box-shadow: 0 1px 2px var(--shadow);
 }
 
-.head {
-  padding: 0 16px;
-
-  h2 {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 0;
-    font-size: 1rem;
-  }
-}
-
-// Ícone de jogador ao lado do título, como os dos outros quadros (bola, chuteira, estrela).
-.title-icon {
-  width: 20px;
-  height: 20px;
-  font-size: 20px;
-  color: var(--accent);
-  font-variation-settings: 'FILL' 1;
-}
-
-.subtitle {
-  margin: 2px 0 0;
-  font-size: 0.72rem;
-  color: $muted;
-}
-
-.tabs {
-  padding: 0 16px;
-}
-
-// Acumulado, à direita (o filtro Regulares/Todos fica no topo da página).
-.controls {
+// O card do site (app-card com `flush`): estica até a altura do quadro ao lado, com a paginação no rodapé
+// (mesmo respiro embaixo que os quadros ao lado).
+.table {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  min-width: 0;
-  padding: 0 16px;
+  flex: 1;
+  flex-direction: column;
+  padding-bottom: 8px;
 }
 
-.mode-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: $muted;
+// Abas logo abaixo do título (o card já deixa 8 px), com 12 px até a tabela.
+.tabs {
+  padding: 4px 16px 12px;
 }
 
 // Tabela rola de lado em telas estreitas; número, time e nome ficam presos à esquerda.
@@ -237,16 +198,18 @@ thead .sorted {
 }
 
 .message {
-  margin: 0;
   padding: 12px 16px;
-  font-size: 0.85rem;
-  color: $muted;
+}
+
+// Aviso no lugar da tabela: as abas já deixam o respiro em cima.
+app-notice.message {
+  padding-top: 0;
 }
 
 // Paginação presa ao rodapé do card, mesmo quando ele estica para acompanhar o quadro ao lado.
 .pager {
   margin-top: auto;
-  padding: 0 16px;
+  padding: 12px 16px 0;
 }
 
 /* Esqueleto */

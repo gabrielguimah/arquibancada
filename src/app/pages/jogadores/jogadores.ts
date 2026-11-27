@@ -1,10 +1,11 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { MatIcon } from '@angular/material/icon';
-import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, PlayerStat, RatedPlayer, Team, TopRated } from '../../api/api-football';
+import { Card } from '../../shared/card';
+import { Notice, NoticeMessage } from '../../shared/notice';
 import { Crest } from '../../shared/crest';
 import { FiltersPanel } from '../../shared/filters-panel';
+import { ACCUMULATIONS, Accumulation } from './player-columns';
 import { Pager } from '../../shared/pager';
 import { SectionTabs, TabOption } from '../../shared/section-tabs';
 import { ToggleGroup, ToggleOption } from '../../shared/toggle-group';
@@ -20,6 +21,8 @@ const REGULAR_FRACTION = 0.5;
 const RATED_RETRY_MS = 60_000;
 
 type Filter = 'todos' | 'regulares';
+
+const FAILED: NoticeMessage = { kind: 'error', text: 'Não foi possível carregar.' };
 
 /** Linha de um ranking, no mesmo formato para gols, assistências e notas. */
 interface Leader {
@@ -39,28 +42,31 @@ type Section = 'scorers' | 'assists' | 'team' | 'rated' | 'players';
 interface Board {
   /** Lugar do quadro na grade da página (grid-area). */
   id: 'scorers' | 'assists' | 'rated';
+  /** Ícone do título (Material Symbols) ou, no lugar dele, um SVG registrado (chuteira). */
+  icon: string | null;
+  svgIcon: string | null;
   title: string;
   subtitle: string;
   unit: string;
   rating: boolean;
   rows: Leader[];
   loading: boolean;
-  message: string | null;
+  message: NoticeMessage | null;
 }
 
 /** Dados de um ranking como chegaram da API, antes do filtro. */
 interface Source<T> {
   data: T | null;
-  message: string | null;
+  message: NoticeMessage | null;
 }
 
 @Component({
-  selector: 'app-estatisticas',
-  imports: [Crest, FiltersPanel, MatIcon, MatTooltip, Pager, PlayersTable, RoundTeamCard, SectionTabs, ToggleGroup],
-  templateUrl: './estatisticas.html',
-  styleUrl: './estatisticas.scss',
+  selector: 'app-jogadores',
+  imports: [Card, Crest, Notice, FiltersPanel, Pager, PlayersTable, RoundTeamCard, SectionTabs, ToggleGroup],
+  templateUrl: './jogadores.html',
+  styleUrl: './jogadores.scss',
 })
-export class Estatisticas {
+export class Jogadores {
   private api = inject(ApiFootball);
   private retry?: ReturnType<typeof setTimeout>;
 
@@ -94,7 +100,16 @@ export class Estatisticas {
     return apps.length ? Math.ceil(Math.max(...apps) * REGULAR_FRACTION) : 0;
   });
 
-  /** Regulares / Todos (o filtro dentro do botão Filtros, no celular), com a regra no ícone de informação. */
+  /** Acumulado da tabela de jogadores: totais da temporada ou médias. */
+  protected mode = signal<Accumulation>('total');
+  protected accumulations: ToggleOption<Accumulation>[] = ACCUMULATIONS;
+  /** O que está escolhido, no botão Filtros (ex.: "Regulares · Por jogo"). */
+  protected filtersSummary = computed(() => {
+    const who = this.filter() === 'regulares' ? 'Regulares' : 'Todos os jogadores';
+    return `${who} · ${ACCUMULATIONS.find((a) => a.id === this.mode())!.label}`;
+  });
+
+  /** Regulares / Todos (no botão Filtros), com a regra no ícone de informação. */
   protected filterOptions = computed<ToggleOption<Filter>[]>(() => [
     { id: 'regulares', label: 'Regulares', info: this.regularTip() },
     { id: 'todos', label: 'Todos os jogadores' },
@@ -110,9 +125,10 @@ export class Estatisticas {
     const regulars = this.filter() === 'regulares';
     const rated = this.rated();
     return [
-      board('scorers', 'Artilheiros', 'Gols marcados', 'Gols', false, this.scorers(), withRanks),
-      board('assists', 'Assistências', 'Passes para gol', 'Assist.', false, this.assists(), withRanks),
-      board('rated', 'Melhores notas', 'Nota média na temporada', 'Nota', true, {
+      board('scorers', 'sports_soccer', 'Artilheiros', 'Gols marcados', 'Gols', false, this.scorers(), withRanks),
+      board('assists', 'svg:chuteira', 'Assistências', 'Passes para gol', 'Assist.', false, this.assists(), withRanks),
+      // O subtítulo diz quem entra no ranking (o filtro da página).
+      board('rated', 'star', 'Melhores notas', `Nota média na temporada, ${regulars ? 'só dos regulares' : 'de todos os jogadores'}`, 'Nota', true, {
         data: rated.data ? (regulars ? rated.data.response : rated.data.all).map(fromRated) : null,
         message: rated.message,
       }, withRanks),
@@ -124,11 +140,11 @@ export class Estatisticas {
 
     this.api.topScorers().subscribe({
       next: (players) => this.scorers.set({ data: fromStats(players, (s) => s.goals.total ?? 0, scorerDetail), message: null }),
-      error: () => this.scorers.set({ data: null, message: 'Não foi possível carregar.' }),
+      error: () => this.scorers.set({ data: null, message: FAILED }),
     });
     this.api.topAssists().subscribe({
       next: (players) => this.assists.set({ data: fromStats(players, (s) => s.goals.assists ?? 0, gamesDetail), message: null }),
-      error: () => this.assists.set({ data: null, message: 'Não foi possível carregar.' }),
+      error: () => this.assists.set({ data: null, message: FAILED }),
     });
     this.loadRated();
   }
@@ -138,10 +154,10 @@ export class Estatisticas {
       next: (data) => this.rated.set({ data, message: null }),
       error: (err: HttpErrorResponse) => {
         if (err.status === 503) {
-          this.rated.set({ data: null, message: 'Ranking de notas sendo montado. Ele aparece aqui em alguns minutos.' });
+          this.rated.set({ data: null, message: { kind: 'wait', text: 'Ranking de notas sendo montado. Ele aparece aqui em alguns minutos.' } });
           this.retry = setTimeout(() => this.loadRated(), RATED_RETRY_MS);
         } else {
-          this.rated.set({ data: null, message: 'Não foi possível carregar.' });
+          this.rated.set({ data: null, message: FAILED });
         }
       },
     });
@@ -171,6 +187,7 @@ export class Estatisticas {
 
 function board(
   id: Board['id'],
+  icon: string,
   title: string,
   subtitle: string,
   unit: string,
@@ -179,8 +196,20 @@ function board(
   shape: (rows: Leader[]) => Leader[],
 ): Board {
   const rows = source.data ? shape(source.data) : [];
-  const message = source.message ?? (source.data && !rows.length ? 'Nenhum jogador neste filtro.' : null);
-  return { id, title, subtitle, unit, rating, rows, loading: !source.data && !source.message, message };
+  const message = source.message ?? (source.data && !rows.length ? { kind: 'empty' as const, text: 'Nenhum jogador neste filtro.' } : null);
+  const svg = icon.startsWith('svg:') ? icon.slice(4) : null;
+  return {
+    id,
+    icon: svg ? null : icon,
+    svgIcon: svg,
+    title,
+    subtitle,
+    unit,
+    rating,
+    rows,
+    loading: !source.data && !source.message,
+    message,
+  };
 }
 
 function fromStats(

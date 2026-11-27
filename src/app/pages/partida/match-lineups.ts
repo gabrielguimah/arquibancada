@@ -1,15 +1,19 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
+import { Card } from '../../shared/card';
 import { Coach, Fixture, Injury } from '../../api/api-football';
 import { absences } from './absences';
 import { MatchAbsences } from './match-absences';
 import { MatchCoach } from './match-coach';
 import { Crest } from '../../shared/crest';
+import { isLive } from '../../shared/fixture-card';
 import { PlayerPhoto } from '../../shared/player-photo';
 import { MatchBench } from './match-bench';
 import { NO_RATING_CLASS, NO_RATING_LABEL, NO_RATING_TITLE, formatRating, ratingClass } from '../../shared/rating';
 import { lineups, pitchPositions, playerTip } from './lineups';
+import { MatTooltip } from '@angular/material/tooltip';
+import { Notice } from '../../shared/notice';
 
 const NOT_STARTED = new Set(['TBD', 'NS', 'PST', 'CANC']);
 
@@ -20,7 +24,7 @@ const NOT_STARTED = new Set(['TBD', 'NS', 'PST', 'CANC']);
  */
 @Component({
   selector: 'app-match-lineups',
-  imports: [Crest, MatchAbsences, MatchBench, MatchCoach, MatIcon, NgTemplateOutlet, PlayerPhoto],
+  imports: [Notice, MatTooltip, Card, Crest, MatchAbsences, MatchBench, MatchCoach, MatIcon, NgTemplateOutlet, PlayerPhoto],
   templateUrl: './match-lineups.html',
   styleUrl: './match-lineups.scss',
 })
@@ -56,6 +60,8 @@ export class MatchLineups {
   /** Bola já rolou? Antes disso (escalação divulgada, jogo adiado ou cancelado), o campo fica sem selo de nota. */
   // Desfalques antes da escalação: fechados, abrem e fecham os dois times juntos.
   protected absencesOpen = signal(false);
+  /** Jogo em andamento: o título fica no azul do ao vivo, com a bolinha (como nos outros cards). */
+  protected live = computed(() => isLive(this.fixture()));
   protected started = computed(() => !NOT_STARTED.has(this.fixture().fixture.status.short));
 
   protected tip = playerTip;

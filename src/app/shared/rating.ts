@@ -1,3 +1,5 @@
+import { formatNumber } from './number-format';
+
 /**
  * Classe do selo de nota (0–10): uma por décimo, de `r-50` (5,0 ou menos) a `r-100` (10). As cores de
  * cada décimo vêm da paleta (rating-gradient em styles.scss).
@@ -13,8 +15,8 @@ export function ratingClass(value: number): string {
   return `rating-badge r-${tenth}`;
 }
 
-/** Nota com uma casa decimal ("8.2", nunca "8.20"); a nota máxima é só "10". */
+/** Nota com uma casa decimal ("8,2", nunca "8,20"); a nota máxima é só "10". */
 export function formatRating(value: number): string {
   const rounded = Math.round(value * 10) / 10;
-  return rounded >= 10 ? '10' : rounded.toFixed(1);
+  return rounded >= 10 ? '10' : formatNumber(rounded, 1);
 }

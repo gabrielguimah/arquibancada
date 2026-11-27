@@ -1,10 +1,4 @@
-<section class="card" aria-labelledby="stats-title">
-  <h2 id="stats-title" [class.live]="live()">
-    Estatísticas
-    @if (live()) {
-      <span class="live-dot" title="Ao vivo" aria-label="Ao vivo"></span>
-    }
-  </h2>
+<app-card icon="bar_chart" heading="Estatísticas" subtitle="Comparação entre os times" [live]="live()">
 
   @for (g of groups(); track g.title) {
     <h3>{{ g.title }}</h3>
@@ -25,6 +19,6 @@
       }
     </ul>
   } @empty {
-    <p class="message">As estatísticas aparecem quando a bola rolar.</p>
+    <app-notice class="message">As estatísticas aparecem quando a bola rolar.</app-notice>
   }
-</section>
+</app-card>

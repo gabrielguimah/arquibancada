@@ -1,9 +1,13 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
+import { Card } from '../../shared/card';
 import { Fixture, Team, TeamForm } from '../../api/api-football';
 import { Crest } from '../../shared/crest';
+import { FormChip } from '../../shared/form-chip';
 import { LIVE_STATUSES, TZ } from '../../shared/fixture-status';
 import { formatRating, ratingClass } from '../../shared/rating';
+import { MatTooltip } from '@angular/material/tooltip';
+import { Notice } from '../../shared/notice';
 
 // Jogos de cada time no card.
 const FORM_GAMES = 5;
@@ -39,7 +43,7 @@ interface FormBlock {
  */
 @Component({
   selector: 'app-match-form',
-  imports: [Crest, MatIcon],
+  imports: [Notice, MatTooltip, Card, Crest, FormChip],
   templateUrl: './match-form.html',
   styleUrl: './match-form.scss',
 })
@@ -76,6 +80,9 @@ export class MatchForm {
     });
   });
 
+  /** Jogo em andamento: o título fica no azul do ao vivo, com a bolinha (como nos outros cards). */
+  protected live = computed(() => LIVE_STATUSES.has(this.fixture().fixture.status.short));
+
   /** Esta partida como linha dos últimos jogos, do ponto de vista de `team`; `null` se não está rolando. */
   private liveRow(team: Team): FormRow | null {
     const f = this.fixture();
@@ -101,11 +108,6 @@ export class MatchForm {
   /** Jogos com placar à mostra; fechado, só o resumo de cada time. */
   protected expanded = signal(false);
 
-  protected toggle() {
-    this.expanded.update((open) => !open);
-  }
-
   protected resultLabel = { V: 'Vitória', E: 'Empate', D: 'Derrota' };
-  protected chipTitle = (live: boolean) => (live ? 'Jogo em andamento: resultado parcial' : null);
   protected skeletonRows = [0, 1, 2, 3, 4];
 }

@@ -4,6 +4,7 @@ import { MatIcon } from '@angular/material/icon';
 import { ApiFootball, Team } from '../api/api-football';
 import { Crest } from './crest';
 import { FavoriteTeam } from './favorite-team';
+import { Notice } from './notice';
 
 /**
  * Modal do time do coração: os clubes do campeonato (da classificação, em ordem alfabética) com
@@ -11,7 +12,7 @@ import { FavoriteTeam } from './favorite-team';
  */
 @Component({
   selector: 'app-favorite-team-dialog',
-  imports: [MatIcon, MatDialogClose, Crest],
+  imports: [Notice, MatIcon, MatDialogClose, Crest],
   templateUrl: './favorite-team-dialog.html',
   styleUrl: './favorite-team-dialog.scss',
 })

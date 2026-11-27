@@ -3,8 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { ApiFootball } from '../api/api-football';
-import { Estatisticas } from './estatisticas/estatisticas';
-import { Rodada } from './rodada/rodada';
+import { Jogadores } from './jogadores/jogadores';
+import { Campeonato } from './campeonato/campeonato';
 import { Times } from './times/times';
 
 /** Motivo da opção Chances bloqueada: o texto que o tooltip liga ao botão (aria-describedby). */
@@ -28,7 +28,7 @@ const pendingApi: Partial<Record<keyof ApiFootball, () => typeof NEVER>> = {
   playerStats: () => NEVER,
 };
 
-// A Rodada tem bloco @defer (a tabela das chances): o TestBed precisa compilar antes (compileComponents).
+// A página Campeonato tem bloco @defer (a tabela das chances): o TestBed precisa compilar antes (compileComponents).
 async function render<T>(component: Type<T>): Promise<HTMLElement> {
   TestBed.configureTestingModule({
     imports: [component],
@@ -42,13 +42,13 @@ async function render<T>(component: Type<T>): Promise<HTMLElement> {
 
 describe('Esqueletos de carregamento', () => {
   it('Classificação: partidas de hoje, rodada e tabela', async () => {
-    const el = await render(Rodada);
+    const el = await render(Campeonato);
     expect(el.querySelector('.hoje[aria-busy="true"] app-fixture-card-skeleton')).toBeTruthy();
     expect(el.querySelectorAll('.skeleton app-fixture-card-skeleton').length).toBeGreaterThan(0);
     expect(el.querySelectorAll('.tabela tr.sk-row').length).toBe(20);
     expect(el.querySelector('app-team-ratings')).toBeNull();
     // Troca já na tela e o título do card (Classificação) desde o carregamento; Chances bloqueada, sem cadeado, enquanto carrega.
-    expect(el.querySelector('.tabela .card-head h2')?.textContent).toContain('Classificação');
+    expect(el.querySelector('.tabela app-card h2')?.textContent).toContain('Classificação');
     const chances = el.querySelectorAll('.view-switch button')[1];
     expect(chances.getAttribute('aria-disabled')).toBe('true');
     expect(chances.querySelector('.lock')).toBeNull();
@@ -59,12 +59,12 @@ describe('Esqueletos de carregamento', () => {
     const el = await render(Times);
     expect(el.querySelector('app-team-ratings h1')?.textContent?.trim()).toBe('Times');
     // Botão Filtros já na tela (os seletores de período e mando ficam dentro dele, fechado).
-    expect(el.querySelector('app-team-ratings .filters-toggle')).toBeTruthy();
+    expect(el.querySelector('app-team-ratings app-filters .collapsible-toggle')).toBeTruthy();
     expect(el.querySelectorAll('app-team-ratings table[aria-busy="true"] .sk-name').length).toBe(20);
   });
 
   it('Jogadores: os três quadros, o time da rodada e a tabela de jogadores', async () => {
-    const el = await render(Estatisticas);
+    const el = await render(Jogadores);
     expect(el.querySelectorAll('.board .rows[aria-busy="true"]').length).toBe(3);
     expect(el.querySelectorAll('app-round-team .pitch[aria-busy="true"] .sk-photo').length).toBe(11);
     expect(el.querySelectorAll('app-players-table table[aria-busy="true"] .sk-name').length).toBe(10);
@@ -80,7 +80,7 @@ describe('Quadros de estatísticas', () => {
     });
     const players = Array.from({ length: 20 }, (_, i) => player(i + 1));
     TestBed.configureTestingModule({
-      imports: [Estatisticas],
+      imports: [Jogadores],
       providers: [
         provideRouter([]),
         {
@@ -96,7 +96,7 @@ describe('Quadros de estatísticas', () => {
         },
       ],
     });
-    const fixture = TestBed.createComponent(Estatisticas);
+    const fixture = TestBed.createComponent(Jogadores);
     fixture.detectChanges();
     const boards = () => [...(fixture.nativeElement as HTMLElement).querySelectorAll('.board')] as HTMLElement[];
     const ranks = (board: HTMLElement) => [...board.querySelectorAll('.rank')].map((r) => r.textContent?.trim());
@@ -111,7 +111,7 @@ describe('Quadros de estatísticas', () => {
 
 describe('Jogadores no celular', () => {
   it('abas dos quadros: começa em Artilheiros; cada aba mostra o seu quadro (com o título dele)', async () => {
-    const el = await render(Estatisticas);
+    const el = await render(Jogadores);
     const page = () => el.querySelector('.page')!;
     const tabs = () => [...el.querySelectorAll<HTMLButtonElement>('.section-tabs button')];
     // Ícones (o nome no aria-label) e, na última, o nome.
@@ -129,16 +129,23 @@ describe('Jogadores no celular', () => {
     expect(el.querySelector('.area-rated h2')?.textContent).toContain('Melhores notas');
 
     // Filtro do celular: dentro do botão Filtros (com o escolhido no resumo), no padrão dos seletores.
-    const toggle = el.querySelector<HTMLButtonElement>('.mobile-filters .filters-toggle')!;
-    expect(toggle.querySelector('.filters-summary')?.textContent?.trim()).toBe('Regulares');
-    expect(el.querySelector('.mobile-filters .view-switch')).toBeNull();
+    const toggle = el.querySelector<HTMLButtonElement>('.area-filter .collapsible-toggle')!;
+    expect(toggle.querySelector('.filters-summary')?.textContent?.trim()).toBe('Regulares · Total');
+    expect(el.querySelector('.area-filter .view-switch')).toBeNull();
     toggle.click();
     TestBed.tick();
-    const options = [...el.querySelectorAll<HTMLButtonElement>('.mobile-filters .view-switch button')];
+    const groups = [...el.querySelectorAll('.area-filter .view-switch')];
+    expect(groups.length).toBe(2);
+    const options = [...groups[0].querySelectorAll<HTMLButtonElement>('button')];
     expect(options.map((b) => b.textContent?.replace('info', '').trim())).toEqual(['Regulares', 'Todos os jogadores']);
     options[1].click();
     TestBed.tick();
-    expect(toggle.querySelector('.filters-summary')?.textContent?.trim()).toBe('Todos os jogadores');
+    expect(toggle.querySelector('.filters-summary')?.textContent?.trim()).toBe('Todos os jogadores · Total');
+    // O acumulado (antes dentro da tabela) também fica nos filtros.
+    const modes = [...groups[1].querySelectorAll<HTMLButtonElement>('button')];
+    modes[1].click();
+    TestBed.tick();
+    expect(toggle.querySelector('.filters-summary')?.textContent?.trim()).toBe(`Todos os jogadores · ${modes[1].textContent?.trim()}`);
   });
 });
 
@@ -148,18 +155,18 @@ describe('Seletor de rodada em esqueleto', () => {
     const rounds = () => of(['Regular Season - 1']);
     const current = () => of('Regular Season - 1');
     TestBed.configureTestingModule({
-      imports: [Rodada, Estatisticas],
+      imports: [Campeonato, Jogadores],
       providers: [
         provideRouter([]),
         { provide: ApiFootball, useValue: { ...pendingApi, rounds, currentRound: current, teamOfRound: () => NEVER } },
       ],
     });
     await TestBed.compileComponents();
-    for (const component of [Rodada, Estatisticas] as const) {
+    for (const component of [Campeonato, Jogadores] as const) {
       const fixture = TestBed.createComponent(component as Type<unknown>);
       fixture.detectChanges();
       const el = fixture.nativeElement as HTMLElement;
-      const nav = component === Rodada ? el.querySelector('.jogos')! : el.querySelector('app-round-team')!;
+      const nav = component === Campeonato ? el.querySelector('.jogos')! : el.querySelector('app-round-team')!;
       expect(nav.querySelector('.round-nav .sk-nav-select')).toBeTruthy();
       expect(nav.querySelector('mat-select')).toBeNull();
     }

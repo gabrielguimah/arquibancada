@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { Crest } from './crest';
 import { FavoriteHeart } from './favorite-heart';
 import { liveClock } from './live-clock';
+import { MatTooltip } from '@angular/material/tooltip';
 
 export { TZ };
 
@@ -22,7 +23,7 @@ export function isLive(f: Fixture): boolean {
 /** Card compacto de partida: horário e situação à esquerda, times empilhados, placar à direita. */
 @Component({
   selector: 'app-fixture-card',
-  imports: [Crest, FavoriteHeart, RouterLink],
+  imports: [MatTooltip, Crest, FavoriteHeart, RouterLink],
   templateUrl: './fixture-card.html',
   styleUrl: './fixture-card.scss',
 })

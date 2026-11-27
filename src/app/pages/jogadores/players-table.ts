@@ -1,14 +1,14 @@
 import { Component, DestroyRef, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, PlayerRow, PlayerStats } from '../../api/api-football';
+import { Card } from '../../shared/card';
+import { Notice, NoticeMessage } from '../../shared/notice';
 import { Crest } from '../../shared/crest';
 import { PlayerPhoto } from '../../shared/player-photo';
 import { Pager } from '../../shared/pager';
 import { NO_RATING_CLASS, NO_RATING_LABEL, NO_RATING_TITLE, ratingClass } from '../../shared/rating';
 import {
-  ACCUMULATIONS,
   Accumulation,
   PLAYER_TABS,
   PlayerColumn,
@@ -39,7 +39,7 @@ interface Line {
  */
 @Component({
   selector: 'app-players-table',
-  imports: [Crest, MatIcon, Pager, MatTooltip, PlayerPhoto],
+  imports: [Card, Crest, Notice, Pager, MatTooltip, PlayerPhoto],
   templateUrl: './players-table.html',
   styleUrl: './players-table.scss',
 })
@@ -48,16 +48,22 @@ export class PlayersTable {
   private retry?: ReturnType<typeof setTimeout>;
 
   protected tabs = PLAYER_TABS;
-  protected accumulations = ACCUMULATIONS;
   protected skeleton = Array.from({ length: 10 }, (_, i) => i);
 
   /** Só jogadores regulares (mínimo de jogos); `false` mostra todos. */
   regulars = input(true);
+  /** Totais da temporada ou médias (por jogo, por 90 minutos): o filtro da página. */
+  mode = input<Accumulation>('total');
+
+  /** Subtítulo do card: totais ou médias, e de quem (ex.: "Médias por jogo, só dos regulares"). */
+  protected subtitle = computed(() => {
+    const what = { total: 'Totais da temporada', game: 'Médias por jogo', p90: 'Médias por 90 minutos' }[this.mode()];
+    return `${what}, ${this.regulars() ? 'só dos regulares' : 'de todos os jogadores'}`;
+  });
 
   private data = signal<PlayerStats | null>(null);
-  protected message = signal<string | null>(null);
+  protected message = signal<NoticeMessage | null>(null);
   protected tab = signal<PlayerTab>(PLAYER_TABS[0]);
-  protected mode = signal<Accumulation>('total');
   protected sort = signal<Sort>({ column: PLAYER_TABS[0].sort, ascending: false });
   // Volta para a primeira página quando muda o filtro, a aba, o modo ou a ordenação.
   protected page = linkedSignal({
@@ -120,10 +126,10 @@ export class PlayersTable {
       },
       error: (err: HttpErrorResponse) => {
         if (err.status === 503) {
-          this.message.set('Tabela de jogadores sendo montada. Ela aparece aqui em alguns minutos.');
+          this.message.set({ kind: 'wait', text: 'Tabela de jogadores sendo montada. Ela aparece aqui em alguns minutos.' });
           this.retry = setTimeout(() => this.load(), RETRY_MS);
         } else {
-          this.message.set('Não foi possível carregar.');
+          this.message.set({ kind: 'error', text: 'Não foi possível carregar.' });
         }
       },
     });

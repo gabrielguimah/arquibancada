@@ -1,33 +1,23 @@
 import { Component } from '@angular/core';
+import { Card } from '../../shared/card';
 
 // Cards de carregamento da página da partida: mesmo formato dos cards de verdade, com blocos no lugar
 // do conteúdo (`.sk`, o brilho vem de styles.scss).
 
+// O card do site (app-card), com os títulos de verdade (são fixos): o esqueleto fica com a mesma altura do
+// card pronto.
 const CARD = `
   :host {
     display: block;
-  }
-
-  .card {
-    padding: 14px 16px 16px;
-    background: var(--surface);
-    border-radius: 12px;
-    box-shadow: 0 1px 2px var(--shadow);
-  }
-
-  .sk-title {
-    width: 120px;
-    height: 18px;
-    margin-bottom: 14px;
   }
 `;
 
 /** Lance a lance: linhas alternando mandante (à esquerda) e visitante (à direita). */
 @Component({
   selector: 'app-timeline-skeleton',
+  imports: [Card],
   template: `
-    <div class="card" aria-busy="true" aria-label="Carregando lance a lance">
-      <span class="sk sk-title"></span>
+    <app-card icon="history" heading="Lance a lance" subtitle="Gols, cartões e substituições" aria-busy="true">
       @for (side of rows; track $index) {
         <div class="row" [class.away]="side === 'away'" aria-hidden="true">
           <span class="sk minute"></span>
@@ -35,7 +25,7 @@ const CARD = `
           <span class="sk text" [style.width.px]="70 + ($index % 3) * 25"></span>
         </div>
       }
-    </div>
+    </app-card>
   `,
   styles:
     CARD +
@@ -78,9 +68,9 @@ export class TimelineSkeleton {
 /** Estatísticas: valor, nome e valor, com as duas barras embaixo. */
 @Component({
   selector: 'app-stats-skeleton',
+  imports: [Card],
   template: `
-    <div class="card" aria-busy="true" aria-label="Carregando estatísticas">
-      <span class="sk sk-title"></span>
+    <app-card icon="bar_chart" heading="Estatísticas" subtitle="Comparação entre os times" aria-busy="true">
       @for (i of rows; track i) {
         <div class="row" aria-hidden="true">
           <div class="values">
@@ -91,7 +81,7 @@ export class TimelineSkeleton {
           <span class="sk bar"></span>
         </div>
       }
-    </div>
+    </app-card>
   `,
   styles:
     CARD +
@@ -132,9 +122,9 @@ export class StatsSkeleton {
  */
 @Component({
   selector: 'app-lineups-skeleton',
+  imports: [Card],
   template: `
-    <div class="card" aria-busy="true" aria-label="Carregando escalações">
-      <span class="sk sk-title"></span>
+    <app-card icon="stadium" heading="Escalações" subtitle="Formação, notas e banco" aria-busy="true">
       <!-- Como o campo de verdade: no estreito, faixa do mandante, campo e faixa do visitante; no largo,
            as duas faixas lado a lado em cima do campo deitado. -->
       <div class="field" aria-hidden="true">
@@ -147,19 +137,19 @@ export class StatsSkeleton {
         @for (t of [0, 1]; track t) {
           <div class="bench-team">
             <div class="coach">
-              <div class="heading"><span class="sk crest"></span><span class="sk subtitle"></span></div>
+              <div class="heading"><span class="sk crest"></span><span class="sk sk-label"></span></div>
               <div class="person">
                 <span class="sk photo"></span>
                 <span class="sk name"></span>
               </div>
             </div>
             @for (i of [0, 1]; track i) {
-              <div class="heading toggle"><span class="sk crest"></span><span class="sk subtitle"></span><span class="sk chevron"></span></div>
+              <div class="heading toggle"><span class="sk crest"></span><span class="sk sk-label"></span><span class="sk chevron"></span></div>
             }
           </div>
         }
       </div>
-    </div>
+    </app-card>
   `,
   styles:
     CARD +
@@ -238,8 +228,8 @@ export class StatsSkeleton {
       }
     }
 
-    // Alturas do card pronto: técnico (63 px e 14 px de respiro), título das reservas (24 px) e o dos
-    // desfalques (30 px, com o respiro de baixo por dentro).
+    // Alturas do card pronto: técnico (63 px e 14 px de respiro) e os títulos fechados de reservas e
+    // desfalques (24 px cada, 14 px entre eles).
     .coach {
       height: 63px;
       margin-bottom: 14px;
@@ -255,15 +245,15 @@ export class StatsSkeleton {
 
     .toggle {
       height: 24px;
+      margin-bottom: 0;
     }
 
     // 20 px acima: no card pronto, os 6 px de baixo das reservas e os 14 px de cima dos desfalques somam
     // (aqui as duas margens se juntariam na maior).
+    // Reservas e Desfalques fechados: 24 px cada; entre eles, os 14 px de cima dos desfalques.
     .toggle + .toggle {
-      box-sizing: border-box;
-      height: 30px;
-      margin: 20px 0 0;
-      padding-bottom: 6px;
+      height: 24px;
+      margin: 14px 0 0;
     }
 
     .crest {
@@ -297,7 +287,7 @@ export class StatsSkeleton {
       height: 12px;
     }
 
-    .subtitle {
+    .sk-label {
       width: 80px;
       height: 13px;
     }
@@ -308,9 +298,10 @@ export class LineupsSkeleton {}
 /** Últimos 5 jogos (fechado): título com a seta e, por time, escudo, nome, média e os 5 resultados. */
 @Component({
   selector: 'app-form-skeleton',
+  imports: [Card],
   template: `
-    <div class="card" aria-busy="true" aria-label="Carregando últimos jogos">
-      <div class="head" aria-hidden="true"><span class="sk sk-title"></span><span class="sk chevron"></span></div>
+    <!-- O mesmo card do pronto (fechado): ícone, nome, subtítulo e a seta. -->
+    <app-card icon="event_repeat" heading="Últimos 5 jogos" subtitle="Antes desta partida" [collapsible]="true" aria-busy="true">
       <div class="teams" aria-hidden="true">
         @for (t of [0, 1]; track t) {
           <div class="team">
@@ -325,31 +316,13 @@ export class LineupsSkeleton {}
           </div>
         }
       </div>
-    </div>
+    </app-card>
   `,
   styles:
     CARD +
     `
     :host {
       container-type: inline-size;
-    }
-
-    // Mesmas alturas do card pronto: título 24 px, linha de cada time 21 px.
-    .head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 24px;
-      margin-bottom: 12px;
-    }
-
-    .head .sk-title {
-      margin: 0;
-    }
-
-    .chevron {
-      width: 14px;
-      height: 10px;
     }
 
     .teams {

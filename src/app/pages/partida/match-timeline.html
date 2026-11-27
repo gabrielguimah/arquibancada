@@ -1,10 +1,4 @@
-<section class="card" aria-labelledby="timeline-title">
-  <h2 id="timeline-title" [class.live]="live()">
-    Lance a lance
-    @if (live()) {
-      <span class="live-dot" title="Ao vivo" aria-label="Ao vivo"></span>
-    }
-  </h2>
+<app-card icon="history" heading="Lance a lance" subtitle="Gols, cartões e substituições" [live]="live()">
 
   @if (items().length || running()) {
     <ol class="items">
@@ -19,7 +13,7 @@
           <!-- Mandante: minuto à esquerda; visitante: minuto à direita (a ordem visual inverte no CSS). -->
           <li class="event" [class]="item.side + ' ' + item.kind" [attr.aria-label]="labels[item.kind] + ', ' + item.minute">
             <span class="minute">{{ item.minute }}</span>
-            <span class="icon" [title]="labels[item.kind]">
+            <span class="icon" [matTooltip]="labels[item.kind]">
               @switch (item.kind) {
                 @case ('goal') {
                   <mat-icon aria-hidden="true">sports_soccer</mat-icon>
@@ -68,6 +62,6 @@
       }
     </ol>
   } @else {
-    <p class="message">Nenhum lance ainda.</p>
+    <app-notice class="message">Nenhum lance ainda.</app-notice>
   }
-</section>
+</app-card>

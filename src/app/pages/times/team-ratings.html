@@ -15,15 +15,19 @@
 
 <div class="layout" [attr.data-section]="section()">
   <div class="main">
-    @if (message()) {
-      <p class="message">{{ message() }}</p>
+    @if (message(); as m) {
+      <app-notice class="message" [kind]="m.kind">{{ m.text }}</app-notice>
     } @else {
-      <div class="card" #tableCard>
-        <!-- Título do card, como nos outros: escudo, nome e o período/mando escolhidos nos filtros. -->
-        <header class="card-head">
-          <h2 id="times-table-title"><mat-icon class="title-icon" aria-hidden="true">shield</mat-icon>Times</h2>
-          <p class="subtitle">{{ periodLabel() }}</p>
-        </header>
+      <!-- Título do card, como nos outros: escudo, nome e o período/mando escolhidos nos filtros. -->
+      <app-card
+        #tableCard
+        class="table-card"
+        icon="shield"
+        heading="Times"
+        [subtitle]="periodLabel()"
+        titleId="times-table-title"
+        [flush]="true"
+      >
         <!-- Abas: categoria das estatísticas (como na tabela de jogadores). -->
         <div class="pills tabs" role="tablist" aria-label="Categoria das estatísticas">
           @for (t of tabs; track t.id) {
@@ -91,23 +95,18 @@
             </tbody>
           </table>
         </div>
-      </div>
+      </app-card>
     }
   </div>
 
   <!-- Coluna ao lado da tabela (no celular, na aba Resumo): os líderes de cada categoria e o time do coração. -->
   <aside class="side" aria-label="Resumo dos times">
-    <section class="side-card" aria-labelledby="highlights-title">
-      <h2 id="highlights-title" class="side-title">
-        <mat-icon class="side-icon" aria-hidden="true">military_tech</mat-icon>
-        Destaques
-      </h2>
-      <p class="side-sub">{{ periodLabel() }}</p>
+    <app-card class="side-card highlights-card" icon="military_tech" heading="Destaques" [subtitle]="periodLabel()">
       <ul class="highlights" [attr.aria-busy]="highlights() === null">
         @if (highlights(); as list) {
           @for (h of list; track h.label) {
             <li>
-              <button type="button" (click)="showMetric(h.metric.id)" [title]="'Ver ' + h.metric.title.toLowerCase() + ' na tabela'">
+              <button type="button" (click)="showMetric(h.metric.id)" [matTooltip]="'Ver ' + h.metric.title.toLowerCase() + ' na tabela'">
                 <img crest [src]="h.row.team.logo" alt="" width="28" height="28" loading="lazy" />
                 <span class="hl-text">
                   <small>{{ h.label }}</small>
@@ -132,13 +131,9 @@
           }
         }
       </ul>
-    </section>
+    </app-card>
 
-    <section class="side-card fav-card" aria-labelledby="fav-title">
-      <h2 id="fav-title" class="side-title">
-        <mat-icon class="side-icon" aria-hidden="true">favorite</mat-icon>
-        Seu time do coração
-      </h2>
+    <app-card class="side-card fav-card" icon="favorite" heading="Seu time do coração" [subtitle]="favSubtitle()">
       @if (!favorite.team()) {
         <!-- Sem time: convite no meio do card (o card acompanha a altura da tabela). -->
         <div class="fav-empty">
@@ -151,12 +146,11 @@
           <img crest [src]="f.team.logo" alt="" width="32" height="32" />
           <strong>{{ f.team.name }}</strong>
         </div>
-        <p class="side-sub">{{ periodLabel() }}, entre os {{ f.total }} times</p>
         @if (f.ranks.length) {
           <ul class="fav-ranks">
             @for (r of f.ranks; track r.metric.id) {
               <li>
-                <button type="button" (click)="showMetric(r.metric.id)" [title]="'Ver ' + r.metric.title.toLowerCase() + ' na tabela'">
+                <button type="button" (click)="showMetric(r.metric.id)" [matTooltip]="'Ver ' + r.metric.title.toLowerCase() + ' na tabela'">
                   <span class="fav-label">{{ r.label }}</span>
                   <span class="fav-value">{{ r.text }}</span>
                   <span class="fav-rank" [class]="r.tone ?? ''">{{ r.rank }}º</span>
@@ -170,7 +164,6 @@
       } @else {
         <!-- Esqueleto enquanto as estatísticas carregam: mesmo cabeçalho e mesmas linhas do card pronto. -->
         <div class="fav-team" aria-hidden="true"><span class="sk sk-crest-lg"></span><span class="sk sk-name"></span></div>
-        <p class="side-sub" aria-hidden="true"><span class="sk sk-sub"></span></p>
         <ul class="fav-ranks" aria-busy="true">
           @for (i of favSkeleton; track i) {
             <li class="sk-row" aria-hidden="true">
@@ -181,6 +174,6 @@
           }
         </ul>
       }
-    </section>
+    </app-card>
   </aside>
 </div>

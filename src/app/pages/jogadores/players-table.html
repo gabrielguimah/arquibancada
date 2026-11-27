@@ -1,10 +1,5 @@
-<header class="head">
-  <div>
-    <h2 id="players-title"><mat-icon class="title-icon" aria-hidden="true">directions_run</mat-icon>Jogadores</h2>
-    <p class="subtitle">Números de cada jogador na temporada</p>
-  </div>
-</header>
-
+<!-- O subtítulo diz o que a tabela mostra: totais ou médias, e de quem (os filtros da página). -->
+<app-card class="table" icon="directions_run" heading="Jogadores" [subtitle]="subtitle()" titleId="players-title" [flush]="true">
 <!-- Abas: tipo de estatística. -->
 <div class="pills tabs" role="tablist" aria-label="Tipo de estatística">
   @for (t of tabs; track t.id) {
@@ -14,20 +9,8 @@
   }
 </div>
 
-<!-- Acumulado: totais da temporada ou médias. -->
-<div class="controls">
-  <span class="mode-label" id="players-mode-label">Acumulado</span>
-  <div class="pills" role="radiogroup" aria-labelledby="players-mode-label">
-    @for (a of accumulations; track a.id) {
-      <button type="button" role="radio" [attr.aria-checked]="a.id === mode()" [class.on]="a.id === mode()" (click)="mode.set(a.id)">
-        {{ a.label }}
-      </button>
-    }
-  </div>
-</div>
-
-@if (message()) {
-  <p class="message">{{ message() }}</p>
+@if (message(); as m) {
+  <app-notice class="message" [kind]="m.kind">{{ m.text }}</app-notice>
 } @else {
   <div class="table-wrap">
     <table [attr.aria-busy]="visible() === null" aria-labelledby="players-title">
@@ -52,7 +35,7 @@
             <tr>
               <td class="rank">{{ l.rank }}</td>
               <td class="team">
-                <img crest [src]="l.player.team.logo" [alt]="l.player.team.name" [title]="l.player.team.name" width="22" height="22" loading="lazy" />
+                <img crest [src]="l.player.team.logo" [alt]="l.player.team.name" [matTooltip]="l.player.team.name" width="22" height="22" loading="lazy" />
               </td>
               <td class="name">
                 <span class="who">
@@ -65,7 +48,7 @@
                   @if (cell.column.kind === 'rating' && cell.value !== null) {
                     <span [class]="ratingClass(cell.value)">{{ cell.text }}</span>
                   } @else if (cell.column.kind === 'rating') {
-                    <span [class]="noRating.class" [title]="noRating.title">{{ noRating.label }}</span>
+                    <span [class]="noRating.class" [matTooltip]="noRating.title">{{ noRating.label }}</span>
                   } @else {
                     {{ cell.text }}
                   }
@@ -74,7 +57,7 @@
             </tr>
           } @empty {
             <tr>
-              <td class="message" [attr.colspan]="tab().columns.length + 3">Nenhum jogador neste filtro.</td>
+              <td class="message" [attr.colspan]="tab().columns.length + 3"><app-notice>Nenhum jogador neste filtro.</app-notice></td>
             </tr>
           }
         } @else {
@@ -97,3 +80,4 @@
 
   <app-pager class="pager" [page]="page()" [pages]="pages()" label="Páginas de jogadores" (pageChange)="page.set($event)" />
 }
+</app-card>

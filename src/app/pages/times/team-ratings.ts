@@ -3,6 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ApiFootball, TeamRating, TeamRatings } from '../../api/api-football';
+import { Card } from '../../shared/card';
+import { Notice, NoticeMessage } from '../../shared/notice';
 import { Crest } from '../../shared/crest';
 import { SectionTabs, TabOption } from '../../shared/section-tabs';
 import { ToggleGroup, ToggleOption } from '../../shared/toggle-group';
@@ -80,7 +82,7 @@ interface Line {
  */
 @Component({
   selector: 'app-team-ratings',
-  imports: [Crest, FavoriteHeart, FiltersPanel, MatIcon, MatTooltip, SectionTabs, ToggleGroup],
+  imports: [Card, Crest, Notice, FavoriteHeart, FiltersPanel, MatIcon, MatTooltip, SectionTabs, ToggleGroup],
   host: { class: 'times' },
   templateUrl: './team-ratings.html',
   styleUrl: './team-ratings.scss',
@@ -106,7 +108,7 @@ export class TeamRatingsTables {
   protected highlightSkeleton = HIGHLIGHTS.map((_, i) => i);
 
   private data = signal<TeamRatings | null>(null);
-  protected message = signal<string | null>(null);
+  protected message = signal<NoticeMessage | null>(null);
   protected period = signal<Period>('season');
   protected venue = signal<Venue>('all');
   /** O que está escolhido, no botão Filtros (para ver sem abrir). */
@@ -156,7 +158,7 @@ export class TeamRatingsTables {
 
   protected favorite = inject(FavoriteTeam);
   private injector = inject(Injector);
-  private tableCard = viewChild<ElementRef<HTMLElement>>('tableCard');
+  private tableCard = viewChild('tableCard', { read: ElementRef<HTMLElement> });
 
   /** Linhas do período (temporada ou últimas 5) e do mando escolhidos; `null` enquanto carrega. */
   private rows = computed(() => {
@@ -211,6 +213,12 @@ export class TeamRatingsTables {
     return period + venue;
   });
 
+  /** Subtítulo do card do time do coração: o período e, com o time escolhido, entre quantos times. */
+  protected favSubtitle = computed(() => {
+    const total = this.favorite.team() ? this.favoriteCard()?.total : null;
+    return total ? `${this.periodLabel()}, entre os ${total} times` : this.periodLabel();
+  });
+
   protected chooseFavorite() {
     openFavoriteTeamDialog(this.injector);
   }
@@ -245,7 +253,9 @@ export class TeamRatingsTables {
       },
       error: (err: HttpErrorResponse) => {
         this.message.set(
-          err.status === 503 ? 'Estatísticas dos times sendo calculadas. Elas aparecem aqui em alguns minutos.' : 'Não foi possível carregar.',
+          err.status === 503
+            ? { kind: 'wait', text: 'Estatísticas dos times sendo calculadas. Elas aparecem aqui em alguns minutos.' }
+            : { kind: 'error', text: 'Não foi possível carregar. Tentando de novo em instantes…' },
         );
         this.retry = setTimeout(() => this.load(true), RETRY_MS);
       },

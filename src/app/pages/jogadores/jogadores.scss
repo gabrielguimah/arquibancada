@@ -15,7 +15,8 @@ $line: var(--line);
 
   // Celular e tablet: uma coluna (lista simples, sem as linhas da grade: quadro escondido não deixa
   // espaço), com as abas em cima e um quadro por vez. O filtro (Regulares / Todos) só aparece nos
-  // quadros que ele afeta (melhores notas e estatísticas), logo acima deles.
+  // quadros que ele afeta (melhores notas e estatísticas), logo acima deles. No computador, ele fica na
+  // linha inteira entre os quadros de cima e os de baixo.
   @media (max-width: 1000px) {
     display: flex;
     flex-direction: column;
@@ -23,12 +24,7 @@ $line: var(--line);
     gap: 12px;
     max-width: 560px;
 
-    // O seletor de sempre sai; o filtro fica dentro do botão Filtros (abaixo).
-    .area-filter {
-      display: none;
-    }
-
-    &:not([data-section='rated']):not([data-section='players']) .mobile-filters {
+    &:not([data-section='rated']):not([data-section='players']) .area-filter {
       display: none;
     }
 
@@ -57,96 +53,14 @@ app-section-tabs {
   }
 }
 
-.filter {
-  display: grid;
-  justify-items: start;
-  align-self: end;
-}
-
-.switch {
-  display: inline-flex;
-  padding: 3px;
-  border-radius: 999px;
-  background: var(--button-bg);
-
-  button {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 14px;
-    border: 0;
-    border-radius: 999px;
-    background: transparent;
-    font: inherit;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: $muted;
-    cursor: pointer;
-
-    &.on {
-      background: var(--surface);
-      color: var(--accent);
-      box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-  }
-}
-
-// Ícone de informação da opção Regulares (texto no matTooltip).
-.info {
-  margin: -2px -4px 0 2px;
-  font-size: 17px;
-  width: 17px;
-  height: 17px;
-  cursor: help;
-}
-
+// Quadros (app-card com `flush`): as linhas até as bordas e a paginação no rodapé.
 .board {
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border-radius: 10px;
-  box-shadow: 0 1px 2px var(--shadow);
-  padding: 12px 0 8px;
-
-  header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 0 16px 8px;
-  }
-
-  h2 {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 0;
-    font-size: 1rem;
-  }
+  padding-bottom: 8px;
 }
 
-// Bola (artilharia), chuteira (assistências) e estrela (melhores notas) ao lado do título.
-.title-icon {
-  width: 20px;
-  height: 20px;
-  font-size: 20px;
-  color: var(--accent);
-
-  // Estrela preenchida, como a do melhor da rodada.
-  &.filled {
-    font-variation-settings: 'FILL' 1;
-  }
-}
-
-.subtitle {
-  margin: 2px 0 0;
-  font-size: 0.72rem;
-  color: $muted;
-}
-
+// Unidade da coluna de valores, no fim do cabeçalho do card.
 .unit {
   padding-top: 3px;
   font-size: 0.72rem;
@@ -253,8 +167,6 @@ $row-height: 51px;
 
 .message {
   margin: 8px 16px 12px;
-  font-size: 0.85rem;
-  color: $muted;
 }
 
 /* Esqueleto */
@@ -291,12 +203,14 @@ $row-height: 51px;
   height: 16px;
 }
 
-// Filtros do celular (componente compartilhado, com o seletor Regulares / Todos dentro). No computador,
-// não aparece.
-.mobile-filters {
-  display: none;
+// Os dois seletores do Filtros (jogadores considerados e acumulado) lado a lado, metade cada; no
+// celular, um embaixo do outro (como em Times).
+.toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
 
-  @media (max-width: 1000px) {
-    display: block;
+  @media (max-width: 560px) {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
